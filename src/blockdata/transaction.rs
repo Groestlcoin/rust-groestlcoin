@@ -294,21 +294,21 @@ impl Transaction {
     /// this will give the correct txid (not including witnesses) while `wtxid`
     /// will also hash witnesses.
     pub fn txid(&self) -> Txid {
-        let mut enc = Txid::engine();
+        let mut enc = TxidInternal::engine();
         self.version.consensus_encode(&mut enc).unwrap();
         self.input.consensus_encode(&mut enc).unwrap();
         self.output.consensus_encode(&mut enc).unwrap();
         self.lock_time.consensus_encode(&mut enc).unwrap();
-        Txid::from_engine(enc)
+        Txid::from(TxidInternal::from_engine(enc))
     }
 
     /// Computes SegWit-version of the transaction id (wtxid). For transaction with the witness
     /// data this hash includes witness, for pre-witness transaction it is equal to the normal
     /// value returned by txid() function.
     pub fn wtxid(&self) -> Wtxid {
-        let mut enc = Wtxid::engine();
+        let mut enc = WtxidInternal::engine();
         self.consensus_encode(&mut enc).unwrap();
-        Wtxid::from_engine(enc)
+        Wtxid::from(WtxidInternal::from_engine(enc))
     }
 
     /// Computes a signature hash for a given input index with a given sighash flag.

@@ -336,8 +336,13 @@ mod test {
     use super::{RawNetworkMessage, NetworkMessage, CommandString};
     use network::constants::ServiceFlags;
     use consensus::encode::{Encodable, deserialize, deserialize_partial, serialize};
+
     use hex::decode as hex_decode;
     use hashes::sha256d::Hash;
+   //use hashes::hex::FromHex;
+    use hashes::groestld;
+    use hashes::sha256d;
+    //use hashes::sha256;
     use hashes::Hash as HashTrait;
     use network::address::Address;
     use super::message_network::{Reject, RejectReason, VersionMessage};
@@ -346,9 +351,21 @@ mod test {
     use network::message_filter::{GetCFilters, CFilter, GetCFHeaders, CFHeaders, GetCFCheckpt, CFCheckpt};
     use blockdata::transaction::Transaction;
 
-    fn hash(slice: [u8;32]) -> Hash {
-        Hash::from_slice(&slice).unwrap()
+    fn sha256d_hash(slice: [u8;32]) -> sha256d::Hash {
+        sha256d::Hash::from_slice(&slice).unwrap()
     }
+
+    fn groestl_hash(slice: [u8;32]) -> groestld::Hash {
+        groestld::Hash::from_slice(&slice).unwrap()
+    }
+
+    /*fn sha256_hash(slice: [u8;32]) -> sha256::Hash {
+        sha256::Hash::from_slice(&slice).unwrap()
+    }
+
+    fn hash(slice: [u8;32]) -> sha256::Hash {
+        sha256::Hash::from_slice(&slice).unwrap()
+    }*/
 
     #[test]
     fn full_round_ser_der_raw_network_message_test() {
@@ -362,11 +379,11 @@ mod test {
             NetworkMessage::Version(version_msg),
             NetworkMessage::Verack,
             NetworkMessage::Addr(vec![(45, Address::new(&([123,255,000,100], 833).into(), ServiceFlags::NETWORK))]),
-            NetworkMessage::Inv(vec![Inventory::Block(hash([8u8; 32]).into())]),
-            NetworkMessage::GetData(vec![Inventory::Transaction(hash([45u8; 32]).into())]),
+            NetworkMessage::Inv(vec![Inventory::Block(groestl_hash([8u8; 32]).into())]),
+            NetworkMessage::GetData(vec![Inventory::Transaction(sha256d_hash([45u8; 32]).into())]),
             NetworkMessage::NotFound(vec![Inventory::Error]),
-            NetworkMessage::GetBlocks(GetBlocksMessage::new(vec![hash([1u8; 32]).into(), hash([4u8; 32]).into()], hash([5u8; 32]).into())),
-            NetworkMessage::GetHeaders(GetHeadersMessage::new(vec![hash([10u8; 32]).into(), hash([40u8; 32]).into()], hash([50u8; 32]).into())),
+            NetworkMessage::GetBlocks(GetBlocksMessage::new(vec![groestl_hash([1u8; 32]).into(), groestl_hash([4u8; 32]).into()], groestl_hash([5u8; 32]).into())),
+            NetworkMessage::GetHeaders(GetHeadersMessage::new(vec![groestl_hash([10u8; 32]).into(), groestl_hash([40u8; 32]).into()], groestl_hash([50u8; 32]).into())),
             NetworkMessage::MemPool,
             NetworkMessage::Tx(tx),
             NetworkMessage::Block(block),
@@ -375,14 +392,14 @@ mod test {
             NetworkMessage::GetAddr,
             NetworkMessage::Ping(15),
             NetworkMessage::Pong(23),
-            NetworkMessage::GetCFilters(GetCFilters{filter_type: 2, start_height: 52, stop_hash: hash([42u8; 32]).into()}),
-            NetworkMessage::CFilter(CFilter{filter_type: 7, block_hash: hash([25u8; 32]).into(), filter: vec![1,2,3]}),
-            NetworkMessage::GetCFHeaders(GetCFHeaders{filter_type: 4, start_height: 102, stop_hash: hash([47u8; 32]).into()}),
-            NetworkMessage::CFHeaders(CFHeaders{filter_type: 13, stop_hash: hash([53u8; 32]).into(), previous_filter: hash([12u8; 32]).into(), filter_hashes: vec![hash([4u8; 32]).into(), hash([12u8; 32]).into()]}),
-            NetworkMessage::GetCFCheckpt(GetCFCheckpt{filter_type: 17, stop_hash: hash([25u8; 32]).into()}),
-            NetworkMessage::CFCheckpt(CFCheckpt{filter_type: 27, stop_hash: hash([77u8; 32]).into(), filter_headers: vec![hash([3u8; 32]).into(), hash([99u8; 32]).into()]}),
+            NetworkMessage::GetCFilters(GetCFilters{filter_type: 2, start_height: 52, stop_hash: groestl_hash([42u8; 32]).into()}),
+            NetworkMessage::CFilter(CFilter{filter_type: 7, block_hash: groestl_hash([25u8; 32]).into(), filter: vec![1,2,3]}),
+            NetworkMessage::GetCFHeaders(GetCFHeaders{filter_type: 4, start_height: 102, stop_hash: groestl_hash([47u8; 32]).into()}),
+            NetworkMessage::CFHeaders(CFHeaders{filter_type: 13, stop_hash: groestl_hash([53u8; 32]).into(), previous_filter: groestl_hash([12u8; 32]).into(), filter_hashes: vec![groestl_hash([4u8; 32]).into(), groestl_hash([12u8; 32]).into()]}),
+            NetworkMessage::GetCFCheckpt(GetCFCheckpt{filter_type: 17, stop_hash: groestl_hash([25u8; 32]).into()}),
+            NetworkMessage::CFCheckpt(CFCheckpt{filter_type: 27, stop_hash: groestl_hash([77u8; 32]).into(), filter_headers: vec![groestl_hash([3u8; 32]).into(), groestl_hash([99u8; 32]).into()]}),
             NetworkMessage::Alert(vec![45,66,3,2,6,8,9,12,3,130]),
-            NetworkMessage::Reject(Reject{message: "Test reject".into(), ccode: RejectReason::Duplicate, reason: "Cause".into(), hash: hash([255u8; 32])}),
+            NetworkMessage::Reject(Reject{message: "Test reject".into(), ccode: RejectReason::Duplicate, reason: "Cause".into(), hash: sha256d_hash([255u8; 32])}),
         ];
 
         for msg in msgs {
@@ -418,7 +435,7 @@ mod test {
         assert_eq!(serialize(&RawNetworkMessage { magic: 0xd9b4bef9, payload: NetworkMessage::Verack }),
                              vec![0xf9, 0xbe, 0xb4, 0xd9, 0x76, 0x65, 0x72, 0x61,
                                   0x63, 0x6B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                  0x00, 0x00, 0x00, 0x00, 0x5d, 0xf6, 0xe0, 0xe2]);
+                                  0x00, 0x00, 0x00, 0x00, 0xfd, 0xfb, 0x14, 0xd3]);
     }
 
     #[test]
@@ -426,7 +443,7 @@ mod test {
         assert_eq!(serialize(&RawNetworkMessage { magic: 0xd9b4bef9, payload: NetworkMessage::Ping(100) }),
                              vec![0xf9, 0xbe, 0xb4, 0xd9, 0x70, 0x69, 0x6e, 0x67,
                                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                  0x08, 0x00, 0x00, 0x00, 0x24, 0x67, 0xf1, 0x1d,
+                                  0x08, 0x00, 0x00, 0x00, 0x1F, 0xb7, 0x6e, 0xd0,
                                   0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 
@@ -436,7 +453,7 @@ mod test {
         assert_eq!(serialize(&RawNetworkMessage { magic: 0xd9b4bef9, payload: NetworkMessage::MemPool }),
                              vec![0xf9, 0xbe, 0xb4, 0xd9, 0x6d, 0x65, 0x6d, 0x70,
                                   0x6f, 0x6f, 0x6c, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                  0x00, 0x00, 0x00, 0x00, 0x5d, 0xf6, 0xe0, 0xe2]);
+                                  0x00, 0x00, 0x00, 0x00, 0xfd, 0xfb, 0x14, 0xd3]);
     }
 
     #[test]
@@ -444,7 +461,7 @@ mod test {
         assert_eq!(serialize(&RawNetworkMessage { magic: 0xd9b4bef9, payload: NetworkMessage::GetAddr }),
                              vec![0xf9, 0xbe, 0xb4, 0xd9, 0x67, 0x65, 0x74, 0x61,
                                   0x64, 0x64, 0x72, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                  0x00, 0x00, 0x00, 0x00, 0x5d, 0xf6, 0xe0, 0xe2]);
+                                  0x00, 0x00, 0x00, 0x00, 0xfd, 0xfb, 0x14, 0xd3]);
     }
 
     #[test]

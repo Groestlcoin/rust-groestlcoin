@@ -19,8 +19,8 @@
 use std::io;
 
 use consensus::encode::{Encodable, Decodable, Error};
-use hashes::{sha256, sha256d, hash160, Hash};
-use hashes::hex::{ToHex, FromHex};
+use hashes::{Hash, sha256, sha256d, ripemd160, hash160, groestld};
+use hashes::hex::{FromHex, ToHex};
 
 macro_rules! impl_hashencode {
     ($hashtype:ident) => {
@@ -38,13 +38,27 @@ macro_rules! impl_hashencode {
     }
 }
 
-hash_newtype!(Txid, sha256d::Hash, 32, doc="A bitcoin transaction hash/transaction ID.");
-hash_newtype!(Wtxid, sha256d::Hash, 32, doc="A bitcoin witness transaction ID.");
-hash_newtype!(BlockHash, sha256d::Hash, 32, doc="A bitcoin block hash.");
-hash_newtype!(SigHash, sha256d::Hash, 32, doc="Hash of the transaction according to the signature algorithm");
+hash_newtype!(Txid, sha256d::Hash, 32, doc="A groestlcoin transaction hash/transaction ID.");
+hash_newtype!(TxidInternal, sha256::Hash, 32, doc="A groestlcoin transaction hash/transaction ID.");
+hash_newtype!(Wtxid, sha256d::Hash, 32, doc="A groestlcoin witness transaction ID.");
+hash_newtype!(WtxidInternal, sha256::Hash, 32, doc="A groestlcoin witness transaction ID.");
+hash_newtype!(BlockHash, groestld::Hash, 32, doc="A groestlcoin block hash.");
+hash_newtype!(SigHash, sha256::Hash, 32, doc="Hash of the transaction according to the signature algorithm");
+
+impl From<TxidInternal> for Txid {
+    fn from(txid: TxidInternal) -> Self {
+        Self::from_inner(txid.into_inner())
+    }
+}
+
+impl From<WtxidInternal> for Wtxid {
+    fn from(txid: WtxidInternal) -> Self {
+        Self::from_inner(txid.into_inner())
+    }
+}
 
 hash_newtype!(PubkeyHash, hash160::Hash, 20, doc="A hash of a public key.");
-hash_newtype!(ScriptHash, hash160::Hash, 20, doc="A hash of Bitcoin Script bytecode.");
+hash_newtype!(ScriptHash, hash160::Hash, 20, doc="A hash of Groestlcoin Script bytecode.");
 hash_newtype!(WPubkeyHash, hash160::Hash, 20, doc="SegWit version of a public key hash.");
 hash_newtype!(WScriptHash, sha256::Hash, 32, doc="SegWit version of a Bitcoin Script bytecode hash.");
 
@@ -53,7 +67,7 @@ hash_newtype!(WitnessMerkleNode, sha256d::Hash, 32, doc="A hash corresponding to
 hash_newtype!(WitnessCommitment, sha256d::Hash, 32, doc="A hash corresponding to the witness structure commitment in the coinbase transaction");
 hash_newtype!(XpubIdentifier, hash160::Hash, 20, doc="XpubIdentifier as defined in BIP-32.");
 
-hash_newtype!(FilterHash, sha256d::Hash, 32, doc="Bloom filter souble-SHA256 locator hash, as defined in BIP-168");
+hash_newtype!(FilterHash, groestld::Hash, 32, doc="Bloom filter groestld locator hash, as defined in BIP-168");
 
 
 impl_hashencode!(Txid);
