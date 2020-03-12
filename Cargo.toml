@@ -1,17 +1,17 @@
 [package]
-name = "bitcoin"
+name = "groestlcoin"
 version = "0.23.0"
 authors = ["Andrew Poelstra <apoelstra@wpsoftware.net>"]
 license = "CC0-1.0"
-homepage = "https://github.com/rust-bitcoin/rust-bitcoin/"
-repository = "https://github.com/rust-bitcoin/rust-bitcoin/"
-documentation = "https://docs.rs/bitcoin/"
-description = "General purpose library for using and interoperating with Bitcoin and other cryptocurrencies."
+homepage = "https://github.com/Groestlcoin/rust-groestlcoin/"
+repository = "https://github.com/Groestlcoin/rust-groestlcoin/"
+documentation = "https://docs.rs/groestlcoin/"
+description = "General groestlcoin library for using and interoperating with Groestlcoin."
 keywords = [ "crypto", "bitcoin" ]
 readme = "README.md"
 
 [lib]
-name = "bitcoin"
+name = "groestlcoin"
 path = "src/lib.rs"
 
 [features]
