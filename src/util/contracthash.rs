@@ -314,7 +314,7 @@ mod tests {
         let contract = hex!("5032534894ffbf32c1f1c0d3089b27c98fd991d5d7329ebd7d711223e2cde5a9417a1fa3e852c576");
 
         let addr = create_address(&secp, Network::Testnet, &contract, keys, &alpha_template!()).unwrap();
-        assert_eq!(addr.to_string(), "2N3zXjbwdTcPsJiy8sUK9FhWJhqQCxA8Jjr".to_owned());
+        assert_eq!(addr.to_string(), "2N3zXjbwdTcPsJiy8sUK9FhWJhqQCuBqxcE".to_owned());
     }
 
     #[test]
