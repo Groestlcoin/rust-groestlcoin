@@ -659,8 +659,14 @@ impl Decodable for Box<[u8]> {
 
 
 /// Do a double-SHA256 on some data and return the first 4 bytes
-fn sha2_checksum(data: &[u8]) -> [u8; 4] {
-    let checksum = <sha256d::Hash as HashTrait>::hash(data);
+//fn sha2_checksum(data: &[u8]) -> [u8; 4] {
+//    let checksum = <sha256d::Hash as Hash>::hash(data);
+//    [checksum[0], checksum[1], checksum[2], checksum[3]]
+//}
+
+/// Do a double-SHA256 on some data and return the first 4 bytes
+fn groestl2_checksum(data: &[u8]) -> [u8; 4] {
+    let checksum = <groestld::Hash as Hash>::hash(data);
     [checksum[0], checksum[1], checksum[2], checksum[3]]
 }
 
@@ -669,7 +675,7 @@ impl Encodable for CheckedData {
     #[inline]
     fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, Error> {
         (self.0.len() as u32).consensus_encode(&mut s)?;
-        sha2_checksum(&self.0).consensus_encode(&mut s)?;
+        groestl2_checksum(&self.0).consensus_encode(&mut s)?;
         s.emit_slice(&self.0)?;
         Ok(8 + self.0.len())
     }
@@ -689,7 +695,7 @@ impl Decodable for CheckedData {
         let mut ret = Vec::with_capacity(len as usize);
         ret.resize(len as usize, 0);
         d.read_slice(&mut ret)?;
-        let expected_checksum = sha2_checksum(&ret);
+        let expected_checksum = groestl2_checksum(&ret);
         if expected_checksum != checksum {
             Err(self::Error::InvalidChecksum {
                 expected: expected_checksum,
@@ -743,6 +749,30 @@ impl Decodable for sha256d::Hash {
     fn consensus_decode<D: io::Read>(d: D) -> Result<Self, Error> {
         let inner = <[u8; 32]>::consensus_decode(d)?;
         Ok(sha256d::Hash::from_slice(&inner).unwrap())
+    }
+}
+
+impl Encodable for sha256::Hash {
+    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, Error> {
+        self.into_inner().consensus_encode(s)
+    }
+}
+
+impl Decodable for sha256::Hash {
+    fn consensus_decode<D: io::Read>(d: D) -> Result<Self, Error> {
+        Ok(Self::from_inner(<<Self as Hash>::Inner>::consensus_decode(d)?))
+    }
+}
+
+impl Encodable for groestld::Hash {
+    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, Error> {
+        self.into_inner().consensus_encode(s)
+    }
+}
+
+impl Decodable for groestld::Hash {
+    fn consensus_decode<D: io::Read>(d: D) -> Result<Self, Error> {
+        Ok(Self::from_inner(<<Self as Hash>::Inner>::consensus_decode(d)?))
     }
 }
 
@@ -855,7 +885,7 @@ mod tests {
     #[test]
     fn serialize_checkeddata_test() {
         let cd = CheckedData(vec![1u8, 2, 3, 4, 5]);
-        assert_eq!(serialize(&cd), vec![5, 0, 0, 0, 162, 107, 175, 90, 1, 2, 3, 4, 5]);
+        assert_eq!(serialize(&cd), vec![5, 0, 0, 0, 134, 30, 66, 180, 1, 2, 3, 4, 5]);
     }
 
     #[test]
@@ -926,7 +956,7 @@ mod tests {
 
     #[test]
     fn deserialize_checkeddata_test() {
-        let cd: Result<CheckedData, _> = deserialize(&[5u8, 0, 0, 0, 162, 107, 175, 90, 1, 2, 3, 4, 5]);
+        let cd: Result<CheckedData, _> = deserialize(&[5u8, 0, 0, 0, 134, 30, 66, 180, 1, 2, 3, 4, 5]);
         assert_eq!(cd.ok(), Some(CheckedData(vec![1u8, 2, 3, 4, 5])));
     }
 }

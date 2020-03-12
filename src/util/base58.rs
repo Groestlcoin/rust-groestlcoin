@@ -17,6 +17,7 @@
 use std::{error, fmt, str, slice, iter};
 
 use byteorder::{ByteOrder, LittleEndian};
+use hashes::{groestld, Hash};
 
 use hashes::{sha256d, Hash};
 
@@ -162,8 +163,8 @@ pub fn from_check(data: &str) -> Result<Vec<u8>, Error> {
         return Err(Error::TooShort(ret.len()));
     }
     let ck_start = ret.len() - 4;
-    let expected = LittleEndian::read_u32(&sha256d::Hash::hash(&ret[..ck_start])[..4]);
-    let actual = LittleEndian::read_u32(&ret[ck_start..(ck_start + 4)]);
+    let expected = endian::slice_to_u32_le(&groestld::Hash::hash(&ret[..ck_start])[..4]);
+    let actual = endian::slice_to_u32_le(&ret[ck_start..(ck_start + 4)]);
     if expected != actual {
         return Err(Error::BadChecksum(expected, actual));
     }
@@ -231,7 +232,7 @@ pub fn encode_slice(data: &[u8]) -> String {
 /// Obtain a string with the base58check encoding of a slice
 /// (Tack the first 4 256-digits of the object's Bitcoin hash onto the end.)
 pub fn check_encode_slice(data: &[u8]) -> String {
-    let checksum = sha256d::Hash::hash(&data);
+    let checksum = groestld::Hash::hash(&data);
     encode_iter(
         data.iter()
             .cloned()
@@ -242,7 +243,7 @@ pub fn check_encode_slice(data: &[u8]) -> String {
 /// Obtain a string with the base58check encoding of a slice
 /// (Tack the first 4 256-digits of the object's Bitcoin hash onto the end.)
 pub fn check_encode_slice_to_fmt(fmt: &mut fmt::Formatter, data: &[u8]) -> fmt::Result {
-    let checksum = sha256d::Hash::hash(&data);
+    let checksum = groestld::Hash::hash(&data);
     let iter = data.iter()
         .cloned()
         .chain(checksum[0..4].iter().cloned());
@@ -275,8 +276,8 @@ mod tests {
         assert_eq!(&res, exp);
 
         // Addresses
-        let addr = hex_decode("00f8917303bfa8ef24f292e8fa1419b20460ba064d").unwrap();
-        assert_eq!(&check_encode_slice(&addr[..]), "1PfJpZsjreyVrqeoAfabrRwwjQyoSQMmHH");
+        let addr = Vec::from_hex("24F8917303BFA8EF24F292E8FA1419B20460BA064D").unwrap();
+        assert_eq!(&check_encode_slice(&addr[..]), "Fsq2GUc7R9f3JSfv3ma5JwkGPaFm3uH23D");
       }
 
       #[test]
@@ -292,13 +293,13 @@ mod tests {
         assert_eq!(from("111211").ok(), Some(vec![0u8, 0, 0, 13, 36]));
 
         // Addresses
-        assert_eq!(from_check("1PfJpZsjreyVrqeoAfabrRwwjQyoSQMmHH").ok(),
-                   Some(hex_decode("00f8917303bfa8ef24f292e8fa1419b20460ba064d").unwrap()))
+        assert_eq!(from_check("Fsq2GUc7R9f3JSfv3ma5JwkGPaFm3uH23D").ok(),
+                   Some(Vec::from_hex("24f8917303bfa8ef24f292e8fa1419b20460ba064d").unwrap()))
     }
 
     #[test]
     fn test_base58_roundtrip() {
-        let s = "xprv9wTYmMFdV23N2TdNG573QoEsfRrWKQgWeibmLntzniatZvR9BmLnvSxqu53Kw1UmYPxLgboyZQaXwTCg8MSY3H2EU4pWcQDnRnrVA1xe8fs";
+        let s = "xprv9wTYmMFdV23N2TdNG573QoEsfRrWKQgWeibmLntzniatZvR9BmLnvSxqu53Kw1UmYPxLgboyZQaXwTCg8MSY3H2EU4pWcQDnRnrVA1zNPxJ";
         let v: Vec<u8> = from_check(s).unwrap();
         assert_eq!(check_encode_slice(&v[..]), s);
         assert_eq!(from_check(&check_encode_slice(&v[..])).ok(), Some(v));
