@@ -370,7 +370,7 @@ impl Display for Address {
             Payload::PubkeyHash(ref hash) => {
                 let mut prefixed = [0; 21];
                 prefixed[0] = match self.network {
-                    Network::Bitcoin => 0,
+                    Network::Bitcoin => 0x24,
                     Network::Testnet | Network::Regtest => 111,
                 };
                 prefixed[1..].copy_from_slice(&hash[..]);
@@ -419,9 +419,9 @@ impl FromStr for Address {
         // try bech32
         let bech32_network = match find_bech32_prefix(s) {
             // note that upper or lowercase is allowed but NOT mixed case
-            "bc" | "BC" => Some(Network::Bitcoin),
-            "tb" | "TB" => Some(Network::Testnet),
-            "bcrt" | "BCRT" => Some(Network::Regtest),
+            "grs" | "GRS" => Some(Network::Bitcoin),
+            "tgrs" | "TGRS" => Some(Network::Testnet),
+            "grsrt" | "GRSRT" => Some(Network::Regtest),
             _ => None,
         };
         if let Some(network) = bech32_network {
@@ -548,7 +548,7 @@ mod tests {
             addr.script_pubkey(),
             hex_script!("76a914162c5ea71c0b23f5b9022ef047c4a86470a5b07088ac")
         );
-        assert_eq!(&addr.to_string(), "132F25rTsvBdp9JzLLBHP5mvGY66i1xdiM");
+        assert_eq!(&addr.to_string(), "FXBxTzaqSQsBFkL7DSAkqbaEvhN4HxNsAr");
         assert_eq!(addr.address_type(), Some(AddressType::P2pkh));
         roundtrips(&addr);
     }
@@ -557,11 +557,11 @@ mod tests {
     fn test_p2pkh_from_key() {
         let key = hex_key!("048d5141948c1702e8c95f438815794b87f706a8d4cd2bffad1dc1570971032c9b6042a0431ded2478b5c9cf2d81c124a5e57347a3c63ef0e7716cf54d613ba183");
         let addr = Address::p2pkh(&key, Bitcoin);
-        assert_eq!(&addr.to_string(), "1QJVDzdqb1VpbDK7uDeyVXy9mR27CJiyhY");
+        assert_eq!(&addr.to_string(), "FtUCfuND9WBN2pLEnKeSx3mURaJ4iQdado");
 
         let key = hex_key!(&"03df154ebfcf29d29cc10d5c2565018bce2d9edbab267c31d2caf44a63056cf99f");
         let addr = Address::p2pkh(&key, Testnet);
-        assert_eq!(&addr.to_string(), "mqkhEMH6NCeYjFybv7pvFC22MFeaNT9AQC");
+        assert_eq!(&addr.to_string(), "mqkhEMH6NCeYjFybv7pvFC22MFeaH9jnTv");
         assert_eq!(addr.address_type(), Some(AddressType::P2pkh));
         roundtrips(&addr);
     }
@@ -577,7 +577,7 @@ mod tests {
             addr.script_pubkey(),
             hex_script!("a914162c5ea71c0b23f5b9022ef047c4a86470a5b07087")
         );
-        assert_eq!(&addr.to_string(), "33iFwdLuRpW1uK1RTRqsoi8rR4NpDzk66k");
+        assert_eq!(&addr.to_string(), "33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32");
         assert_eq!(addr.address_type(), Some(AddressType::P2sh));
         roundtrips(&addr);
     }
@@ -587,7 +587,7 @@ mod tests {
         let script = hex_script!("552103a765fc35b3f210b95223846b36ef62a4e53e34e2925270c2c7906b92c9f718eb2103c327511374246759ec8d0b89fa6c6b23b33e11f92c5bc155409d86de0c79180121038cae7406af1f12f4786d820a1466eec7bc5785a1b5e4a387eca6d797753ef6db2103252bfb9dcaab0cd00353f2ac328954d791270203d66c2be8b430f115f451b8a12103e79412d42372c55dd336f2eb6eb639ef9d74a22041ba79382c74da2338fe58ad21035049459a4ebc00e876a9eef02e72a3e70202d3d1f591fc0dd542f93f642021f82102016f682920d9723c61b27f562eb530c926c00106004798b6471e8c52c60ee02057ae");
         let addr = Address::p2sh(&script, Testnet);
 
-        assert_eq!(&addr.to_string(), "2N3zXjbwdTcPsJiy8sUK9FhWJhqQCxA8Jjr");
+        assert_eq!(&addr.to_string(), "2N3zXjbwdTcPsJiy8sUK9FhWJhqQCuBqxcE");
         assert_eq!(addr.address_type(), Some(AddressType::P2sh));
         roundtrips(&addr);
     }
@@ -620,7 +620,7 @@ mod tests {
         // stolen from Bitcoin transaction: ad3fd9c6b52e752ba21425435ff3dd361d6ac271531fc1d2144843a9f550ad01
         let key = hex_key!("026c468be64d22761c30cd2f12cbc7de255d592d7904b1bab07236897cc4c2e766");
         let addr = Address::p2shwpkh(&key, Bitcoin);
-        assert_eq!(&addr.to_string(), "3QBRmWNqqBGme9er7fMkGqtZtp4gjMFxhE");
+        assert_eq!(&addr.to_string(), "3QBRmWNqqBGme9er7fMkGqtZtp4gn5WwDf");
         assert_eq!(addr.address_type(), Some(AddressType::P2sh));
         roundtrips(&addr);
     }
@@ -630,7 +630,7 @@ mod tests {
         // stolen from Bitcoin transaction f9ee2be4df05041d0e0a35d7caa3157495ca4f93b233234c9967b6901dacf7a9
         let script = hex_script!("522103e5529d8eaa3d559903adb2e881eb06c86ac2574ffa503c45f4e942e2a693b33e2102e5f10fcdcdbab211e0af6a481f5532536ec61a5fdbf7183770cf8680fe729d8152ae");
         let addr = Address::p2shwsh(&script, Bitcoin);
-        assert_eq!(&addr.to_string(), "36EqgNnsWW94SreZgBWc1ANC6wpFZwirHr");
+        assert_eq!(&addr.to_string(), "36EqgNnsWW94SreZgBWc1ANC6wpFWqFy1q");
         assert_eq!(addr.address_type(), Some(AddressType::P2sh));
         roundtrips(&addr);
     }
@@ -690,11 +690,11 @@ mod tests {
     fn test_json_serialize() {
         use serde_json;
 
-        let addr = Address::from_str("132F25rTsvBdp9JzLLBHP5mvGY66i1xdiM").unwrap();
+        let addr = Address::from_str("FXBxTzaqSQsBFkL7DSAkqbaEvhN4HxNsAr").unwrap();
         let json = serde_json::to_value(&addr).unwrap();
         assert_eq!(
             json,
-            serde_json::Value::String("132F25rTsvBdp9JzLLBHP5mvGY66i1xdiM".to_owned())
+            serde_json::Value::String("FXBxTzaqSQsBFkL7DSAkqbaEvhN4HxNsAr".to_owned())
         );
         let into: Address = serde_json::from_value(json).unwrap();
         assert_eq!(addr.to_string(), into.to_string());
@@ -703,11 +703,11 @@ mod tests {
             hex_script!("76a914162c5ea71c0b23f5b9022ef047c4a86470a5b07088ac")
         );
 
-        let addr = Address::from_str("33iFwdLuRpW1uK1RTRqsoi8rR4NpDzk66k").unwrap();
+        let addr = Address::from_str("33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32").unwrap();
         let json = serde_json::to_value(&addr).unwrap();
         assert_eq!(
             json,
-            serde_json::Value::String("33iFwdLuRpW1uK1RTRqsoi8rR4NpDzk66k".to_owned())
+            serde_json::Value::String("33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32".to_owned())
         );
         let into: Address = serde_json::from_value(json).unwrap();
         assert_eq!(addr.to_string(), into.to_string());
