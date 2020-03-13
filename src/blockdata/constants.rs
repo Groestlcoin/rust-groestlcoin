@@ -102,7 +102,7 @@ pub fn genesis_block(network: Network) -> Block {
                 header: BlockHeader {
                     version: 112,
                     prev_blockhash: Default::default(),
-                    merkle_root,
+                    merkle_root: txdata[0].txid(),
                     time: 1395342829,
                     bits: 0x1e0fffff,
                     nonce: 220035
@@ -116,7 +116,7 @@ pub fn genesis_block(network: Network) -> Block {
                 header: BlockHeader {
                     version: 3,
                     prev_blockhash: Default::default(),
-                    merkle_root,
+                    merkle_root: txdata[0].txid(),
                     time: 1440000002,
                     bits: 0x1e00ffff,
                     nonce: 6556309
@@ -130,7 +130,7 @@ pub fn genesis_block(network: Network) -> Block {
                 header: BlockHeader {
                     version: 3,
                     prev_blockhash: Default::default(),
-                    merkle_root,
+                    merkle_root: txdata[0].txid(),
                     time: 1440000002,
                     bits: 0x1e00ffff,
                     nonce: 6556309

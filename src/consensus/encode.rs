@@ -38,7 +38,7 @@ use std::io::{Cursor, Read, Write};
 use byteorder::{LittleEndian, WriteBytesExt, ReadBytesExt};
 use hex::encode as hex_encode;
 
-use hashes::{sha256d, Hash as HashTrait};
+use hashes::{sha256d, Hash as HashTrait, sha256, groestld};
 use secp256k1;
 
 use util::base58;
@@ -666,7 +666,7 @@ impl Decodable for Box<[u8]> {
 
 /// Do a double-SHA256 on some data and return the first 4 bytes
 fn groestl2_checksum(data: &[u8]) -> [u8; 4] {
-    let checksum = <groestld::Hash as Hash>::hash(data);
+    let checksum = <groestld::Hash>::hash(data);
     [checksum[0], checksum[1], checksum[2], checksum[3]]
 }
 
@@ -760,7 +760,8 @@ impl Encodable for sha256::Hash {
 
 impl Decodable for sha256::Hash {
     fn consensus_decode<D: io::Read>(d: D) -> Result<Self, Error> {
-        Ok(Self::from_inner(<<Self as Hash>::Inner>::consensus_decode(d)?))
+        let inner = <[u8; 32]>::consensus_decode(d)?;
+        Ok(sha256::Hash::from_slice(&inner).unwrap())
     }
 }
 
@@ -772,7 +773,8 @@ impl Encodable for groestld::Hash {
 
 impl Decodable for groestld::Hash {
     fn consensus_decode<D: io::Read>(d: D) -> Result<Self, Error> {
-        Ok(Self::from_inner(<<Self as Hash>::Inner>::consensus_decode(d)?))
+        let inner = <[u8; 32]>::consensus_decode(d)?;
+        Ok(groestld::Hash::from_slice(&inner).unwrap())
     }
 }
 
