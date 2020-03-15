@@ -27,7 +27,7 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use std::default::Default;
 use std::{fmt, io};
 
-use hashes::{self, sha256d, Hash};
+use hashes::{self, sha256d, Hash, sha256};
 use hashes::hex::FromHex;
 
 use util::hash::BitcoinHash;
@@ -428,9 +428,9 @@ impl Transaction {
 
 impl BitcoinHash for Transaction {
     fn bitcoin_hash(&self) -> sha256d::Hash {
-        let mut enc = sha256d::Hash::engine();
+        let mut enc = sha256::Hash::engine();
         self.consensus_encode(&mut enc).unwrap();
-        sha256d::Hash::from_engine(enc)
+        sha256d::Hash::from_inner(sha256::Hash::from_engine(enc).into_inner())
     }
 }
 

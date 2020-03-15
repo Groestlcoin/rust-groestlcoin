@@ -20,7 +20,7 @@
 //! these blocks and the blockchain.
 //!
 
-use hashes::{sha256d, Hash};
+use hashes::{sha256d, Hash, groestld};
 
 use util;
 use util::Error::{BlockBadTarget, BlockBadProofOfWork};
@@ -193,7 +193,7 @@ impl BlockHeader {
 impl BitcoinHash for BlockHeader {
     fn bitcoin_hash(&self) -> sha256d::Hash {
         use consensus::encode::serialize;
-        sha256d::Hash::hash(&serialize(self))
+        sha256d::Hash::from_inner(groestld::Hash::hash(&serialize(self)).into_inner())
     }
 }
 
