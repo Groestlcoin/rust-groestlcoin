@@ -283,12 +283,12 @@ impl Transaction {
     /// this will give the correct txid (not including witnesses) while `bitcoin_hash`
     /// will also hash witnesses.
     pub fn txid(&self) -> sha256d::Hash {
-        let mut enc = sha256d::Hash::engine();
+        let mut enc = sha256::Hash::engine();
         self.version.consensus_encode(&mut enc).unwrap();
         self.input.consensus_encode(&mut enc).unwrap();
         self.output.consensus_encode(&mut enc).unwrap();
         self.lock_time.consensus_encode(&mut enc).unwrap();
-        sha256d::Hash::from_engine(enc)
+        sha256d::Hash::from_inner(sha256::Hash::from_engine(enc).into_inner())
     }
 
     /// Computes a signature hash for a given input index with a given sighash flag.
