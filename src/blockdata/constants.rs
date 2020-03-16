@@ -144,13 +144,14 @@ pub fn genesis_block(network: Network) -> Block {
 #[cfg(test)]
 mod test {
     use std::default::Default;
-    use hex::decode as hex_decode;
+    //use hex::decode as hex_decode;
 
     use network::constants::Network;
     use consensus::encode::serialize;
     use blockdata::constants::{genesis_block, bitcoin_genesis_tx};
     use blockdata::constants::{MAX_SEQUENCE, COIN_VALUE};
     use util::hash::BitcoinHash;
+    use hashes::hex::FromHex;
 
     #[test]
     fn bitcoin_genesis_first_transaction() {
@@ -170,7 +171,7 @@ mod test {
         assert_eq!(gen.output[0].value, 0 * COIN_VALUE);
         assert_eq!(gen.lock_time, 0);
 
-        assert_eq!(format!("{:x}", gen.wtxid()),
+        assert_eq!(format!("{:x}", gen.bitcoin_hash()),
                    "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb".to_string());
     }
 
@@ -185,7 +186,7 @@ mod test {
         assert_eq!(gen.header.time, 1395342829);
         assert_eq!(gen.header.bits, 0x1e0fffff);
         assert_eq!(gen.header.nonce, 220035);
-        assert_eq!(format!("{:x}", gen.header.block_hash()),
+        assert_eq!(format!("{:x}", gen.header.bitcoin_hash()),
                    "00000ac5927c594d49cc0bdb81759d0da8297eb614683d3acb62f0703b639023".to_string());
     }
 
@@ -199,7 +200,7 @@ mod test {
         assert_eq!(gen.header.time, 1440000002);
         assert_eq!(gen.header.bits, 0x1e00ffff);
         assert_eq!(gen.header.nonce, 6556309);
-        assert_eq!(format!("{:x}", gen.header.block_hash()),
+        assert_eq!(format!("{:x}", gen.header.bitcoin_hash()),
                    "000000ffbb50fc9898cdd36ec163e6ba23230164c0052a28876255b7dcf2cd36".to_string());
     }
 }
