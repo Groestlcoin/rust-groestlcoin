@@ -338,11 +338,8 @@ mod test {
     use consensus::encode::{Encodable, deserialize, deserialize_partial, serialize};
 
     use hex::decode as hex_decode;
-    use hashes::sha256d::Hash;
-   //use hashes::hex::FromHex;
     use hashes::groestld;
     use hashes::sha256d;
-    //use hashes::sha256;
     use hashes::Hash as HashTrait;
     use network::address::Address;
     use super::message_network::{Reject, RejectReason, VersionMessage};
