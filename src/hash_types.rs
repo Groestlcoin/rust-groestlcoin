@@ -57,6 +57,12 @@ impl From<WtxidInternal> for Wtxid {
     }
 }
 
+impl From<BlockHash> for sha256d::Hash {
+    fn from(blockid: BlockHash) -> Self {
+        Self::from_inner(blockid.into_inner())
+    }
+}
+
 hash_newtype!(PubkeyHash, hash160::Hash, 20, doc="A hash of a public key.");
 hash_newtype!(ScriptHash, hash160::Hash, 20, doc="A hash of Groestlcoin Script bytecode.");
 hash_newtype!(WPubkeyHash, hash160::Hash, 20, doc="SegWit version of a public key hash.");
