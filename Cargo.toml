@@ -1,13 +1,13 @@
 [package]
 name = "groestlcoin"
 version = "0.23.0"
-authors = ["Andrew Poelstra <apoelstra@wpsoftware.net>"]
+authors = ["Groestlcoin Developers <groestlcoin@gmail.com>", "Andrew Poelstra <apoelstra@wpsoftware.net>"]
 license = "CC0-1.0"
 homepage = "https://github.com/Groestlcoin/rust-groestlcoin/"
 repository = "https://github.com/Groestlcoin/rust-groestlcoin/"
 documentation = "https://docs.rs/groestlcoin/"
 description = "General groestlcoin library for using and interoperating with Groestlcoin."
-keywords = [ "crypto", "bitcoin" ]
+keywords = [ "crypto", "groestlcoin" ]
 readme = "README.md"
 
 [lib]
@@ -22,7 +22,7 @@ use-serde = ["hex", "serde", "groestlcoin_hashes/serde", "secp256k1/serde"]
 
 [dependencies]
 bech32 = "0.7.2"
-groestlcoin_hashes = { git = "https://github.com/Groestlcoin/groestlcoin_hashes" }
+groestlcoin_hashes = { git = "https://github.com/Groestlcoin/groestlcoin_hashes", tag = "0.7.4-grs" }
 
 secp256k1 = "0.17.1"
 
