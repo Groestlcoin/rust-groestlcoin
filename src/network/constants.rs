@@ -65,13 +65,13 @@ impl Network {
     /// ```rust
     /// use bitcoin::network::constants::Network;
     ///
-    /// assert_eq!(Some(Network::Bitcoin), Network::from_magic(0xD9B4BEF9));
+    /// assert_eq!(Some(Network::Groestlcoin), Network::from_magic(0xD4B4BEF9));
     /// assert_eq!(None, Network::from_magic(0xFFFFFFFF));
     /// ```
     pub fn from_magic(magic: u32) -> Option<Network> {
         // Note: any new entries here must be added to `magic` below
         match magic {
-            0xD9B4BEF9 => Some(Network::Bitcoin),
+            0xD4B4BEF9 => Some(Network::Groestlcoin),
             0x0709110B => Some(Network::Testnet),
             0xDAB5BFFA => Some(Network::Regtest),
             _ => None
@@ -86,13 +86,12 @@ impl Network {
     /// ```rust
     /// use bitcoin::network::constants::Network;
     ///
-    /// let network = Network::Bitcoin;
-    /// assert_eq!(network.magic(), 0xD9B4BEF9);
+    /// assert_eq!(network.magic(), 0xD4B4BEF9);
     /// ```
     pub fn magic(&self) -> u32 {
         // Note: any new entries here must be added to `from_magic` above
         match *self {
-            Network::Groestlcoin => 0xD9B4BEF9,
+            Network::Groestlcoin => 0xD4B4BEF9,
             Network::Testnet => 0x0709110B,
             Network::Regtest => 0xDAB5BFFA,
         }
@@ -108,7 +107,7 @@ mod tests {
     fn serialize_test() {
         assert_eq!(
             serialize(&Network::Groestlcoin.magic()),
-            &[0xf9, 0xbe, 0xb4, 0xd9]
+            &[0xf9, 0xbe, 0xb4, 0xd4]
         );
         assert_eq!(
             serialize(&Network::Testnet.magic()),
@@ -120,7 +119,7 @@ mod tests {
         );
 
         assert_eq!(
-            deserialize(&[0xf9, 0xbe, 0xb4, 0xd9]).ok(),
+            deserialize(&[0xf9, 0xbe, 0xb4, 0xd4]).ok(),
             Some(Network::Groestlcoin.magic())
         );
         assert_eq!(
