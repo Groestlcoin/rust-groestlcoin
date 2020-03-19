@@ -15,7 +15,7 @@
 //! Blockdata network messages
 //!
 //! This module describes network messages which are used for passing
-//! Bitcoin data (blocks and transactions) around.
+//! Groestlcoin data (blocks and transactions) around.
 //!
 
 use std::io;

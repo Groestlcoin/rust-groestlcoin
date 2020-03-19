@@ -92,7 +92,7 @@ mod test {
     use network::message::{NetworkMessage, RawNetworkMessage};
 
     // First, let's define some byte arrays for sample messages - dumps are taken from live
-    // Bitcoin Core node v0.17.1 with Wireshark
+    // Groestlcoin Core node v0.17.1 with Wireshark
     const MSG_VERSION: [u8; 126] = [
         0xf9, 0xbe, 0xb4, 0xd9, 0x76, 0x65, 0x72, 0x73,
         0x69, 0x6f, 0x6e, 0x00, 0x00, 0x00, 0x00, 0x00,

@@ -15,7 +15,7 @@
 //! Network message
 //!
 //! This module defines the `Message` traits which are used
-//! for (de)serializing Bitcoin objects for transmission on the network. It
+//! for (de)serializing Groestlcoin objects for transmission on the network. It
 //! also defines (de)serialization routines for many primitives.
 //!
 
@@ -103,7 +103,7 @@ pub struct RawNetworkMessage {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 /// A Network message payload. Proper documentation is available on at
-/// [Bitcoin Wiki: Protocol Specification](https://en.bitcoin.it/wiki/Protocol_specification)
+/// [Groestlcoin Wiki: Protocol Specification](https://en.bitcoin.it/wiki/Protocol_specification)
 pub enum NetworkMessage {
     /// `version`
     Version(message_network::VersionMessage),

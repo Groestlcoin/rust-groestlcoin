@@ -13,7 +13,7 @@
 
 //! Addresses
 //!
-//! Support for ordinary base58 Bitcoin addresses and private keys
+//! Support for ordinary base58 Groestlcoin addresses and private keys
 //!
 //! # Example: creating a new address from a randomly-generated key pair
 //!
@@ -229,14 +229,14 @@ impl Payload {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-/// A Bitcoin address
+/// A Groestlcoin address
 pub struct Address {
     /// The type of the address
     pub payload: Payload,
     /// The network on which this address is usable
     pub network: Network,
 }
-serde_string_impl!(Address, "a Bitcoin address");
+serde_string_impl!(Address, "a Groestlcoin address");
 
 impl Address {
     /// Creates a pay to (compressed) public key hash address from a public key
@@ -341,7 +341,7 @@ impl Address {
         }
     }
 
-    /// Check whether or not the address is following Bitcoin
+    /// Check whether or not the address is following Groestlcoin
     /// standardness rules.
     ///
     /// Segwit addresses with unassigned witness versions or non-standard
@@ -594,7 +594,7 @@ mod tests {
 
     #[test]
     fn test_p2wpkh() {
-        // stolen from Bitcoin transaction: b3c8c2b6cfc335abbcb2c7823a8453f55d64b2b5125a9a61e8737230cdb8ce20
+        // stolen from Groestlcoin transaction: b3c8c2b6cfc335abbcb2c7823a8453f55d64b2b5125a9a61e8737230cdb8ce20
         let key = hex_key!("033bc8c83c52df5712229a2f72206d90192366c36428cb0c12b6af98324d97bfbc");
         let addr = Address::p2wpkh(&key, Bitcoin);
         assert_eq!(&addr.to_string(), "bc1qvzvkjn4q3nszqxrv3nraga2r822xjty3ykvkuw");
@@ -604,7 +604,7 @@ mod tests {
 
     #[test]
     fn test_p2wsh() {
-        // stolen from Bitcoin transaction 5df912fda4becb1c29e928bec8d64d93e9ba8efa9b5b405bd683c86fd2c65667
+        // stolen from Groestlcoin transaction 5df912fda4becb1c29e928bec8d64d93e9ba8efa9b5b405bd683c86fd2c65667
         let script = hex_script!("52210375e00eb72e29da82b89367947f29ef34afb75e8654f6ea368e0acdfd92976b7c2103a1b26313f430c4b15bb1fdce663207659d8cac749a0e53d70eff01874496feff2103c96d495bfdd5ba4145e3e046fee45e84a8a48ad05bd8dbb395c011a32cf9f88053ae");
         let addr = Address::p2wsh(&script, Bitcoin);
         assert_eq!(
@@ -617,7 +617,7 @@ mod tests {
 
     #[test]
     fn test_p2shwpkh() {
-        // stolen from Bitcoin transaction: ad3fd9c6b52e752ba21425435ff3dd361d6ac271531fc1d2144843a9f550ad01
+        // stolen from Groestlcoin transaction: ad3fd9c6b52e752ba21425435ff3dd361d6ac271531fc1d2144843a9f550ad01
         let key = hex_key!("026c468be64d22761c30cd2f12cbc7de255d592d7904b1bab07236897cc4c2e766");
         let addr = Address::p2shwpkh(&key, Bitcoin);
         assert_eq!(&addr.to_string(), "3QBRmWNqqBGme9er7fMkGqtZtp4gn5WwDf");
@@ -627,7 +627,7 @@ mod tests {
 
     #[test]
     fn test_p2shwsh() {
-        // stolen from Bitcoin transaction f9ee2be4df05041d0e0a35d7caa3157495ca4f93b233234c9967b6901dacf7a9
+        // stolen from Groestlcoin transaction f9ee2be4df05041d0e0a35d7caa3157495ca4f93b233234c9967b6901dacf7a9
         let script = hex_script!("522103e5529d8eaa3d559903adb2e881eb06c86ac2574ffa503c45f4e942e2a693b33e2102e5f10fcdcdbab211e0af6a481f5532536ec61a5fdbf7183770cf8680fe729d8152ae");
         let addr = Address::p2shwsh(&script, Bitcoin);
         assert_eq!(&addr.to_string(), "36EqgNnsWW94SreZgBWc1ANC6wpFWqFy1q");

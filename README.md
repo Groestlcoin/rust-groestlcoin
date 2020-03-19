@@ -1,23 +1,23 @@
 [![Status](https://travis-ci.org/rust-bitcoin/rust-bitcoin.png?branch=master)](https://travis-ci.org/rust-bitcoin/rust-bitcoin)
 [![Safety Dance](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
 
-# Rust Bitcoin Library
+# Rust Groestlcoin Library
 
 Library with support for de/serialization, parsing and executing on data
-structures and network messages related to Bitcoin.
+structures and network messages related to Groestlcoin.
 
 [Documentation](https://docs.rs/bitcoin/)
 
 Supports (or should support)
 
-* De/serialization of Bitcoin protocol network messages
+* De/serialization of Groestlcoin protocol network messages
 * De/serialization of blocks and transactions
 * Script de/serialization
 * Private keys and address creation, de/serialization and validation (including full BIP32 support)
 * PSBT creation, manipulation, merging and finalization
 * Pay-to-contract support as in Appendix A of the [Blockstream sidechains whitepaper](https://www.blockstream.com/sidechains.pdf)
 
-For JSONRPC interaction with Bitcoin Core, it is recommended to use
+For JSONRPC interaction with Groestlcoin Core, it is recommended to use
 [rust-bitcoincore-rpc](https://github.com/rust-bitcoin/rust-bitcoincore-rpc).
 
 # Known limitations
@@ -27,8 +27,8 @@ For JSONRPC interaction with Bitcoin Core, it is recommended to use
 This library **must not** be used for consensus code (i.e. fully validating
 blockchain data). It technically supports doing this, but doing so is very
 ill-advised because there are many deviations, known and unknown, between
-this library and the Bitcoin Core reference implementation. In a consensus
-based cryptocurrency such as Bitcoin it is critical that all parties are
+this library and the Groestlcoin Core reference implementation. In a consensus
+based cryptocurrency such as Groestlcoin it is critical that all parties are
 using the same rules to validate data, and this library is simply unable
 to implement the same rules as Core.
 
@@ -87,7 +87,7 @@ mark it by prefixing the title with `WIP: `.
 
 ## Policy on Altcoins/Altchains
 
-Patches which add support for non-Bitcoin cryptocurrencies by adding constants
+Patches which add support for non-Groestlcoin cryptocurrencies by adding constants
 to existing enums (e.g. to set the network message magic-byte sequence) are
 welcome. Anything more involved will be considered on a case-by-case basis,
 as the altcoin landscape includes projects which [frequently appear and

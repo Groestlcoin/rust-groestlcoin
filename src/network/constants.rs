@@ -14,7 +14,7 @@
 
 //! Network constants
 //!
-//! This module provides various constants relating to the Bitcoin network
+//! This module provides various constants relating to the Groestlcoin network
 //! protocol, such as protocol versioning and magic header bytes.
 //!
 //! The [`Network`][1] type implements the [`Decodable`][2] and
@@ -48,11 +48,11 @@ user_enum! {
     /// The cryptocurrency to act on
     #[derive(Copy, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
     pub enum Network {
-        /// Classic Bitcoin
+        /// Classic Groestlcoin
         Groestlcoin <-> "groestlcoin",
-        /// Bitcoin's testnet
+        /// Groestlcoin's testnet
         Testnet <-> "testnet",
-        /// Bitcoin's regtest
+        /// Groestlcoin's regtest
         Regtest <-> "regtest"
     }
 }
@@ -108,16 +108,16 @@ impl ServiceFlags {
     pub const NONE: ServiceFlags = ServiceFlags(0);
 
     /// NETWORK means that the node is capable of serving the complete block chain. It is currently
-    /// set by all Bitcoin Core non pruned nodes, and is unset by SPV clients or other light
+    /// set by all Groestlcoin Core non pruned nodes, and is unset by SPV clients or other light
     /// clients.
     pub const NETWORK: ServiceFlags = ServiceFlags(1 << 0);
 
-    /// GETUTXO means the node is capable of responding to the getutxo protocol request.  Bitcoin
-    /// Core does not support this but a patch set called Bitcoin XT does.
+    /// GETUTXO means the node is capable of responding to the getutxo protocol request.  Groestlcoin
+    /// Core does not support this but a patch set called Groestlcoin XT does.
     /// See BIP 64 for details on how this is implemented.
     pub const GETUTXO: ServiceFlags = ServiceFlags(1 << 1);
 
-    /// BLOOM means the node is capable and willing to handle bloom-filtered connections.  Bitcoin
+    /// BLOOM means the node is capable and willing to handle bloom-filtered connections.  Groestlcoin
     /// Core nodes used to support this by default, without advertising this bit, but no longer do
     /// as of protocol version 70011 (= NO_BLOOM_VERSION)
     pub const BLOOM: ServiceFlags = ServiceFlags(1 << 2);

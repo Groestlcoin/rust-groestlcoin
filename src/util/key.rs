@@ -11,9 +11,9 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Bitcoin Keys
+//! Groestlcoin Keys
 //!
-//! Keys used in Bitcoin that can be roundtrip (de)serialized.
+//! Keys used in Groestlcoin that can be roundtrip (de)serialized.
 //!
 
 use std::fmt::{self, Write};
@@ -52,7 +52,7 @@ impl error::Error for Error {
     }
 
     fn description(&self) -> &str {
-		"Bitcoin key error"
+		"Groestlcoin key error"
     }
 }
 
@@ -70,7 +70,7 @@ impl From<secp256k1::Error> for Error {
     }
 }
 
-/// A Bitcoin ECDSA public key
+/// A Groestlcoin ECDSA public key
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PublicKey {
     /// Whether this public key should be serialized as compressed
@@ -144,7 +144,7 @@ impl FromStr for PublicKey {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
-/// A Bitcoin ECDSA private key
+/// A Groestlcoin ECDSA private key
 pub struct PrivateKey {
     /// Whether this private key should be serialized as compressed
     pub compressed: bool,
@@ -384,7 +384,7 @@ mod tests {
 
         // mainnet uncompressed
         let sk = PrivateKey::from_wif("5JYkZjmN7PVMjJUfJWfRFwtuXTGB439XV6faajeHPAM9Z2PT2R3").unwrap();
-        assert_eq!(sk.network, Bitcoin);
+        assert_eq!(sk.network, Groestlcoin);
         assert_eq!(sk.compressed, false);
         assert_eq!(&sk.to_wif(), "5JYkZjmN7PVMjJUfJWfRFwtuXTGB439XV6faajeHPAM9Z2PT2R3");
 

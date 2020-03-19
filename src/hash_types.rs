@@ -66,7 +66,7 @@ impl From<BlockHash> for sha256d::Hash {
 hash_newtype!(PubkeyHash, hash160::Hash, 20, doc="A hash of a public key.");
 hash_newtype!(ScriptHash, hash160::Hash, 20, doc="A hash of Groestlcoin Script bytecode.");
 hash_newtype!(WPubkeyHash, hash160::Hash, 20, doc="SegWit version of a public key hash.");
-hash_newtype!(WScriptHash, sha256::Hash, 32, doc="SegWit version of a Bitcoin Script bytecode hash.");
+hash_newtype!(WScriptHash, sha256::Hash, 32, doc="SegWit version of a Groestlcoin Script bytecode hash.");
 
 hash_newtype!(TxMerkleNode, sha256d::Hash, 32, doc="A hash of the Merkle tree branch or root for transactions");
 hash_newtype!(WitnessMerkleNode, sha256d::Hash, 32, doc="A hash corresponding to the Merkle tree root for witness data");

@@ -127,7 +127,7 @@ impl error::Error for Error {
     }
 
     fn description(&self) -> &str {
-        "Bitcoin encoding error"
+        "Groestlcoin encoding error"
     }
 }
 
@@ -185,7 +185,7 @@ pub fn deserialize_partial<'a, T: Decodable>(
 }
 
 
-/// Extensions of `Write` to encode data as per Bitcoin consensus
+/// Extensions of `Write` to encode data as per Groestlcoin consensus
 pub trait WriteExt {
     /// Output a 64-bit uint
     fn emit_u64(&mut self, v: u64) -> Result<(), Error>;
@@ -212,7 +212,7 @@ pub trait WriteExt {
     fn emit_slice(&mut self, v: &[u8]) -> Result<(), Error>;
 }
 
-/// Extensions of `Read` to decode data as per Bitcoin consensus
+/// Extensions of `Read` to decode data as per Groestlcoin consensus
 pub trait ReadExt {
     /// Read a 64-bit uint
     fn read_u64(&mut self) -> Result<u64, Error>;

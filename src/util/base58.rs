@@ -229,7 +229,7 @@ pub fn encode_slice(data: &[u8]) -> String {
 }
 
 /// Obtain a string with the base58check encoding of a slice
-/// (Tack the first 4 256-digits of the object's Bitcoin hash onto the end.)
+/// (Tack the first 4 256-digits of the object's Groestlcoin hash onto the end.)
 pub fn check_encode_slice(data: &[u8]) -> String {
     let checksum = groestld::Hash::hash(&data);
     encode_iter(
@@ -240,7 +240,7 @@ pub fn check_encode_slice(data: &[u8]) -> String {
 }
 
 /// Obtain a string with the base58check encoding of a slice
-/// (Tack the first 4 256-digits of the object's Bitcoin hash onto the end.)
+/// (Tack the first 4 256-digits of the object's Groestlcoin hash onto the end.)
 pub fn check_encode_slice_to_fmt(fmt: &mut fmt::Formatter, data: &[u8]) -> fmt::Result {
     let checksum = groestld::Hash::hash(&data);
     let iter = data.iter()
