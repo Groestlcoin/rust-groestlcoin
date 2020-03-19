@@ -280,7 +280,7 @@ mod tests {
     fn serialize_test() {
         assert_eq!(
             serialize(&Network::Groestlcoin.magic()),
-            &[0xf9, 0xbe, 0xb4, 0xd9]
+            &[0xf9, 0xbe, 0xb4, 0xd4]
         );
         assert_eq!(
             serialize(&Network::Testnet.magic()),
@@ -292,7 +292,7 @@ mod tests {
         );
 
         assert_eq!(
-            deserialize(&[0xf9, 0xbe, 0xb4, 0xd9]).ok(),
+            deserialize(&[0xf9, 0xbe, 0xb4, 0xd4]).ok(),
             Some(Network::Groestlcoin.magic())
         );
         assert_eq!(
