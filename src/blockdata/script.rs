@@ -14,11 +14,11 @@
 
 //! Script
 //!
-//! Scripts define Bitcoin's digital signature scheme: a signature is formed
+//! Scripts define Groestlcoin's digital signature scheme: a signature is formed
 //! from a script (the second half of which is defined by a coin to be spent,
 //! and the first half provided by the spending transaction), and is valid
 //! iff the script leaves `TRUE` on the stack after being evaluated.
-//! Bitcoin's script is a stack-based assembly language similar in spirit to
+//! Groestlcoin's script is a stack-based assembly language similar in spirit to
 //! Forth.
 //!
 //! This module provides the structures and functions needed to support scripts.
@@ -39,7 +39,7 @@ use hashes::{hash160, sha256, Hash};
 use util::key::PublicKey;
 
 #[derive(Clone, Default, PartialOrd, Ord, PartialEq, Eq, Hash)]
-/// A Bitcoin script
+/// A Groestlcoin script
 pub struct Script(Box<[u8]>);
 
 impl fmt::Debug for Script {

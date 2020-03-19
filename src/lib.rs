@@ -12,10 +12,10 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! # Rust Bitcoin Library
+//! # Rust Groestlcoin Library
 //!
-//! This is a library for which supports the Bitcoin network protocol and associated
-//! primitives. It is designed for Rust programs built to work with the Bitcoin
+//! This is a library for which supports the Groestlcoin network protocol and associated
+//! primitives. It is designed for Rust programs built to work with the Groestlcoin
 //! network.
 //!
 //! It is also written entirely in Rust to illustrate the benefits of strong type

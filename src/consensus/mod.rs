@@ -15,7 +15,7 @@
 //! Consensus
 //!
 //! This module defines structures, functions, and traits which are needed to
-//! conform to Bitcoin consensus.
+//! conform to Groestlcoin consensus.
 //!
 
 pub mod encode;

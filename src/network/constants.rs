@@ -14,7 +14,7 @@
 
 //! Network constants
 //!
-//! This module provides various constants relating to the Bitcoin network
+//! This module provides various constants relating to the Groestlcoin network
 //! protocol, such as protocol versioning and magic header bytes.
 //!
 //! The [`Network`][1] type implements the [`Decodable`][2] and
@@ -31,7 +31,7 @@
 //! use bitcoin::network::constants::Network;
 //! use bitcoin::consensus::encode::serialize;
 //!
-//! let network = Network::Bitcoin;
+//! let network = Network::Groestlcoin;
 //! let bytes = serialize(&network.magic());
 //!
 //! assert_eq!(&bytes[..], &[0xF9, 0xBE, 0xB4, 0xD9]);
@@ -48,11 +48,11 @@ user_enum! {
     /// The cryptocurrency to act on
     #[derive(Copy, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
     pub enum Network {
-        /// Classic Bitcoin
-        Bitcoin <-> "groestlcoin",
-        /// Bitcoin's testnet
+        /// Classic Groestlcoin
+        Groestlcoin <-> "groestlcoin",
+        /// Groestlcoin's testnet
         Testnet <-> "testnet",
-        /// Bitcoin's regtest
+        /// Groestlcoin's regtest
         Regtest <-> "regtest"
     }
 }
@@ -86,6 +86,7 @@ impl Network {
     /// ```rust
     /// use bitcoin::network::constants::Network;
     ///
+    /// let network = Network::Groestlcoin;
     /// assert_eq!(network.magic(), 0xD4B4BEF9);
     /// ```
     pub fn magic(&self) -> u32 {

@@ -15,7 +15,7 @@
 //! Blockdata network messages
 //!
 //! This module describes network messages which are used for passing
-//! Bitcoin data (blocks and transactions) around.
+//! Groestlcoin data (blocks and transactions) around.
 //!
 
 use network::constants;
@@ -67,7 +67,7 @@ pub struct GetHeadersMessage {
     pub stop_hash: sha256d::Hash
 }
 
-/// An inventory object --- a reference to a Bitcoin object
+/// An inventory object --- a reference to a Groestlcoin object
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct Inventory {
     /// The type of object that is referenced

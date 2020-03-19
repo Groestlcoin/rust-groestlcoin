@@ -57,7 +57,7 @@ pub fn max_money(_: Network) -> u64 {
     21_000_000 * COIN_VALUE
 }
 
-/// Constructs and returns the coinbase (and only) transaction of the Bitcoin genesis block
+/// Constructs and returns the coinbase (and only) transaction of the Groestlcoin genesis block
 fn bitcoin_genesis_tx() -> Transaction {
     // Base
     let mut ret = Transaction {
