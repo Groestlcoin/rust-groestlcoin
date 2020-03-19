@@ -92,7 +92,7 @@ impl Network {
     pub fn magic(&self) -> u32 {
         // Note: any new entries here must be added to `from_magic` above
         match *self {
-            Network::Bitcoin => 0xD9B4BEF9,
+            Network::Groestlcoin => 0xD9B4BEF9,
             Network::Testnet => 0x0709110B,
             Network::Regtest => 0xDAB5BFFA,
         }
@@ -107,7 +107,7 @@ mod tests {
     #[test]
     fn serialize_test() {
         assert_eq!(
-            serialize(&Network::Bitcoin.magic()),
+            serialize(&Network::Groestlcoin.magic()),
             &[0xf9, 0xbe, 0xb4, 0xd9]
         );
         assert_eq!(
@@ -121,7 +121,7 @@ mod tests {
 
         assert_eq!(
             deserialize(&[0xf9, 0xbe, 0xb4, 0xd9]).ok(),
-            Some(Network::Bitcoin.magic())
+            Some(Network::Groestlcoin.magic())
         );
         assert_eq!(
             deserialize(&[0x0b, 0x11, 0x09, 0x07]).ok(),
@@ -135,11 +135,11 @@ mod tests {
 
   #[test]
   fn string_test() {
-      assert_eq!(Network::Bitcoin.to_string(), "groestlcoin");
+      assert_eq!(Network::Groestlcoin.to_string(), "groestlcoin");
       assert_eq!(Network::Testnet.to_string(), "testnet");
       assert_eq!(Network::Regtest.to_string(), "regtest");
 
-      assert_eq!("groestlcoin".parse::<Network>().unwrap(), Network::Bitcoin);
+      assert_eq!("groestlcoin".parse::<Network>().unwrap(), Network::Groestlcoin);
       assert_eq!("testnet".parse::<Network>().unwrap(), Network::Testnet);
       assert_eq!("regtest".parse::<Network>().unwrap(), Network::Regtest);
       assert!("fakenet".parse::<Network>().is_err());

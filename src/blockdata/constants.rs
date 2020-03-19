@@ -96,7 +96,7 @@ fn bitcoin_genesis_tx() -> Transaction {
 /// Constructs and returns the genesis block
 pub fn genesis_block(network: Network) -> Block {
     match network {
-        Network::Bitcoin => {
+        Network::Groestlcoin => {
             let txdata = vec![bitcoin_genesis_tx()];
             Block {
                 header: BlockHeader {
@@ -177,7 +177,7 @@ mod test {
 
     #[test]
     fn bitcoin_genesis_full_block() {
-        let gen = genesis_block(Network::Bitcoin);
+        let gen = genesis_block(Network::Groestlcoin);
 
         assert_eq!(gen.header.version, 112);
         assert_eq!(gen.header.prev_blockhash, Default::default());
