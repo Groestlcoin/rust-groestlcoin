@@ -1110,19 +1110,19 @@ mod tests {
         let sat = Amount::from_sat;
         let ssat = SignedAmount::from_sat;
 
-        assert_eq!(f(11.22, D::Bitcoin), Ok(sat(1122000000)));
+        assert_eq!(f(11.22, D::Groestlcoin), Ok(sat(1122000000)));
         assert_eq!(sf(-11.22, D::MilliBitcoin), Ok(ssat(-1122000)));
         assert_eq!(f(11.22, D::Bit), Ok(sat(1122)));
         assert_eq!(sf(-1000.0, D::MilliSatoshi), Ok(ssat(-1)));
-        assert_eq!(f(0.0001234, D::Bitcoin), Ok(sat(12340)));
-        assert_eq!(sf(-0.00012345, D::Bitcoin), Ok(ssat(-12345)));
+        assert_eq!(f(0.0001234, D::Groestlcoin), Ok(sat(12340)));
+        assert_eq!(sf(-0.00012345, D::Groestlcoin), Ok(ssat(-12345)));
 
         assert_eq!(f(-100.0, D::MilliSatoshi), Err(ParseAmountError::Negative));
         assert_eq!(f(11.22, D::Satoshi), Err(ParseAmountError::TooPrecise));
         assert_eq!(sf(-100.0, D::MilliSatoshi), Err(ParseAmountError::TooPrecise));
         assert_eq!(sf(-100.0, D::MilliSatoshi), Err(ParseAmountError::TooPrecise));
-        assert_eq!(f(42.123456781, D::Bitcoin), Err(ParseAmountError::TooPrecise));
-        assert_eq!(sf(-184467440738.0, D::Bitcoin), Err(ParseAmountError::TooBig));
+        assert_eq!(f(42.123456781, D::Groestlcoin), Err(ParseAmountError::TooPrecise));
+        assert_eq!(sf(-184467440738.0, D::Groestlcoin), Err(ParseAmountError::TooBig));
         assert_eq!(f(18446744073709551617.0, D::Satoshi), Err(ParseAmountError::TooBig));
         assert_eq!(
             f(SignedAmount::max_value().to_float_in(D::Satoshi) + 1.0, D::Satoshi),
@@ -1134,13 +1134,13 @@ mod tests {
         );
 
         let btc = move |f| SignedAmount::from_btc(f).unwrap();
-        assert_eq!(btc(2.5).to_float_in(D::Bitcoin), 2.5);
+        assert_eq!(btc(2.5).to_float_in(D::Groestlcoin), 2.5);
         assert_eq!(btc(-2.5).to_float_in(D::MilliBitcoin), -2500.0);
         assert_eq!(btc(2.5).to_float_in(D::Satoshi), 250000000.0);
         assert_eq!(btc(-2.5).to_float_in(D::MilliSatoshi), -250000000000.0);
 
         let btc = move |f| Amount::from_btc(f).unwrap();
-        assert_eq!(&btc(0.0012).to_float_in(D::Bitcoin).to_string(), "0.0012")
+        assert_eq!(&btc(0.0012).to_float_in(D::Groestlcoin).to_string(), "0.0012")
     }
 
     #[test]
@@ -1174,20 +1174,20 @@ mod tests {
     fn to_string() {
         use super::Denomination as D;
 
-        assert_eq!(Amount::ONE_BTC.to_string_in(D::Bitcoin), "1.00000000");
+        assert_eq!(Amount::ONE_BTC.to_string_in(D::Groestlcoin), "1.00000000");
         assert_eq!(Amount::ONE_BTC.to_string_in(D::Satoshi), "100000000");
-        assert_eq!(Amount::ONE_SAT.to_string_in(D::Bitcoin), "0.00000001");
-        assert_eq!(SignedAmount::from_sat(-42).to_string_in(D::Bitcoin), "-0.00000042");
+        assert_eq!(Amount::ONE_SAT.to_string_in(D::Groestlcoin), "0.00000001");
+        assert_eq!(SignedAmount::from_sat(-42).to_string_in(D::Groestlcoin), "-0.00000042");
 
-        assert_eq!(Amount::ONE_BTC.to_string_with_denomination(D::Bitcoin), "1.00000000 BTC");
+        assert_eq!(Amount::ONE_BTC.to_string_with_denomination(D::Groestlcoin), "1.00000000 BTC");
         assert_eq!(Amount::ONE_SAT.to_string_with_denomination(D::MilliSatoshi), "1000 msat");
         assert_eq!(
             SignedAmount::ONE_BTC.to_string_with_denomination(D::Satoshi),
             "100000000 satoshi"
         );
-        assert_eq!(Amount::ONE_SAT.to_string_with_denomination(D::Bitcoin), "0.00000001 BTC");
+        assert_eq!(Amount::ONE_SAT.to_string_with_denomination(D::Groestlcoin), "0.00000001 BTC");
         assert_eq!(
-            SignedAmount::from_sat(-42).to_string_with_denomination(D::Bitcoin),
+            SignedAmount::from_sat(-42).to_string_with_denomination(D::Groestlcoin),
             "-0.00000042 BTC"
         );
     }
@@ -1236,7 +1236,7 @@ mod tests {
 
         let amt = Amount::from_sat(42);
         let denom = Amount::to_string_with_denomination;
-        assert_eq!(Amount::from_str(&denom(&amt, D::Bitcoin)), Ok(amt));
+        assert_eq!(Amount::from_str(&denom(&amt, D::Groestlcoin)), Ok(amt));
         assert_eq!(Amount::from_str(&denom(&amt, D::MilliBitcoin)), Ok(amt));
         assert_eq!(Amount::from_str(&denom(&amt, D::MicroBitcoin)), Ok(amt));
         assert_eq!(Amount::from_str(&denom(&amt, D::Bit)), Ok(amt));

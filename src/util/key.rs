@@ -172,7 +172,7 @@ impl PrivateKey {
     pub fn fmt_wif(&self, fmt: &mut fmt::Write) -> fmt::Result {
         let mut ret = [0; 34];
         ret[0] = match self.network {
-            Network::Bitcoin => 128,
+            Network::Groestlcoin => 128,
             Network::Testnet | Network::Regtest => 239,
         };
         ret[1..33].copy_from_slice(&self.key[..]);
@@ -204,7 +204,7 @@ impl PrivateKey {
         };
 
         let network = match data[0] {
-            128 => Network::Bitcoin,
+            128 => Network::Groestlcoin,
             239 => Network::Testnet,
             x   => { return Err(Error::Base58(base58::Error::InvalidVersion(vec![x]))); }
         };
@@ -361,7 +361,7 @@ mod tests {
     use secp256k1::Secp256k1;
     use std::str::FromStr;
     use network::constants::Network::Testnet;
-    use network::constants::Network::Bitcoin;
+    use network::constants::Network::Groestlcoin;
     use util::address::Address;
 
     #[test]

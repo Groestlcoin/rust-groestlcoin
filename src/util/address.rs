@@ -36,7 +36,7 @@
 //!     };
 //!
 //!     // Generate pay-to-pubkey-hash address
-//!     let address = Address::p2pkh(&public_key, Network::Bitcoin);
+//!     let address = Address::p2pkh(&public_key, Network::Groestlcoin);
 //! }
 //! ```
 
@@ -370,7 +370,7 @@ impl Display for Address {
             Payload::PubkeyHash(ref hash) => {
                 let mut prefixed = [0; 21];
                 prefixed[0] = match self.network {
-                    Network::Bitcoin => 0x24,
+                    Network::Groestlcoin => 0x24,
                     Network::Testnet | Network::Regtest => 111,
                 };
                 prefixed[1..].copy_from_slice(&hash[..]);
@@ -379,7 +379,7 @@ impl Display for Address {
             Payload::ScriptHash(ref hash) => {
                 let mut prefixed = [0; 21];
                 prefixed[0] = match self.network {
-                    Network::Bitcoin => 5,
+                    Network::Groestlcoin => 5,
                     Network::Testnet | Network::Regtest => 196,
                 };
                 prefixed[1..].copy_from_slice(&hash[..]);
@@ -390,7 +390,7 @@ impl Display for Address {
                 program: ref prog,
             } => {
                 let hrp = match self.network {
-                    Network::Bitcoin => "bc",
+                    Network::Groestlcoin => "bc",
                     Network::Testnet => "tb",
                     Network::Regtest => "bcrt",
                 };
@@ -419,7 +419,7 @@ impl FromStr for Address {
         // try bech32
         let bech32_network = match find_bech32_prefix(s) {
             // note that upper or lowercase is allowed but NOT mixed case
-            "grs" | "GRS" => Some(Network::Bitcoin),
+            "grs" | "GRS" => Some(Network::Groestlcoin),
             "tgrs" | "TGRS" => Some(Network::Testnet),
             "grsrt" | "GRSRT" => Some(Network::Regtest),
             _ => None,
@@ -470,11 +470,11 @@ impl FromStr for Address {
 
         let (network, payload) = match data[0] {
             0 => (
-                Network::Bitcoin,
+                Network::Groestlcoin,
                 Payload::PubkeyHash(PubkeyHash::from_slice(&data[1..]).unwrap()),
             ),
             5 => (
-                Network::Bitcoin,
+                Network::Groestlcoin,
                 Payload::ScriptHash(ScriptHash::from_slice(&data[1..]).unwrap()),
             ),
             111 => (
@@ -647,7 +647,7 @@ mod tests {
                 version: bech32::u5::try_from_u8(version).expect("0<32"),
                 program: program,
             },
-            network: Network::Bitcoin,
+            network: Network::Groestlcoin,
         };
         roundtrips(&addr);
     }

@@ -578,7 +578,7 @@ impl fmt::Display for ExtendedPrivKey {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let mut ret = [0; 78];
         ret[0..4].copy_from_slice(&match self.network {
-            Network::Bitcoin => [0x04, 0x88, 0xAD, 0xE4],
+            Network::Groestlcoin => [0x04, 0x88, 0xAD, 0xE4],
             Network::Testnet | Network::Regtest => [0x04, 0x35, 0x83, 0x94],
         }[..]);
         ret[4] = self.depth as u8;
@@ -605,7 +605,7 @@ impl FromStr for ExtendedPrivKey {
         let child_number: ChildNumber = ChildNumber::from(cn_int);
 
         let network = if &data[0..4] == [0x04u8, 0x88, 0xAD, 0xE4] {
-            Network::Bitcoin
+            Network::Groestlcoin
         } else if &data[0..4] == [0x04u8, 0x35, 0x83, 0x94] {
             Network::Testnet
         } else {
@@ -635,7 +635,7 @@ impl fmt::Display for ExtendedPubKey {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let mut ret = [0; 78];
         ret[0..4].copy_from_slice(&match self.network {
-            Network::Bitcoin => [0x04u8, 0x88, 0xB2, 0x1E],
+            Network::Groestlcoin => [0x04u8, 0x88, 0xB2, 0x1E],
             Network::Testnet | Network::Regtest => [0x04u8, 0x35, 0x87, 0xCF],
         }[..]);
         ret[4] = self.depth as u8;
@@ -662,7 +662,7 @@ impl FromStr for ExtendedPubKey {
 
         Ok(ExtendedPubKey {
             network: if &data[0..4] == [0x04u8, 0x88, 0xB2, 0x1E] {
-                Network::Bitcoin
+                Network::Groestlcoin
             } else if &data[0..4] == [0x04u8, 0x35, 0x87, 0xCF] {
                 Network::Testnet
             } else {

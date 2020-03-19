@@ -100,7 +100,7 @@ pub fn genesis_block(network: Network) -> Block {
     let hash: sha256d::Hash = txdata[0].txid().into();
     let merkle_root = hash.into();
     match network {
-        Network::Bitcoin => {
+        Network::Groestlcoin => {
             Block {
                 header: BlockHeader {
                     version: 112,
@@ -177,7 +177,7 @@ mod test {
 
     #[test]
     fn bitcoin_genesis_full_block() {
-        let gen = genesis_block(Network::Bitcoin);
+        let gen = genesis_block(Network::Groestlcoin);
 
         assert_eq!(gen.header.version, 112);
         assert_eq!(gen.header.prev_blockhash, Default::default());
