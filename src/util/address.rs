@@ -389,9 +389,9 @@ impl Display for Address {
                 program: ref prog,
             } => {
                 let hrp = match self.network {
-                    Network::Groestlcoin => "bc",
-                    Network::Testnet => "tb",
-                    Network::Regtest => "bcrt",
+                    Network::Groestlcoin => "grs",
+                    Network::Testnet => "tgrs",
+                    Network::Regtest => "grsrt",
                 };
                 let mut bech32_writer = bech32::Bech32Writer::new(hrp, fmt)?;
                 bech32::WriteBase32::write_u5(&mut bech32_writer, ver)?;
@@ -468,7 +468,7 @@ impl FromStr for Address {
         }
 
         let (network, payload) = match data[0] {
-            0 => (
+            36 => (
                 Network::Groestlcoin,
                 Payload::PubkeyHash(hash160::Hash::from_slice(&data[1..]).unwrap()),
             ),
