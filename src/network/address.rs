@@ -12,10 +12,10 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Bitcoin network addresses
+//! Groestlcoin network addresses
 //!
 //! This module defines the structures and functions needed to encode
-//! network addresses in Bitcoin messages.
+//! network addresses in Groestlcoin messages.
 //!
 
 use std::io;
@@ -25,7 +25,7 @@ use std::net::{SocketAddr, Ipv6Addr, SocketAddrV4, SocketAddrV6};
 use network::constants::ServiceFlags;
 use consensus::encode::{self, Decodable, Encodable};
 
-/// A message which can be sent on the Bitcoin network
+/// A message which can be sent on the Groestlcoin network
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Address {
     /// Services provided by the peer whose address this is

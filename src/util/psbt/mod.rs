@@ -210,7 +210,7 @@ mod tests {
 
         let mut hd_keypaths: BTreeMap<PublicKey, (Fingerprint, DerivationPath)> = Default::default();
 
-        let mut sk: ExtendedPrivKey = ExtendedPrivKey::new_master(Bitcoin, &seed).unwrap();
+        let mut sk: ExtendedPrivKey = ExtendedPrivKey::new_master(Groestlcoin, &seed).unwrap();
 
         let fprint: Fingerprint = sk.fingerprint(&secp);
 
