@@ -1,6 +1,6 @@
 #!/bin/sh -ex
 
-FEATURES="bitcoinconsensus use-serde rand"
+FEATURES="groestlcoinconsensus use-serde rand"
 
 if [ "$DO_COV" = true ]
 then
