@@ -58,7 +58,7 @@ extern crate hex;
 #[cfg(all(test, feature = "serde"))] extern crate serde_json;
 #[cfg(all(test, feature = "serde"))] extern crate serde_test;
 #[cfg(all(test, feature = "unstable"))] extern crate test;
-#[cfg(feature="bitcoinconsensus")] extern crate bitcoinconsensus;
+#[cfg(feature="groestlcoinconsensus")] extern crate groestlcoinconsensus;
 
 #[cfg(target_pointer_width = "16")]
 compile_error!("rust-groestlcoin cannot be used on 16-bit architectures");

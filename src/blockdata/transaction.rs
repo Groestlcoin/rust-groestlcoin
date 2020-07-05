@@ -31,7 +31,7 @@ use hashes::{self, sha256d, Hash, sha256};
 use hashes::hex::FromHex;
 
 use util::hash::BitcoinHash;
-#[cfg(feature="bitcoinconsensus")] use blockdata::script;
+#[cfg(feature="groestlcoinconsensus")] use blockdata::script;
 use blockdata::script::Script;
 use consensus::{encode, serialize, Decodable, Encodable};
 use VarInt;
@@ -404,7 +404,7 @@ impl Transaction {
         }
     }
 
-    #[cfg(feature="bitcoinconsensus")]
+    #[cfg(feature="groestlcoinconsensus")]
     /// Verify that this transaction is able to spend its inputs
     /// The lambda spent should not return the same TxOut twice!
     pub fn verify<S>(&self, mut spent: S) -> Result<(), script::Error>
@@ -1108,7 +1108,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature="bitcoinconsensus")]
+    #[cfg(feature="groestlcoinconsensus")]
     fn test_transaction_verify () {
         use hex::decode as hex_decode;
         use std::collections::HashMap;

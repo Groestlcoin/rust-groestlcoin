@@ -32,9 +32,9 @@ use std::{error, fmt, io};
 use blockdata::opcodes;
 use consensus::{encode, Decodable, Encodable};
 use hashes::{hash160, sha256, Hash};
-#[cfg(feature="bitcoinconsensus")] use bitcoinconsensus;
-#[cfg(feature="bitcoinconsensus")] use std::convert;
-#[cfg(feature="bitcoinconsensus")] use OutPoint;
+#[cfg(feature="groestlcoinconsensus")] use groestlcoinconsensus;
+#[cfg(feature="groestlcoinconsensus")] use std::convert;
+#[cfg(feature="groestlcoinconsensus")] use OutPoint;
 
 use util::key::PublicKey;
 
@@ -91,13 +91,13 @@ pub enum Error {
     EarlyEndOfScript,
     /// Tried to read an array off the stack as a number when it was more than 4 bytes
     NumericOverflow,
-    #[cfg(feature="bitcoinconsensus")]
-    /// Error validating the script with bitcoinconsensus library
-    BitcoinConsensus(bitcoinconsensus::Error),
-    #[cfg(feature="bitcoinconsensus")]
+    #[cfg(feature="groestlcoinconsensus")]
+    /// Error validating the script with groestlcoinconsensus library
+    BitcoinConsensus(groestlcoinconsensus::Error),
+    #[cfg(feature="groestlcoinconsensus")]
     /// Can not find the spent output
     UnknownSpentOutput(OutPoint),
-    #[cfg(feature="bitcoinconsensus")]
+    #[cfg(feature="groestlcoinconsensus")]
     /// Can not serialize the spending transaction
     SerializationError
 }
@@ -116,20 +116,20 @@ impl error::Error for Error {
             Error::NonMinimalPush => "non-minimal datapush",
             Error::EarlyEndOfScript => "unexpected end of script",
             Error::NumericOverflow => "numeric overflow (number on stack larger than 4 bytes)",
-            #[cfg(feature="bitcoinconsensus")]
-            Error::BitcoinConsensus(ref _n) => "bitcoinconsensus verification failed",
-            #[cfg(feature="bitcoinconsensus")]
+            #[cfg(feature="groestlcoinconsensus")]
+            Error::BitcoinConsensus(ref _n) => "groestlcoinconsensus verification failed",
+            #[cfg(feature="groestlcoinconsensus")]
             Error::UnknownSpentOutput(ref _point) => "unknown spent output Transaction::verify()",
-            #[cfg(feature="bitcoinconsensus")]
+            #[cfg(feature="groestlcoinconsensus")]
             Error::SerializationError => "can not serialize the spending transaction in Transaction::verify()",
         }
     }
 }
 
-#[cfg(feature="bitcoinconsensus")]
+#[cfg(feature="groestlcoinconsensus")]
 #[doc(hidden)]
-impl convert::From<bitcoinconsensus::Error> for Error {
-    fn from(err: bitcoinconsensus::Error) -> Error {
+impl convert::From<groestlcoinconsensus::Error> for Error {
+    fn from(err: groestlcoinconsensus::Error) -> Error {
         match err {
             _ => Error::BitcoinConsensus(err)
         }
@@ -335,14 +335,14 @@ impl Script {
         }
     }
 
-    #[cfg(feature="bitcoinconsensus")]
+    #[cfg(feature="groestlcoinconsensus")]
     /// verify spend of an input script
     /// # Parameters
     ///  * index - the input index in spending which is spending this transaction
     ///  * amount - the amount this script guards
     ///  * spending - the transaction that attempts to spend the output holding this script
     pub fn verify (&self, index: usize, amount: u64, spending: &[u8]) -> Result<(), Error> {
-        Ok(bitcoinconsensus::verify (&self.0[..], amount, spending, index)?)
+        Ok(groestlcoinconsensus::verify (&self.0[..], amount, spending, index)?)
     }
 
     /// Write the assembly decoding of the script to the formatter.
@@ -1078,7 +1078,7 @@ mod test {
     }
 
 	#[test]
-	#[cfg(feature="bitcoinconsensus")]
+	#[cfg(feature="groestlcoinconsensus")]
 	fn test_bitcoinconsensus () {
 		// a random segwit transaction from the blockchain using native segwit
 		let spent = Builder::from(hex_decode("0020701a8d401c84fb13e6baf169d59684e17abd9fa216c8cc5b9fc63d622ff8c58d").unwrap()).into_script();
