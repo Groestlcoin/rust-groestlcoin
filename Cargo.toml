@@ -1,6 +1,6 @@
 [package]
 name = "groestlcoin"
-version = "0.27.0"
+version = "0.27.1"
 authors = ["Groestlcoin Developers <groestlcoin@gmail.com>"]
 license = "CC0-1.0"
 homepage = "https://github.com/Groestlcoin/rust-groestlcoin/"
