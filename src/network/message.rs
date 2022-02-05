@@ -109,6 +109,7 @@ pub struct RawNetworkMessage {
     pub payload: NetworkMessage
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 /// A Network message payload. Proper documentation is available on at
 /// [Groestlcoin Wiki: Protocol Specification](https://en.bitcoin.it/wiki/Protocol_specification)
 pub enum NetworkMessage {
