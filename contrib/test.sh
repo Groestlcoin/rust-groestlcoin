@@ -15,7 +15,7 @@ pin_common_verions() {
     cargo update -p serde_derive --precise "1.0.98" --verbose
 }
 
-# Pin `cc` for Rust 1.29
+# Pin `cc` for Rust 1.41
 if [ "$PIN_VERSIONS" = true ]; then
     pin_common_verions
     cargo update -p byteorder --precise "1.3.4"
@@ -88,9 +88,9 @@ if [ "$AS_DEPENDENCY" = true ]
 then
     cargo new dep_test
     cd dep_test
-    echo 'bitcoin = { path = "..", features = ["use-serde"] }' >> Cargo.toml
+    echo 'groestlcoin = { path = "..", features = ["use-serde"] }' >> Cargo.toml
 
-    # Pin `cc` for Rust 1.29
+    # Pin `cc` for Rust 1.41
     if [ -n "$PIN_VERSIONS" ]; then
         pin_common_verions
     fi

@@ -50,7 +50,7 @@ extern crate alloc;
 extern crate core2;
 
 #[cfg(any(feature = "std", test))]
-extern crate core; // for Rust 1.29 and no-std tests
+extern crate core; // for Rust 1.41 and no-std tests
 
 // Re-exported dependencies.
 #[macro_use] pub extern crate groestlcoin_hashes as hashes;

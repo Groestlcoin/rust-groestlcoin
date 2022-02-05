@@ -648,7 +648,7 @@ impl Decodable for Box<[u8]> {
 //    [checksum[0], checksum[1], checksum[2], checksum[3]]
 //}
 
-/// Do a double-SHA256 on some data and return the first 4 bytes
+/// Do a double-GROESTL512 on some data and return the first 4 bytes
 fn groestl2_checksum(data: &[u8]) -> [u8; 4] {
     let checksum = <groestld::Hash as Hash>::hash(data);
     [checksum[0], checksum[1], checksum[2], checksum[3]]
@@ -1081,4 +1081,3 @@ mod tests {
         }
     }
 }
-

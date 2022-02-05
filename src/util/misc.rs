@@ -304,7 +304,7 @@ mod tests {
         use secp256k1;
 
         let secp = secp256k1::Secp256k1::new();
-        let message = "rust-bitcoin MessageSignature test";
+        let message = "rust-groestlcoin MessageSignature test";
         let msg_hash = super::signed_msg_hash(&message);
         let msg = secp256k1::Message::from_slice(&msg_hash).unwrap();
 
@@ -329,4 +329,3 @@ mod tests {
         assert_eq!(signature2.is_signed_by_address(&secp, &p2shwpkh, msg_hash), Ok(false));
     }
 }
-

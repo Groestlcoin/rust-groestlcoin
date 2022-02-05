@@ -88,9 +88,9 @@ impl Network {
     pub fn from_magic(magic: u32) -> Option<Network> {
         // Note: any new entries here must be added to `magic` below
         match magic {
-            0xD9B4BEF9 => Some(Network::Groestlcoin),
+            0xD4B4BEF9 => Some(Network::Groestlcoin),
             0x0709110B => Some(Network::Testnet),
-            0x40CF030A => Some(Network::Signet), // this is not correct
+            0x7696B422 => Some(Network::Signet),
             0xDAB5BFFA => Some(Network::Regtest),
             _ => None
         }
@@ -105,14 +105,14 @@ impl Network {
     /// use groestlcoin::network::constants::Network;
     ///
     /// let network = Network::Groestlcoin;
-    /// assert_eq!(network.magic(), 0xD9B4BEF9);
+    /// assert_eq!(network.magic(), 0xD4B4BEF9);
     /// ```
     pub fn magic(&self) -> u32 {
         // Note: any new entries here must be added to `from_magic` above
         match *self {
-            Network::Groestlcoin => 0xD9B4BEF9,
+            Network::Groestlcoin => 0xD4B4BEF9,
             Network::Testnet => 0x0709110B,
-            Network::Signet  => 0x40CF030A,
+            Network::Signet  => 0x7696B422,
             Network::Regtest => 0xDAB5BFFA,
         }
     }
@@ -144,7 +144,7 @@ impl ServiceFlags {
     /// WITNESS indicates that a node can be asked for blocks and transactions including witness
     /// data.
     pub const WITNESS: ServiceFlags = ServiceFlags(1 << 3);
-    
+
     /// COMPACT_FILTERS means the node will service basic block filter requests.
     /// See BIP157 and BIP158 for details on how this is implemented.
     pub const COMPACT_FILTERS: ServiceFlags = ServiceFlags(1 << 6);
@@ -298,7 +298,7 @@ mod tests {
     fn serialize_test() {
         assert_eq!(
             serialize(&Network::Groestlcoin.magic()),
-            &[0xf9, 0xbe, 0xb4, 0xd9]
+            &[0xf9, 0xbe, 0xb4, 0xd4]
         );
         assert_eq!(
             serialize(&Network::Testnet.magic()),
@@ -306,7 +306,7 @@ mod tests {
         );
         assert_eq!(
             serialize(&Network::Signet.magic()),
-            &[0x0a, 0x03, 0xcf, 0x40]
+            &[0x22, 0xb4, 0x96, 0x76]
         );
         assert_eq!(
             serialize(&Network::Regtest.magic()),
@@ -322,7 +322,7 @@ mod tests {
             Some(Network::Testnet.magic())
         );
         assert_eq!(
-            deserialize(&[0x0a, 0x03, 0xcf, 0x40]).ok(),
+            deserialize(&[0x22, 0xb4, 0x96, 0x76]).ok(),
             Some(Network::Signet.magic())
         );
         assert_eq!(
@@ -371,7 +371,7 @@ mod tests {
 
         flags2 ^= ServiceFlags::WITNESS;
         assert_eq!(flags2, ServiceFlags::GETUTXO);
-        
+
         flags2 |= ServiceFlags::COMPACT_FILTERS;
         flags2 ^= ServiceFlags::GETUTXO;
         assert_eq!(flags2, ServiceFlags::COMPACT_FILTERS);
@@ -385,4 +385,3 @@ mod tests {
         assert_eq!("ServiceFlags(WITNESS|COMPACT_FILTERS|0xb0)", flag.to_string());
     }
 }
-

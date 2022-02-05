@@ -362,8 +362,8 @@ impl Address {
     /// alphanumeric mode, which is 45% more compact than the normal byte mode."
     pub fn to_qr_uri(&self) -> String {
         let schema = match self.payload {
-            Payload::WitnessProgram { .. } => "BITCOIN",
-            _ => "bitcoin",
+            Payload::WitnessProgram { .. } => "GROESTLCOIN",
+            _ => "groestlcoin",
         };
         format!("{}:{:#}", schema, self)
     }

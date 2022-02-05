@@ -15,7 +15,7 @@ use groestlcoin::secp256k1::ffi::types::AlignedType;
 fn main() {
     // This example derives root xprv
     // from a 32-byte secret of the input WIF string,
-    // derives the child xprv with path m/84h/0h/0h,
+    // derives the child xprv with path m/84h/17h/0h,
     // prints out corresponding xpub,
     // calculates and prints out the first receiving segwit address.
     // Run this example with cargo and WIF argument:
@@ -46,7 +46,7 @@ fn main() {
     println!("Root key: {}", root);
 
     // derive child xpub
-    let path = DerivationPath::from_str("m/84h/0h/0h").unwrap();
+    let path = DerivationPath::from_str("m/84h/17h/0h").unwrap();
     let child = root.derive_priv(&secp, &path).unwrap();
     println!("Child at {}: {}", path, child);
     let xpub = ExtendedPubKey::from_private(&secp, &child);

@@ -456,9 +456,9 @@ impl Script {
     }
 
     #[cfg(feature="groestlcoinconsensus")]
-    /// Shorthand for [Self::verify_with_flags] with flag [bitcoinconsensus::VERIFY_ALL]
+    /// Shorthand for [Self::verify_with_flags] with flag [groestlcoinconsensus::VERIFY_ALL]
     pub fn verify (&self, index: usize, amount: u64, spending: &[u8]) -> Result<(), Error> {
-        self.verify_with_flags(index, ::Amount::from_sat(amount), spending, ::bitcoinconsensus::VERIFY_ALL)
+        self.verify_with_flags(index, ::Amount::from_sat(amount), spending, ::groestlcoinconsensus::VERIFY_ALL)
     }
 
     #[cfg(feature="groestlcoinconsensus")]
@@ -467,7 +467,7 @@ impl Script {
     ///  * `index` - the input index in spending which is spending this transaction
     ///  * `amount` - the amount this script guards
     ///  * `spending` - the transaction that attempts to spend the output holding this script
-    ///  * `flags` - verification flags, see [bitcoinconsensus::VERIFY_ALL] and similar
+    ///  * `flags` - verification flags, see [groestlcoinconsensus::VERIFY_ALL] and similar
     pub fn verify_with_flags<F: Into<u32>>(&self, index: usize, amount: ::Amount, spending: &[u8], flags: F) -> Result<(), Error> {
         Ok(groestlcoinconsensus::verify_with_flags (&self.0[..], amount.as_sat(), spending, index, flags.into())?)
     }
@@ -1279,4 +1279,3 @@ mod test {
         assert_eq!(script_p2pkh.dust_value(), ::Amount::from_sat(546));
     }
 }
-

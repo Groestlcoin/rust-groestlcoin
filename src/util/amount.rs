@@ -53,12 +53,12 @@ impl Denomination {
 impl fmt::Display for Denomination {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(match *self {
-            Denomination::Bitcoin => "BTC",
-            Denomination::MilliBitcoin => "mBTC",
-            Denomination::MicroBitcoin => "uBTC",
-            Denomination::Bit => "bits",
-            Denomination::Satoshi => "satoshi",
-            Denomination::MilliSatoshi => "msat",
+            Denomination::Bitcoin => "GRS",
+            Denomination::MilliBitcoin => "mGRS",
+            Denomination::MicroBitcoin => "uGRS",
+            Denomination::Bit => "groestls",
+            Denomination::Satoshi => "gro",
+            Denomination::MilliSatoshi => "mgro",
         })
     }
 }
@@ -68,13 +68,13 @@ impl FromStr for Denomination {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "BTC" => Ok(Denomination::Bitcoin),
-            "mBTC" => Ok(Denomination::MilliBitcoin),
-            "uBTC" => Ok(Denomination::MicroBitcoin),
-            "bits" => Ok(Denomination::Bit),
-            "satoshi" => Ok(Denomination::Satoshi),
-            "sat" => Ok(Denomination::Satoshi),
-            "msat" => Ok(Denomination::MilliSatoshi),
+            "GRS" => Ok(Denomination::Bitcoin),
+            "mGRS" => Ok(Denomination::MilliBitcoin),
+            "uGRS" => Ok(Denomination::MicroBitcoin),
+            "groestls" => Ok(Denomination::Bit),
+            "gro" => Ok(Denomination::Satoshi),
+            "gro" => Ok(Denomination::Satoshi),
+            "mgro" => Ok(Denomination::MilliSatoshi),
             d => Err(ParseAmountError::UnknownDenomination(d.to_owned())),
         }
     }
@@ -432,7 +432,7 @@ impl default::Default for Amount {
 
 impl fmt::Debug for Amount {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Amount({:.8} BTC)", self.as_btc())
+        write!(f, "Amount({:.8} GRS)", self.as_btc())
     }
 }
 
@@ -757,7 +757,7 @@ impl default::Default for SignedAmount {
 
 impl fmt::Debug for SignedAmount {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "SignedAmount({:.8} BTC)", self.as_btc())
+        write!(f, "SignedAmount({:.8} GRS)", self.as_btc())
     }
 }
 
@@ -1018,7 +1018,7 @@ pub mod serde {
     }
 
     pub mod as_btc {
-        //! Serialize and deserialize [Amount] as JSON numbers denominated in BTC.
+        //! Serialize and deserialize [Amount] as JSON numbers denominated in GRS.
         //! Use with `#[serde(with = "amount::serde::as_btc")]`.
 
         use serde::{Deserializer, Serializer};
@@ -1033,7 +1033,7 @@ pub mod serde {
         }
 
         pub mod opt {
-            //! Serialize and deserialize [Option<Amount>] as JSON numbers denominated in BTC.
+            //! Serialize and deserialize [Option<Amount>] as JSON numbers denominated in GRS.
             //! Use with `#[serde(default, with = "amount::serde::as_btc::opt")]`.
 
             use serde::{Deserializer, Serializer, de};
@@ -1248,16 +1248,16 @@ mod tests {
         assert_eq!(Amount::ONE_SAT.to_string_in(D::Bitcoin), "0.00000001");
         assert_eq!(SignedAmount::from_sat(-42).to_string_in(D::Bitcoin), "-0.00000042");
 
-        assert_eq!(Amount::ONE_BTC.to_string_with_denomination(D::Bitcoin), "1.00000000 BTC");
-        assert_eq!(Amount::ONE_SAT.to_string_with_denomination(D::MilliSatoshi), "1000 msat");
+        assert_eq!(Amount::ONE_BTC.to_string_with_denomination(D::Bitcoin), "1.00000000 GRS");
+        assert_eq!(Amount::ONE_SAT.to_string_with_denomination(D::MilliSatoshi), "1000 mgro");
         assert_eq!(
             SignedAmount::ONE_BTC.to_string_with_denomination(D::Satoshi),
-            "100000000 satoshi"
+            "100000000 gro"
         );
-        assert_eq!(Amount::ONE_SAT.to_string_with_denomination(D::Bitcoin), "0.00000001 BTC");
+        assert_eq!(Amount::ONE_SAT.to_string_with_denomination(D::Bitcoin), "0.00000001 GRS");
         assert_eq!(
             SignedAmount::from_sat(-42).to_string_with_denomination(D::Bitcoin),
-            "-0.00000042 BTC"
+            "-0.00000042 GRS"
         );
     }
 
@@ -1288,36 +1288,36 @@ mod tests {
         let p = Amount::from_str;
         let sp = SignedAmount::from_str;
 
-        assert_eq!(p("x BTC"), Err(E::InvalidCharacter('x')));
-        assert_eq!(p("5 BTC BTC"), Err(E::InvalidFormat));
-        assert_eq!(p("5 5 BTC"), Err(E::InvalidFormat));
+        assert_eq!(p("x GRS"), Err(E::InvalidCharacter('x')));
+        assert_eq!(p("5 GRS GRS"), Err(E::InvalidFormat));
+        assert_eq!(p("5 5 GRS"), Err(E::InvalidFormat));
 
         assert_eq!(p("5 BCH"), Err(E::UnknownDenomination("BCH".to_owned())));
 
-        assert_eq!(p("-1 BTC"), Err(E::Negative));
-        assert_eq!(p("-0.0 BTC"), Err(E::Negative));
-        assert_eq!(p("0.123456789 BTC"), Err(E::TooPrecise));
-        assert_eq!(sp("-0.1 satoshi"), Err(E::TooPrecise));
-        assert_eq!(p("0.123456 mBTC"), Err(E::TooPrecise));
-        assert_eq!(sp("-1.001 bits"), Err(E::TooPrecise));
-        assert_eq!(sp("-200000000000 BTC"), Err(E::TooBig));
-        assert_eq!(p("18446744073709551616 sat"), Err(E::TooBig));
+        assert_eq!(p("-1 GRS"), Err(E::Negative));
+        assert_eq!(p("-0.0 GRS"), Err(E::Negative));
+        assert_eq!(p("0.123456789 GRS"), Err(E::TooPrecise));
+        assert_eq!(sp("-0.1 gro"), Err(E::TooPrecise));
+        assert_eq!(p("0.123456 mGRS"), Err(E::TooPrecise));
+        assert_eq!(sp("-1.001 groestls"), Err(E::TooPrecise));
+        assert_eq!(sp("-200000000000 GRS"), Err(E::TooBig));
+        assert_eq!(p("18446744073709551616 gro"), Err(E::TooBig));
 
-        assert_eq!(sp("0 msat"), Err(E::TooPrecise));
-        assert_eq!(sp("-0 msat"), Err(E::TooPrecise));
-        assert_eq!(sp("000 msat"), Err(E::TooPrecise));
-        assert_eq!(sp("-000 msat"), Err(E::TooPrecise));
-        assert_eq!(p("0 msat"), Err(E::TooPrecise));
-        assert_eq!(p("-0 msat"), Err(E::TooPrecise));
-        assert_eq!(p("000 msat"), Err(E::TooPrecise));
-        assert_eq!(p("-000 msat"), Err(E::TooPrecise));
+        assert_eq!(sp("0 mgro"), Err(E::TooPrecise));
+        assert_eq!(sp("-0 mgro"), Err(E::TooPrecise));
+        assert_eq!(sp("000 mgro"), Err(E::TooPrecise));
+        assert_eq!(sp("-000 mgro"), Err(E::TooPrecise));
+        assert_eq!(p("0 mgro"), Err(E::TooPrecise));
+        assert_eq!(p("-0 mgro"), Err(E::TooPrecise));
+        assert_eq!(p("000 mgro"), Err(E::TooPrecise));
+        assert_eq!(p("-000 mgro"), Err(E::TooPrecise));
 
-        assert_eq!(p(".5 bits"), Ok(Amount::from_sat(50)));
-        assert_eq!(sp("-.5 bits"), Ok(SignedAmount::from_sat(-50)));
-        assert_eq!(p("0.00253583 BTC"), Ok(Amount::from_sat(253583)));
-        assert_eq!(sp("-5 satoshi"), Ok(SignedAmount::from_sat(-5)));
-        assert_eq!(p("0.10000000 BTC"), Ok(Amount::from_sat(100_000_00)));
-        assert_eq!(sp("-100 bits"), Ok(SignedAmount::from_sat(-10_000)));
+        assert_eq!(p(".5 groestls"), Ok(Amount::from_sat(50)));
+        assert_eq!(sp("-.5 groestls"), Ok(SignedAmount::from_sat(-50)));
+        assert_eq!(p("0.00253583 GRS"), Ok(Amount::from_sat(253583)));
+        assert_eq!(sp("-5 gro"), Ok(SignedAmount::from_sat(-5)));
+        assert_eq!(p("0.10000000 GRS"), Ok(Amount::from_sat(100_000_00)));
+        assert_eq!(sp("-100 groestls"), Ok(SignedAmount::from_sat(-10_000)));
     }
 
     #[test]
@@ -1362,8 +1362,8 @@ mod tests {
         assert_eq!(Amount::from_str(&denom(amt, D::Satoshi)), Ok(amt));
         assert_eq!(Amount::from_str(&denom(amt, D::MilliSatoshi)), Ok(amt));
 
-        assert_eq!(Amount::from_str("42 satoshi BTC"), Err(ParseAmountError::InvalidFormat));
-        assert_eq!(SignedAmount::from_str("-42 satoshi BTC"), Err(ParseAmountError::InvalidFormat));
+        assert_eq!(Amount::from_str("42 gro GRS"), Err(ParseAmountError::InvalidFormat));
+        assert_eq!(SignedAmount::from_str("-42 gro GRS"), Err(ParseAmountError::InvalidFormat));
     }
 
     #[cfg(feature = "serde")]

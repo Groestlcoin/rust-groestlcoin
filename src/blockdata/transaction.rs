@@ -468,7 +468,7 @@ impl Transaction {
     }
 
     #[cfg(feature="groestlcoinconsensus")]
-    /// Shorthand for [Self::verify_with_flags] with flag [bitcoinconsensus::VERIFY_ALL]
+    /// Shorthand for [Self::verify_with_flags] with flag [groestlcoinconsensus::VERIFY_ALL]
     pub fn verify<S>(&self, spent: S) -> Result<(), script::Error>
         where S: FnMut(&OutPoint) -> Option<TxOut> {
         self.verify_with_flags(spent, ::groestlcoinconsensus::VERIFY_ALL)

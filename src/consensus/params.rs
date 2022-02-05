@@ -100,7 +100,7 @@ impl Params {
                 rule_change_activation_threshold: 1916, // 95%
                 miner_confirmation_window: 2016,
                 pow_limit: MAX_BITS_BITCOIN,
-                pow_target_spacing: 10 * 60,            // 10 minutes.
+                pow_target_spacing: 60,            // 1 minute.
                 pow_target_timespan: 14 * 24 * 60 * 60, // 2 weeks.
                 allow_min_difficulty_blocks: false,
                 no_pow_retargeting: false,
@@ -114,7 +114,7 @@ impl Params {
                 rule_change_activation_threshold: 1512, // 75%
                 miner_confirmation_window: 2016,
                 pow_limit: MAX_BITS_TESTNET,
-                pow_target_spacing: 10 * 60,            // 10 minutes.
+                pow_target_spacing: 60,            // 1 minute.
                 pow_target_timespan: 14 * 24 * 60 * 60, // 2 weeks.
                 allow_min_difficulty_blocks: true,
                 no_pow_retargeting: false,
@@ -128,7 +128,7 @@ impl Params {
                 rule_change_activation_threshold: 1916, // 95%
                 miner_confirmation_window: 2016,
                 pow_limit: MAX_BITS_SIGNET,
-                pow_target_spacing: 10 * 60,            // 10 minutes.
+                pow_target_spacing: 60,            // 1 minute.
                 pow_target_timespan: 14 * 24 * 60 * 60, // 2 weeks.
                 allow_min_difficulty_blocks: false,
                 no_pow_retargeting: false,
@@ -142,7 +142,7 @@ impl Params {
                 rule_change_activation_threshold: 108, // 75%
                 miner_confirmation_window: 144,
                 pow_limit: MAX_BITS_REGTEST,
-                pow_target_spacing: 10 * 60,            // 10 minutes.
+                pow_target_spacing: 60,            // 1 minute.
                 pow_target_timespan: 14 * 24 * 60 * 60, // 2 weeks.
                 allow_min_difficulty_blocks: true,
                 no_pow_retargeting: true,
