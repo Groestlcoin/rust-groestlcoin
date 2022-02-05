@@ -633,7 +633,7 @@ mod tests {
 
         // Test uncompressed pubkey
         key.compressed = false;
-        assert_eq!(Address::p2wpkh(&key, Bitcoin), Err(Error::UncompressedPubkey));
+        assert_eq!(Address::p2wpkh(&key, Groestlcoin), Err(Error::UncompressedPubkey));
     }
 
     #[test]
@@ -660,7 +660,7 @@ mod tests {
 
         // Test uncompressed pubkey
         key.compressed = false;
-        assert_eq!(Address::p2wpkh(&key, Bitcoin), Err(Error::UncompressedPubkey));
+        assert_eq!(Address::p2wpkh(&key, Groestlcoin), Err(Error::UncompressedPubkey));
     }
 
     #[test]

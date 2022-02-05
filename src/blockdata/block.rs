@@ -368,7 +368,7 @@ mod tests {
         assert_eq!(real_decode.header.nonce, 2067413810);
         assert_eq!(real_decode.header.work(), work);
         assert_eq!(real_decode.header.validate_pow(&real_decode.header.target()).unwrap(), real_decode.block_hash());
-        assert_eq!(real_decode.header.difficulty(Network::Bitcoin), 1);
+        assert_eq!(real_decode.header.difficulty(Network::Groestlcoin), 1);
         // [test] TODO: check the transaction data
 
         assert_eq!(real_decode.get_size(), some_block.len());

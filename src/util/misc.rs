@@ -321,11 +321,11 @@ mod tests {
         assert_eq!(pubkey.compressed, true);
         assert_eq!(pubkey.key, secp256k1::PublicKey::from_secret_key(&secp, &privkey));
 
-        let p2pkh = ::Address::p2pkh(&pubkey, ::Network::Bitcoin);
+        let p2pkh = ::Address::p2pkh(&pubkey, ::Network::Groestlcoin);
         assert_eq!(signature2.is_signed_by_address(&secp, &p2pkh, msg_hash), Ok(true));
-        let p2wpkh = ::Address::p2wpkh(&pubkey, ::Network::Bitcoin).unwrap();
+        let p2wpkh = ::Address::p2wpkh(&pubkey, ::Network::Groestlcoin).unwrap();
         assert_eq!(signature2.is_signed_by_address(&secp, &p2wpkh, msg_hash), Ok(false));
-        let p2shwpkh = ::Address::p2shwpkh(&pubkey, ::Network::Bitcoin).unwrap();
+        let p2shwpkh = ::Address::p2shwpkh(&pubkey, ::Network::Groestlcoin).unwrap();
         assert_eq!(signature2.is_signed_by_address(&secp, &p2shwpkh, msg_hash), Ok(false));
     }
 }

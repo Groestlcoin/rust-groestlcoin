@@ -333,9 +333,9 @@ mod tests {
         let (sk2, pk2) = secp.generate_keypair(&mut thread_rng());
         let (sk3, pk3) = secp.generate_keypair(&mut thread_rng());
 
-        let sk1 = PrivateKey::new(sk1, Network::Bitcoin);
-        let sk2 = PrivateKey::new_uncompressed(sk2, Network::Bitcoin);
-        let sk3 = PrivateKey::new(sk3, Network::Bitcoin);
+        let sk1 = PrivateKey::new(sk1, Network::Groestlcoin);
+        let sk2 = PrivateKey::new_uncompressed(sk2, Network::Groestlcoin);
+        let sk3 = PrivateKey::new(sk3, Network::Groestlcoin);
         let pks = [
             PublicKey::new(pk1),
             PublicKey::new_uncompressed(pk2),
