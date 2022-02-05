@@ -817,11 +817,11 @@ mod tests {
             hex_script!("00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262")
         );
 
-        let addr = Address::from_str("bcrt1q2nfxmhd4n3c8834pj72xagvyr9gl57n5r94fsl").unwrap();
+        let addr = Address::from_str(" grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h").unwrap();
         let json = serde_json::to_value(&addr).unwrap();
         assert_eq!(
             json,
-            serde_json::Value::String("bcrt1q2nfxmhd4n3c8834pj72xagvyr9gl57n5r94fsl".to_owned())
+            serde_json::Value::String(" grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h".to_owned())
         );
         let into: Address = serde_json::from_value(json).unwrap();
         assert_eq!(addr.to_string(), into.to_string());
@@ -833,12 +833,12 @@ mod tests {
 
     #[test]
     fn test_qr_string() {
-        for el in  ["132F25rTsvBdp9JzLLBHP5mvGY66i1xdiM", "33iFwdLuRpW1uK1RTRqsoi8rR4NpDzk66k"].iter() {
+        for el in  ["FXBxTzaqSQsBFkL7DSAkqbaEvhN4HxNsAr", "33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32"].iter() {
             let addr = Address::from_str(el).unwrap();
             assert_eq!(addr.to_qr_uri(), format!("groestlcoin:{}", el));
         }
 
-        for el in ["bcrt1q2nfxmhd4n3c8834pj72xagvyr9gl57n5r94fsl", "grs1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxsphnwkk"].iter() {
+        for el in [" grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h", "grs1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxsphnwkk"].iter() {
             let addr = Address::from_str(el).unwrap();
             assert_eq!(addr.to_qr_uri(), format!("GROESTLCOIN:{}", el.to_ascii_uppercase()) );
         }

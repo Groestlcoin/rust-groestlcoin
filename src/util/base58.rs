@@ -281,8 +281,8 @@ mod tests {
         assert_eq!(&res, exp);
 
         // Addresses
-        let addr = Vec::from_hex("00f8917303bfa8ef24f292e8fa1419b20460ba064d").unwrap();
-        assert_eq!(&check_encode_slice(&addr[..]), "1PfJpZsjreyVrqeoAfabrRwwjQyoSQMmHH");
+        let addr = Vec::from_hex("24f8917303bfa8ef24f292e8fa1419b20460ba064d").unwrap();
+        assert_eq!(&check_encode_slice(&addr[..]), "Fsq2GUc7R9f3JSfv3ma5JwkGPaFm3uH23D");
       }
 
       #[test]
