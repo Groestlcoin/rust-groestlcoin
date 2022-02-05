@@ -762,7 +762,7 @@ mod tests {
             assert_eq!(
                 tx.txid(),
                 Txid::from_hex(
-                    "75c5c9665a570569ad77dd1279e6fd4628a093c4dcbf8d41532614044c14c115"
+                    "8d20d72e5697468d6a79447a450990e2f586f95c43f61004b9e1eba8014f852f"
                 ).unwrap()
             );
 

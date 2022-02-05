@@ -160,8 +160,8 @@ mod tests {
 
     #[test]
     fn getblocks_message_test() {
-        let from_sat = Vec::from_hex("72110100014a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b0000000000000000000000000000000000000000000000000000000000000000").unwrap();
-        let genhash = Vec::from_hex("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b").unwrap();
+        let from_sat = Vec::from_hex("72110100013ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb0000000000000000000000000000000000000000000000000000000000000000").unwrap();
+        let genhash = Vec::from_hex("3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb").unwrap();
 
         let decode: Result<GetBlocksMessage, _> = deserialize(&from_sat);
         assert!(decode.is_ok());
@@ -176,8 +176,8 @@ mod tests {
 
     #[test]
     fn getheaders_message_test() {
-        let from_sat = Vec::from_hex("72110100014a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b0000000000000000000000000000000000000000000000000000000000000000").unwrap();
-        let genhash = Vec::from_hex("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b").unwrap();
+        let from_sat = Vec::from_hex("72110100013ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb0000000000000000000000000000000000000000000000000000000000000000").unwrap();
+        let genhash = Vec::from_hex("3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb").unwrap();
 
         let decode: Result<GetHeadersMessage, _> = deserialize(&from_sat);
         assert!(decode.is_ok());
@@ -190,4 +190,3 @@ mod tests {
         assert_eq!(serialize(&real_decode), from_sat);
     }
 }
-

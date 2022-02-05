@@ -320,7 +320,7 @@ mod test {
             port: 1331
         }),
         vec![1u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0xff, 0xff, 0x0a, 0, 0, 1, 0x20, 0x8d]);
+             0, 0, 0, 0xff, 0xff, 0x0a, 0, 0, 1, 0x05, 0x33]);
     }
 
     #[test]
@@ -349,7 +349,7 @@ mod test {
     fn deserialize_address_test() {
         let mut addr: Result<Address, _> = deserialize(&[1u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                                        0, 0, 0, 0, 0, 0, 0xff, 0xff, 0x0a, 0,
-                                                       0, 1, 0x20, 0x8d]);
+                                                       0, 1, 0x05, 0x33]);
         assert!(addr.is_ok());
         let full = addr.unwrap();
         assert!(match full.socket_addr().unwrap() {
@@ -487,7 +487,7 @@ mod test {
 
     #[test]
     fn addrv2message_test() {
-        let raw = Vec::from_hex("0261bc6649019902abab208d79627683fd4804010409090909208d").unwrap();
+        let raw = Vec::from_hex("0261bc6649019902abab053379627683fd48040104090909090533").unwrap();
         let addresses: Vec<AddrV2Message> = deserialize(&raw).unwrap();
 
         assert_eq!(addresses, vec![

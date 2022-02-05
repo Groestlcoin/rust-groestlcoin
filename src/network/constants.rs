@@ -34,7 +34,7 @@
 //! let network = Network::Groestlcoin;
 //! let bytes = serialize(&network.magic());
 //!
-//! assert_eq!(&bytes[..], &[0xF9, 0xBE, 0xB4, 0xD9]);
+//! assert_eq!(&bytes[..], &[0xF9, 0xBE, 0xB4, 0xD4]);
 //! ```
 
 use core::{fmt, ops, convert::From};
@@ -82,7 +82,7 @@ impl Network {
     /// ```rust
     /// use groestlcoin::network::constants::Network;
     ///
-    /// assert_eq!(Some(Network::Groestlcoin), Network::from_magic(0xD9B4BEF9));
+    /// assert_eq!(Some(Network::Groestlcoin), Network::from_magic(0xD4B4BEF9));
     /// assert_eq!(None, Network::from_magic(0xFFFFFFFF));
     /// ```
     pub fn from_magic(magic: u32) -> Option<Network> {

@@ -94,9 +94,9 @@ mod test {
     use network::message::{NetworkMessage, RawNetworkMessage};
 
     // First, let's define some byte arrays for sample messages - dumps are taken from live
-    // Groestlcoin Core node v0.17.1 with Wireshark
+    // Groestlcoin Core node v2.17.2 with Wireshark
     const MSG_VERSION: [u8; 126] = [
-        0xf9, 0xbe, 0xb4, 0xd9, 0x76, 0x65, 0x72, 0x73,
+        0xf9, 0xbe, 0xb4, 0xd4, 0x76, 0x65, 0x72, 0x73,
         0x69, 0x6f, 0x6e, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x66, 0x00, 0x00, 0x00, 0xbe, 0x61, 0xb8, 0x27,
         0x7f, 0x11, 0x01, 0x00, 0x0d, 0x04, 0x00, 0x00,
@@ -115,20 +115,20 @@ mod test {
     ];
 
     const MSG_VERACK: [u8; 24] = [
-        0xf9, 0xbe, 0xb4, 0xd9, 0x76, 0x65, 0x72, 0x61,
+        0xf9, 0xbe, 0xb4, 0xd4, 0x76, 0x65, 0x72, 0x61,
         0x63, 0x6b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x5d, 0xf6, 0xe0, 0xe2
     ];
 
     const MSG_PING: [u8; 32] = [
-        0xf9, 0xbe, 0xb4, 0xd9, 0x70, 0x69, 0x6e, 0x67,
+        0xf9, 0xbe, 0xb4, 0xd4, 0x70, 0x69, 0x6e, 0x67,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x08, 0x00, 0x00, 0x00, 0x24, 0x67, 0xf1, 0x1d,
         0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     ];
 
     const MSG_ALERT: [u8; 192] = [
-        0xf9, 0xbe, 0xb4, 0xd9, 0x61, 0x6c, 0x65, 0x72,
+        0xf9, 0xbe, 0xb4, 0xd4, 0x61, 0x6c, 0x65, 0x72,
         0x74, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0xa8, 0x00, 0x00, 0x00, 0x1b, 0xf9, 0xaa, 0xea,
         0x60, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -156,13 +156,13 @@ mod test {
 
     // Helper functions that checks parsed versions of the messages from the byte arrays above
     fn check_version_msg(msg: &RawNetworkMessage) {
-        assert_eq!(msg.magic, 0xd9b4bef9);
+        assert_eq!(msg.magic, 0xd4b4bef9);
         if let NetworkMessage::Version(ref version_msg) = msg.payload {
             assert_eq!(version_msg.version, 70015);
             assert_eq!(version_msg.services, ServiceFlags::NETWORK | ServiceFlags::BLOOM | ServiceFlags::WITNESS | ServiceFlags::NETWORK_LIMITED);
             assert_eq!(version_msg.timestamp, 1548554224);
             assert_eq!(version_msg.nonce, 13952548347456104954);
-            assert_eq!(version_msg.user_agent, "/Satoshi:0.17.1/");
+            assert_eq!(version_msg.user_agent, "/Groestlcoin:2.17.2/");
             assert_eq!(version_msg.start_height, 560275);
             assert_eq!(version_msg.relay, true);
         } else {
@@ -171,7 +171,7 @@ mod test {
     }
 
     fn check_alert_msg(msg: &RawNetworkMessage) {
-        assert_eq!(msg.magic, 0xd9b4bef9);
+        assert_eq!(msg.magic, 0xd4b4bef9);
         if let NetworkMessage::Alert(ref alert) = msg.payload {
             assert_eq!(alert.clone(), [
                 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -227,7 +227,7 @@ mod test {
         check_version_msg(&message);
 
         let msg: RawNetworkMessage = reader.read_next().unwrap();
-        assert_eq!(msg.magic, 0xd9b4bef9);
+        assert_eq!(msg.magic, 0xd4b4bef9);
         if let NetworkMessage::Ping(nonce) = msg.payload {
             assert_eq!(nonce, 100);
         } else {
@@ -302,7 +302,7 @@ mod test {
 
         // Reading and checking the second message (Verack)
         let msg: RawNetworkMessage = reader.read_next().unwrap();
-        assert_eq!(msg.magic, 0xd9b4bef9);
+        assert_eq!(msg.magic, 0xd4b4bef9);
         assert_eq!(msg.payload, NetworkMessage::Verack, "Wrong message type, expected VerackMessage");
 
         // Reading and checking the third message (Alert)

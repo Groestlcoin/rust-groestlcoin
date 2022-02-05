@@ -627,7 +627,7 @@ mod tests {
         // stolen from Groestlcoin transaction: b3c8c2b6cfc335abbcb2c7823a8453f55d64b2b5125a9a61e8737230cdb8ce20
         let mut key = hex_key!("033bc8c83c52df5712229a2f72206d90192366c36428cb0c12b6af98324d97bfbc");
         let addr = Address::p2wpkh(&key, Groestlcoin).unwrap();
-        assert_eq!(&addr.to_string(), "bc1qvzvkjn4q3nszqxrv3nraga2r822xjty3ykvkuw");
+        assert_eq!(&addr.to_string(), "grs1qvzvkjn4q3nszqxrv3nraga2r822xjty3e8sh90");
         assert_eq!(addr.address_type(), Some(AddressType::P2wpkh));
         roundtrips(&addr);
 
@@ -643,7 +643,7 @@ mod tests {
         let addr = Address::p2wsh(&script, Groestlcoin);
         assert_eq!(
             &addr.to_string(),
-            "bc1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxswvvzej"
+            "grs1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxsphnwkk"
         );
         assert_eq!(addr.address_type(), Some(AddressType::P2wsh));
         roundtrips(&addr);
@@ -838,7 +838,7 @@ mod tests {
             assert_eq!(addr.to_qr_uri(), format!("groestlcoin:{}", el));
         }
 
-        for el in ["bcrt1q2nfxmhd4n3c8834pj72xagvyr9gl57n5r94fsl", "bc1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxswvvzej"].iter() {
+        for el in ["bcrt1q2nfxmhd4n3c8834pj72xagvyr9gl57n5r94fsl", "grs1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxsphnwkk"].iter() {
             let addr = Address::from_str(el).unwrap();
             assert_eq!(addr.to_qr_uri(), format!("GROESTLCOIN:{}", el.to_ascii_uppercase()) );
         }

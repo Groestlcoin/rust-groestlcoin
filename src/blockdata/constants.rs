@@ -188,7 +188,7 @@ mod test {
         assert_eq!(gen.output.len(), 1);
         assert_eq!(serialize(&gen.output[0].script_pubkey),
                    Vec::from_hex("434104678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5fac").unwrap());
-        assert_eq!(gen.output[0].value, 50 * COIN_VALUE);
+        assert_eq!(gen.output[0].value, 0 * COIN_VALUE);
         assert_eq!(gen.lock_time, 0);
 
         assert_eq!(format!("{:x}", gen.wtxid()),
@@ -203,7 +203,7 @@ mod test {
         assert_eq!(gen.header.prev_blockhash, Default::default());
         assert_eq!(format!("{:x}", gen.header.merkle_root),
                    "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb".to_string());
-        assert_eq!(gen.header.time, 1231006505);
+        assert_eq!(gen.header.time, 1395342829);
         assert_eq!(gen.header.bits, 0x1d00ffff);
         assert_eq!(gen.header.nonce, 2083236893);
         assert_eq!(format!("{:x}", gen.header.block_hash()),
@@ -217,7 +217,7 @@ mod test {
         assert_eq!(gen.header.prev_blockhash, Default::default());
         assert_eq!(format!("{:x}", gen.header.merkle_root),
                   "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb".to_string());
-        assert_eq!(gen.header.time, 1296688602);
+        assert_eq!(gen.header.time, 1440000002);
         assert_eq!(gen.header.bits, 0x1d00ffff);
         assert_eq!(gen.header.nonce, 414098458);
         assert_eq!(format!("{:x}", gen.header.block_hash()),
@@ -230,11 +230,11 @@ mod test {
         assert_eq!(gen.header.version, 1);
         assert_eq!(gen.header.prev_blockhash, Default::default());
         assert_eq!(format!("{:x}", gen.header.merkle_root),
-                  "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b".to_string());
+                  "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb".to_string());
         assert_eq!(gen.header.time, 1598918400);
         assert_eq!(gen.header.bits, 0x1e0377ae);
         assert_eq!(gen.header.nonce, 52613770);
         assert_eq!(format!("{:x}", gen.header.block_hash()),
-                   "00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6".to_string());
+                   "7d6c4b596d26710b86b645995d15468c8e1282bdef550f196ed573ca6fcbbed3".to_string());
     }
 }

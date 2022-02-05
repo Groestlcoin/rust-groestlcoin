@@ -274,9 +274,10 @@ mod tests {
         // Long input (>100 bytes => has to use heap)
         let res = encode_slice(&"GroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestl\
         coinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoin".as_bytes());
-        let exp = "ZqC5ZdfpZRi7fjA8hbhX5pEE96MdH9hEaC1YouxscPtbJF16qVWksHWR4wwvx7MotFcs2ChbJqK8KJ9X\
-        wZznwWn1JFDhhTmGo9v6GjAVikzCsBWZehu7bm22xL8b5zBR5AsBygYRwbFJsNwNkjpyFuDKwmsUTKvkULCvucPJrN5\
-        QUdxpGakhqkZFL7RU4yT";
+        let exp = "2hXiLBbH9kmBoA9HWRRpWuHu29Hg49ApfMGzw6CXJkHn2sVUFjm8qF8FQQm29jFNXHjUXs59Q\
+        K9gk2MrWjiLokRHQ2t71bY5HjQUmutR2rTU91sc9gZjixxegH45Zs19PkCweG4bshVEm3XvqSDnELis8yjxkb\
+        aeV3DFCuYA69mxwtsqZpJxqWCSbu9vPBAoX5bWKeF5bRXNSd9tp4F7GMWCmvQqC2fxpVqk78YkxCs6H4EAJncp\
+        sNxAxCwrLQ164Pzn2y5zupcmLmwEf1SRmN997q5J3rU3ytRf3ot1iuymf";
         assert_eq!(&res, exp);
 
         // Addresses
