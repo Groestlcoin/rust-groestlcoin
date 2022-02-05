@@ -34,7 +34,7 @@ use prelude::*;
 use core::{fmt, mem, u32, convert::From};
 #[cfg(feature = "std")] use std::error;
 
-use hashes::{sha256d, Hash, greostld};
+use hashes::{sha256, sha256d, Hash, groestld};
 use hash_types::{BlockHash, FilterHash, TxMerkleNode, FilterHeader};
 
 use io::{self, Cursor, Read};
@@ -763,7 +763,7 @@ impl Decodable for sha256d::Hash {
 }
 
 impl Encodable for sha256::Hash {
-    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, Error> {
+    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, io::Error> {
         self.into_inner().consensus_encode(s)
     }
 }
@@ -775,7 +775,7 @@ impl Decodable for sha256::Hash {
 }
 
 impl Encodable for groestld::Hash {
-    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, Error> {
+    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, io::Error> {
         self.into_inner().consensus_encode(s)
     }
 }

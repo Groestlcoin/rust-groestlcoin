@@ -25,7 +25,7 @@
 
 use prelude::*;
 
-use io;
+use ::{io, TxidInternal};
 use core::{fmt, str, default::Default};
 #[cfg(feature = "std")] use std::error;
 
@@ -38,7 +38,7 @@ use blockdata::constants::WITNESS_SCALE_FACTOR;
 use blockdata::script::Script;
 use consensus::{encode, Decodable, Encodable};
 use consensus::encode::MAX_VEC_SIZE;
-use hash_types::{SigHash, Txid, Wtxid};
+use hash_types::{SigHash, Txid, Wtxid, WtxidInternal};
 use VarInt;
 
 /// A reference to a transaction output
