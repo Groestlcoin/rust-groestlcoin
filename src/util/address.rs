@@ -353,7 +353,7 @@ impl Address {
         self.payload.script_pubkey()
     }
 
-    /// Creates a URI string *bitcoin:address* optimized to be encoded in QR codes.
+    /// Creates a URI string *groestlcoin:address* optimized to be encoded in QR codes.
     ///
     /// If the address is bech32, both the schema and the address become uppercase.
     /// If the address is base58, the schema is lowercase and the address is left mixed case.
@@ -835,12 +835,12 @@ mod tests {
     fn test_qr_string() {
         for el in  ["132F25rTsvBdp9JzLLBHP5mvGY66i1xdiM", "33iFwdLuRpW1uK1RTRqsoi8rR4NpDzk66k"].iter() {
             let addr = Address::from_str(el).unwrap();
-            assert_eq!(addr.to_qr_uri(), format!("bitcoin:{}", el));
+            assert_eq!(addr.to_qr_uri(), format!("groestlcoin:{}", el));
         }
 
         for el in ["bcrt1q2nfxmhd4n3c8834pj72xagvyr9gl57n5r94fsl", "bc1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxswvvzej"].iter() {
             let addr = Address::from_str(el).unwrap();
-            assert_eq!(addr.to_qr_uri(), format!("BITCOIN:{}", el.to_ascii_uppercase()) );
+            assert_eq!(addr.to_qr_uri(), format!("GROESTLCOIN:{}", el.to_ascii_uppercase()) );
         }
     }
 
