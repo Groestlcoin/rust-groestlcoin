@@ -204,8 +204,8 @@ mod test {
         assert_eq!(format!("{:x}", gen.header.merkle_root),
                    "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb".to_string());
         assert_eq!(gen.header.time, 1395342829);
-        assert_eq!(gen.header.bits, 0x1d00ffff);
-        assert_eq!(gen.header.nonce, 2083236893);
+        assert_eq!(gen.header.bits, 0x1e0fffff);
+        assert_eq!(gen.header.nonce, 220035);
         assert_eq!(format!("{:x}", gen.header.block_hash()),
                    "00000ac5927c594d49cc0bdb81759d0da8297eb614683d3acb62f0703b639023".to_string());
     }
@@ -218,8 +218,8 @@ mod test {
         assert_eq!(format!("{:x}", gen.header.merkle_root),
                   "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb".to_string());
         assert_eq!(gen.header.time, 1440000002);
-        assert_eq!(gen.header.bits, 0x1d00ffff);
-        assert_eq!(gen.header.nonce, 414098458);
+        assert_eq!(gen.header.bits, 0x1e00ffff);
+        assert_eq!(gen.header.nonce, 6556309);
         assert_eq!(format!("{:x}", gen.header.block_hash()),
                    "000000ffbb50fc9898cdd36ec163e6ba23230164c0052a28876255b7dcf2cd36".to_string());
     }
