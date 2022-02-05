@@ -25,14 +25,14 @@ const MAX_BITS_BITCOIN: Uint256 = Uint256([
     0x0000000000000000u64,
     0x0000000000000000u64,
     0x0000000000000000u64,
-    0x00000000ffff0000u64,
+    0x00000fffffffffffu64,
 ]);
 /// Lowest possible difficulty for Testnet. See comment on Params::pow_limit for more info.
 const MAX_BITS_TESTNET: Uint256 = Uint256([
     0x0000000000000000u64,
     0x0000000000000000u64,
     0x0000000000000000u64,
-    0x00000000ffff0000u64,
+    0x000000ffffffffffu64,
 ]);
 /// Lowest possible difficulty for Signet. See comment on Params::pow_limit for more info.
 const MAX_BITS_SIGNET: Uint256 = Uint256([
@@ -46,7 +46,7 @@ const MAX_BITS_REGTEST: Uint256 = Uint256([
     0x0000000000000000u64,
     0x0000000000000000u64,
     0x0000000000000000u64,
-    0x7fffff0000000000u64,
+    0x00ffffffffffffffu64,
 ]);
 
 #[derive(Debug, Clone)]
@@ -93,11 +93,11 @@ impl Params {
         match network {
             Network::Groestlcoin => Params {
                 network: Network::Groestlcoin,
-                bip16_time: 1333238400,                 // Apr 1 2012
-                bip34_height: 227931, // 000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8
-                bip65_height: 388381, // 000000000000000004c2b624ed5d7756c508d90fd0da2c7c679febfa6c4735f0
-                bip66_height: 363725, // 00000000000000000379eaa19dce8c9b722d46ae6a57c2f1a988119488b50931
-                rule_change_activation_threshold: 1916, // 95%
+                bip16_time: 0,
+                bip34_height: 800000, // 0000000007f3f37410d5f7e71a07bf09bb802d5af6726fc891f0248ad857708c
+                bip65_height: 2464000, // 00000000000030f90269dd2c0fb5f7502f332cd183b1596817f0cc4cfd6966b1
+                bip66_height: 800000, // 0000000007f3f37410d5f7e71a07bf09bb802d5af6726fc891f0248ad857708c
+                rule_change_activation_threshold: 1815, // 90%
                 miner_confirmation_window: 2016,
                 pow_limit: MAX_BITS_BITCOIN,
                 pow_target_spacing: 60,            // 1 minute.
@@ -107,10 +107,10 @@ impl Params {
             },
             Network::Testnet => Params {
                 network: Network::Testnet,
-                bip16_time: 1333238400,                 // Apr 1 2012
-                bip34_height: 21111, // 0000000023b3a96d3484e5abb3755c413e7d41500f8e2a5c3f0dd01299cd8ef8
-                bip65_height: 581885, // 00000000007f6655f22f98e72ed80d8b06dc761d5da09df0fa1dc4be4f861eb6
-                bip66_height: 330776, // 000000002104c8c45e99a8853285a3b592602a3ccde2b832481da85e9e4ba182
+                bip16_time: 0,
+                bip34_height: 286, // 0000004b7778ba253a75b716c55b2c6609b5fb97691b3260978f9ce4a633106d
+                bip65_height: 982000, // 000000204a7e703f80543d9329d4b90e4269e08f36ad746cfe145add340b8738
+                bip66_height: 286, // 0000004b7778ba253a75b716c55b2c6609b5fb97691b3260978f9ce4a633106d
                 rule_change_activation_threshold: 1512, // 75%
                 miner_confirmation_window: 2016,
                 pow_limit: MAX_BITS_TESTNET,
@@ -121,11 +121,11 @@ impl Params {
             },
             Network::Signet => Params {
                 network: Network::Signet,
-                bip16_time: 1333238400,                 // Apr 1 2012
+                bip16_time: 0,
                 bip34_height: 1,
                 bip65_height: 1,
                 bip66_height: 1,
-                rule_change_activation_threshold: 1916, // 95%
+                rule_change_activation_threshold: 1815, // 90%
                 miner_confirmation_window: 2016,
                 pow_limit: MAX_BITS_SIGNET,
                 pow_target_spacing: 60,            // 1 minute.
@@ -135,10 +135,10 @@ impl Params {
             },
             Network::Regtest => Params {
                 network: Network::Regtest,
-                bip16_time: 1333238400,  // Apr 1 2012
-                bip34_height: 100000000, // not activated on regtest
-                bip65_height: 1351,
-                bip66_height: 1251,                    // used only in rpc tests
+                bip16_time: 0,
+                bip34_height: 1,
+                bip65_height: 1,
+                bip66_height: 1,
                 rule_change_activation_threshold: 108, // 75%
                 miner_confirmation_window: 144,
                 pow_limit: MAX_BITS_REGTEST,

@@ -377,7 +377,7 @@ impl fmt::Display for Address {
             Payload::PubkeyHash(ref hash) => {
                 let mut prefixed = [0; 21];
                 prefixed[0] = match self.network {
-                    Network::Groestlcoin => 0,
+                    Network::Groestlcoin => 36,
                     Network::Testnet | Network::Signet | Network::Regtest => 111,
                 };
                 prefixed[1..].copy_from_slice(&hash[..]);

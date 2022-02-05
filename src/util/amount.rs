@@ -73,7 +73,6 @@ impl FromStr for Denomination {
             "uGRS" => Ok(Denomination::MicroBitcoin),
             "groestls" => Ok(Denomination::Bit),
             "gro" => Ok(Denomination::Satoshi),
-            "gro" => Ok(Denomination::Satoshi),
             "mgro" => Ok(Denomination::MilliSatoshi),
             d => Err(ParseAmountError::UnknownDenomination(d.to_owned())),
         }
