@@ -1,8 +1,8 @@
 
-extern crate bitcoin;
+extern crate groestlcoin;
 
-use bitcoin::blockdata::transaction::OutPoint;
-use bitcoin::consensus::encode;
+use groestlcoin::blockdata::transaction::OutPoint;
+use groestlcoin::consensus::encode;
 
 use std::str::FromStr;
 

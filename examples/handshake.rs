@@ -1,15 +1,15 @@
-extern crate bitcoin;
+extern crate groestlcoin;
 
 use std::net::{IpAddr, Ipv4Addr, Shutdown, SocketAddr, TcpStream};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{env, process};
 use std::io::Write;
 
-use bitcoin::consensus::encode;
-use bitcoin::network::{address, constants, message, message_network};
-use bitcoin::network::stream_reader::StreamReader;
-use bitcoin::secp256k1;
-use bitcoin::secp256k1::rand::Rng;
+use groestlcoin::consensus::encode;
+use groestlcoin::network::{address, constants, message, message_network};
+use groestlcoin::network::stream_reader::StreamReader;
+use groestlcoin::secp256k1;
+use groestlcoin::secp256k1::rand::Rng;
 
 fn main() {
     // This example establishes a connection to a Bitcoin node, sends the intial

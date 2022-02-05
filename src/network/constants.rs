@@ -28,8 +28,8 @@
 //! # Example: encoding a network's magic bytes
 //!
 //! ```rust
-//! use bitcoin::network::constants::Network;
-//! use bitcoin::consensus::encode::serialize;
+//! use groestlcoin::network::constants::Network;
+//! use groestlcoin::consensus::encode::serialize;
 //!
 //! let network = Network::Groestlcoin;
 //! let bytes = serialize(&network.magic());
@@ -80,7 +80,7 @@ impl Network {
     /// # Examples
     ///
     /// ```rust
-    /// use bitcoin::network::constants::Network;
+    /// use groestlcoin::network::constants::Network;
     ///
     /// assert_eq!(Some(Network::Groestlcoin), Network::from_magic(0xD9B4BEF9));
     /// assert_eq!(None, Network::from_magic(0xFFFFFFFF));
@@ -102,7 +102,7 @@ impl Network {
     /// # Examples
     ///
     /// ```rust
-    /// use bitcoin::network::constants::Network;
+    /// use groestlcoin::network::constants::Network;
     ///
     /// let network = Network::Groestlcoin;
     /// assert_eq!(network.magic(), 0xD9B4BEF9);

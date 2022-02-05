@@ -19,11 +19,11 @@
 //!
 //! ```rust
 //!
-//! use bitcoin::network::constants::Network;
-//! use bitcoin::util::address::Address;
-//! use bitcoin::util::ecdsa;
-//! use bitcoin::secp256k1::Secp256k1;
-//! use bitcoin::secp256k1::rand::thread_rng;
+//! use groestlcoin::network::constants::Network;
+//! use groestlcoin::util::address::Address;
+//! use groestlcoin::util::ecdsa;
+//! use groestlcoin::secp256k1::Secp256k1;
+//! use groestlcoin::secp256k1::rand::thread_rng;
 //!
 //! // Generate random key pair
 //! let s = Secp256k1::new();

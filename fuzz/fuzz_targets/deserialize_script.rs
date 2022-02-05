@@ -1,9 +1,9 @@
-extern crate bitcoin;
+extern crate groestlcoin;
 
-use bitcoin::util::address::Address;
-use bitcoin::network::constants::Network;
-use bitcoin::blockdata::script;
-use bitcoin::consensus::encode;
+use groestlcoin::util::address::Address;
+use groestlcoin::network::constants::Network;
+use groestlcoin::blockdata::script;
+use groestlcoin::consensus::encode;
 
 fn do_test(data: &[u8]) {
     let s: Result<script::Script, _> = encode::deserialize(data);

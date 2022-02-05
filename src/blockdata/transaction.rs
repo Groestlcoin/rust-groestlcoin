@@ -78,8 +78,8 @@ impl OutPoint {
     /// # Examples
     ///
     /// ```rust
-    /// use bitcoin::blockdata::constants::genesis_block;
-    /// use bitcoin::network::constants::Network;
+    /// use groestlcoin::blockdata::constants::genesis_block;
+    /// use groestlcoin::network::constants::Network;
     ///
     /// let block = genesis_block(Network::Groestlcoin);
     /// let tx = &block.txdata[0];

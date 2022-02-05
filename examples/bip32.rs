@@ -1,16 +1,16 @@
-extern crate bitcoin;
+extern crate groestlcoin;
 
 use std::{env, process};
 use std::str::FromStr;
 
-use bitcoin::secp256k1::Secp256k1;
-use bitcoin::util::ecdsa::PrivateKey;
-use bitcoin::util::bip32::ExtendedPrivKey;
-use bitcoin::util::bip32::ExtendedPubKey;
-use bitcoin::util::bip32::DerivationPath;
-use bitcoin::util::bip32::ChildNumber;
-use bitcoin::util::address::Address;
-use bitcoin::secp256k1::ffi::types::AlignedType;
+use groestlcoin::secp256k1::Secp256k1;
+use groestlcoin::util::ecdsa::PrivateKey;
+use groestlcoin::util::bip32::ExtendedPrivKey;
+use groestlcoin::util::bip32::ExtendedPubKey;
+use groestlcoin::util::bip32::DerivationPath;
+use groestlcoin::util::bip32::ChildNumber;
+use groestlcoin::util::address::Address;
+use groestlcoin::secp256k1::ffi::types::AlignedType;
 
 fn main() {
     // This example derives root xprv

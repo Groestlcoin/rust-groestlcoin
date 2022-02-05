@@ -1,7 +1,7 @@
-extern crate bitcoin;
+extern crate groestlcoin;
 
 fn do_test(data: &[u8]) {
-    let _: Result<bitcoin::network::message::RawNetworkMessage, _> = bitcoin::consensus::encode::deserialize(data);
+    let _: Result<groestlcoin::network::message::RawNetworkMessage, _> = groestlcoin::consensus::encode::deserialize(data);
 }
 
 #[cfg(feature = "afl")]
