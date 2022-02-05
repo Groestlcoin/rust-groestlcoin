@@ -25,12 +25,10 @@
 //! # Examples
 //!
 //! ```rust
-//! extern crate bitcoin;
 //! use bitcoin::hash_types::Txid;
 //! use bitcoin::hashes::hex::FromHex;
 //! use bitcoin::{Block, MerkleBlock};
 //!
-//! # fn main() {
 //! // Get the proof from a bitcoind by running in the terminal:
 //! // $ TXID="5a4ebf66822b0b2d56bd9dc64ece0bc38ee7844a23ff1d7320a88c5fdb2ad3e2"
 //! // $ bitcoin-cli gettxoutproof [\"$TXID\"]
@@ -52,11 +50,10 @@
 //! );
 //! assert_eq!(1, index.len());
 //! assert_eq!(1, index[0]);
-//! # }
 //! ```
+use prelude::*;
 
-use std::collections::HashSet;
-use std::io;
+use io;
 
 use hashes::Hash;
 use hash_types::{Txid, TxMerkleNode};
@@ -133,12 +130,10 @@ impl PartialMerkleTree {
     /// # Examples
     ///
     /// ```rust
-    /// extern crate bitcoin;
     /// use bitcoin::hash_types::Txid;
     /// use bitcoin::hashes::hex::FromHex;
     /// use bitcoin::util::merkleblock::PartialMerkleTree;
     ///
-    /// # fn main() {
     /// // Block 80000
     /// let txids: Vec<Txid> = [
     ///     "c06fbab289f723c6261d3030ddb6be121f7d2508d77862bb1e484f5cd7f92b25",
@@ -152,7 +147,6 @@ impl PartialMerkleTree {
     /// let matches = vec![false, true];
     /// let tree = PartialMerkleTree::from_txids(&txids, &matches);
     /// assert!(tree.extract_matches(&mut vec![], &mut vec![]).is_ok());
-    /// # }
     /// ```
     pub fn from_txids(txids: &[Txid], matches: &[bool]) -> Self {
         // We can never have zero txs in a merkle block, we always need the coinbase tx
@@ -271,7 +265,7 @@ impl PartialMerkleTree {
         if height == 0 || !parent_of_match {
             // If at height 0, or nothing interesting below, store hash and stop
             let hash = self.calc_hash(height, pos, txids);
-            self.hashes.push(hash.into());
+            self.hashes.push(hash);
         } else {
             // Otherwise, don't store any hash, but descend into the subtrees
             self.traverse_and_build(height - 1, pos * 2, txids, matches);
@@ -356,7 +350,7 @@ impl Encodable for PartialMerkleTree {
     fn consensus_encode<S: io::Write>(
         &self,
         mut s: S,
-    ) -> Result<usize, encode::Error> {
+    ) -> Result<usize, io::Error> {
         let ret = self.num_transactions.consensus_encode(&mut s)?
             + self.hashes.consensus_encode(&mut s)?;
         let mut bytes: Vec<u8> = vec![0; (self.bits.len() + 7) / 8];
@@ -399,20 +393,18 @@ pub struct MerkleBlock {
 }
 
 impl MerkleBlock {
-    /// Create a MerkleBlock from a block, that should contain proofs for the txids.
+    /// Create a MerkleBlock from a block, that contains proofs for specific txids.
     ///
     /// The `block` is a full block containing the header and transactions and `match_txids` is a
-    /// set containing the transaction ids that should be included in the partial merkle tree.
+    /// function that returns true for the ids that should be included in the partial merkle tree.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// extern crate bitcoin;
     /// use bitcoin::hash_types::Txid;
     /// use bitcoin::hashes::hex::FromHex;
     /// use bitcoin::{Block, MerkleBlock};
     ///
-    /// # fn main() {
     /// // Block 80000
     /// let block_bytes = Vec::from_hex("01000000ba8b9cda965dd8e536670f9ddec10e53aab14b20bacad2\
     ///     7b9137190000000000190760b278fe7b8565fda3b968b918d5fd997f993b23674c0af3b6fde300b38f33\
@@ -429,29 +421,58 @@ impl MerkleBlock {
     /// // Create a merkle block containing a single transaction
     /// let txid = Txid::from_hex(
     ///     "5a4ebf66822b0b2d56bd9dc64ece0bc38ee7844a23ff1d7320a88c5fdb2ad3e2").unwrap();
-    /// let match_txids = vec![txid].into_iter().collect();
-    /// let mb = MerkleBlock::from_block(&block, &match_txids);
+    /// let match_txids: Vec<Txid> = vec![txid].into_iter().collect();
+    /// let mb = MerkleBlock::from_block_with_predicate(&block, |t| match_txids.contains(t));
     ///
     /// // Authenticate and extract matched transaction ids
     /// let mut matches: Vec<Txid> = vec![];
     /// let mut index: Vec<u32> = vec![];
     /// assert!(mb.extract_matches(&mut matches, &mut index).is_ok());
     /// assert_eq!(txid, matches[0]);
-    /// # }
     /// ```
-    pub fn from_block(block: &Block, match_txids: &HashSet<Txid>) -> Self {
-        let header = block.header;
+    pub fn from_block_with_predicate<F>(block: &Block, match_txids: F) -> Self
+        where F: Fn(&Txid) -> bool {
+        let block_txids: Vec<_> = block.txdata.iter().map(Transaction::txid).collect();
+        Self::from_header_txids_with_predicate(&block.header, &block_txids, match_txids)
+    }
 
-        let mut matches: Vec<bool> = Vec::with_capacity(block.txdata.len());
-        let mut hashes: Vec<Txid> = Vec::with_capacity(block.txdata.len());
+    /// Create a MerkleBlock from a block, that contains proofs for specific txids.
+    #[cfg(feature = "std")]
+    #[deprecated(since="0.26.2", note="use from_block_with_predicate")]
+    pub fn from_block(block: &Block, match_txids: &::std::collections::HashSet<Txid>) -> Self {
+        Self::from_block_with_predicate(block, |t| match_txids.contains(t))
+    }
 
-        for hash in block.txdata.iter().map(Transaction::txid) {
-            matches.push(match_txids.contains(&hash));
-            hashes.push(hash);
+    /// Create a MerkleBlock from the block's header and txids, that contain proofs for specific txids.
+    ///
+    /// The `header` is the block header, `block_txids` is the full list of txids included in the block and
+    /// `match_txids` is a function that returns true for the ids that should be included in the partial merkle tree.
+    pub fn from_header_txids_with_predicate<F>(
+        header: &BlockHeader,
+        block_txids: &[Txid],
+        match_txids: F,
+    ) -> Self where F: Fn(&Txid) -> bool {
+        let matches: Vec<bool> = block_txids
+            .iter()
+            .map(match_txids)
+            .collect();
+
+        let pmt = PartialMerkleTree::from_txids(&block_txids, &matches);
+        MerkleBlock {
+            header: *header,
+            txn: pmt,
         }
+    }
 
-        let pmt = PartialMerkleTree::from_txids(&hashes, &matches);
-        MerkleBlock { header, txn: pmt }
+    /// Create a MerkleBlock from the block's header and txids, that should contain proofs for match_txids.
+    #[cfg(feature = "std")]
+    #[deprecated(since="0.26.2", note="use from_header_txids_with_predicate")]
+    pub fn from_header_txids(
+        header: &BlockHeader,
+        block_txids: &[Txid],
+        match_txids: &::std::collections::HashSet<Txid>,
+    ) -> Self {
+        Self::from_header_txids_with_predicate(header, block_txids, |t| match_txids.contains(t))
     }
 
     /// Extract the matching txid's represented by this partial merkle tree
@@ -476,7 +497,7 @@ impl Encodable for MerkleBlock {
     fn consensus_encode<S: io::Write>(
         &self,
         mut s: S,
-    ) -> Result<usize, encode::Error> {
+    ) -> Result<usize, io::Error> {
         let len = self.header.consensus_encode(&mut s)?
             + self.txn.consensus_encode(s)?;
         Ok(len)
@@ -494,7 +515,7 @@ impl Decodable for MerkleBlock {
 
 #[cfg(test)]
 mod tests {
-    use std::cmp::min;
+    use core::cmp::min;
 
     use hashes::Hash;
     use hashes::hex::{FromHex, ToHex};
@@ -502,9 +523,9 @@ mod tests {
     use secp256k1::rand::prelude::*;
 
     use consensus::encode::{deserialize, serialize};
-    use util::hash::{bitcoin_merkle_root, BitcoinHash};
+    use util::hash::bitcoin_merkle_root;
     use util::merkleblock::{MerkleBlock, PartialMerkleTree};
-    use {hex, Block};
+    use Block;
 
     #[test]
     fn pmt_tests() {
@@ -615,8 +636,8 @@ mod tests {
             ebe1ae264bc0e2289189ff0316cdc10511da71da757e553cada9f3b5b1434f3923673adb57d83caac392c38\
             af156d6fc30b55fad4112df2b95531e68114e9ad10011e72f7b7cfdb025700";
 
-        let mb: MerkleBlock = deserialize(&hex::decode(mb_hex).unwrap()).unwrap();
-        assert_eq!(get_block_13b8a().bitcoin_hash(), mb.header.bitcoin_hash());
+        let mb: MerkleBlock = deserialize(&Vec::from_hex(mb_hex).unwrap()).unwrap();
+        assert_eq!(get_block_13b8a().block_hash(), mb.header.block_hash());
         assert_eq!(
             mb.header.merkle_root,
             mb.txn.extract_matches(&mut vec![], &mut vec![]).unwrap()
@@ -641,11 +662,11 @@ mod tests {
 
         let txid1 = txids[0];
         let txid2 = txids[1];
-        let txids = txids.into_iter().collect();
+        let txids = vec![txid1, txid2];
 
-        let merkle_block = MerkleBlock::from_block(&block, &txids);
+        let merkle_block = MerkleBlock::from_block_with_predicate(&block, |t| txids.contains(t));
 
-        assert_eq!(merkle_block.header.bitcoin_hash(), block.bitcoin_hash());
+        assert_eq!(merkle_block.header.block_hash(), block.block_hash());
 
         let mut matches: Vec<Txid> = vec![];
         let mut index: Vec<u32> = vec![];
@@ -671,14 +692,14 @@ mod tests {
     #[test]
     fn merkleblock_construct_from_txids_not_found() {
         let block = get_block_13b8a();
-        let txids = ["c0ffee00003bafa802c8aa084379aa98d9fcd632ddc2ed9782b586ec87451f20"]
+        let txids: Vec<Txid> = ["c0ffee00003bafa802c8aa084379aa98d9fcd632ddc2ed9782b586ec87451f20"]
             .iter()
             .map(|hex| Txid::from_hex(hex).unwrap())
             .collect();
 
-        let merkle_block = MerkleBlock::from_block(&block, &txids);
+        let merkle_block = MerkleBlock::from_block_with_predicate(&block, |t| txids.contains(t));
 
-        assert_eq!(merkle_block.header.bitcoin_hash(), block.bitcoin_hash());
+        assert_eq!(merkle_block.header.block_hash(), block.block_hash());
 
         let mut matches: Vec<Txid> = vec![];
         let mut index: Vec<u32> = vec![];
@@ -781,6 +802,6 @@ mod tests {
             058b800a098fc1740ce3012e8fc8a00c96af966ffffffff02c0e1e400000000001976a9144134e75a6fcb60\
             42034aab5e18570cf1f844f54788ac404b4c00000000001976a9142b6ba7c9d796b75eef7942fc9288edd37\
             c32f5c388ac00000000";
-        deserialize(&hex::decode(block_hex).unwrap()).unwrap()
+        deserialize(&Vec::from_hex(block_hex).unwrap()).unwrap()
     }
 }

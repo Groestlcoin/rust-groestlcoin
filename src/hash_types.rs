@@ -16,23 +16,20 @@
 //! to avoid mixing data of the same hash format (like SHA256d) but of different meaning
 //! (transaction id, block hash etc).
 
-use std::io;
-
-use consensus::encode::{Encodable, Decodable, Error};
-use hashes::{Hash, sha256, sha256d, ripemd160, hash160, groestld};
-use hashes::hex::{FromHex, ToHex};
+use hashes::{Hash, sha256, sha256d, hash160, groestld};
 
 macro_rules! impl_hashencode {
     ($hashtype:ident) => {
-        impl Encodable for $hashtype {
-            fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, Error> {
+        impl $crate::consensus::Encodable for $hashtype {
+            fn consensus_encode<S: $crate::io::Write>(&self, s: S) -> Result<usize, $crate::io::Error> {
                 self.0.consensus_encode(s)
             }
         }
 
-        impl Decodable for $hashtype {
-            fn consensus_decode<D: io::Read>(d: D) -> Result<Self, Error> {
-                Ok(Self::from_inner(<<$hashtype as Hash>::Inner>::consensus_decode(d)?))
+        impl $crate::consensus::Decodable for $hashtype {
+            fn consensus_decode<D: $crate::io::Read>(d: D) -> Result<Self, $crate::consensus::encode::Error> {
+                use $crate::hashes::Hash;
+                Ok(Self::from_inner(<<$hashtype as $crate::hashes::Hash>::Inner>::consensus_decode(d)?))
             }
         }
     }
@@ -73,7 +70,8 @@ hash_newtype!(WitnessMerkleNode, sha256d::Hash, 32, doc="A hash corresponding to
 hash_newtype!(WitnessCommitment, sha256d::Hash, 32, doc="A hash corresponding to the witness structure commitment in the coinbase transaction");
 hash_newtype!(XpubIdentifier, hash160::Hash, 20, doc="XpubIdentifier as defined in BIP-32.");
 
-hash_newtype!(FilterHash, groestld::Hash, 32, doc="Bloom filter groestld locator hash, as defined in BIP-168");
+hash_newtype!(FilterHash, groestld::Hash, 32, doc="Filter hash, as defined in BIP-157");
+hash_newtype!(FilterHeader, groestld::Hash, 32, doc="Filter header, as defined in BIP-157");
 
 
 impl_hashencode!(Txid);
@@ -83,3 +81,4 @@ impl_hashencode!(BlockHash);
 impl_hashencode!(TxMerkleNode);
 impl_hashencode!(WitnessMerkleNode);
 impl_hashencode!(FilterHash);
+impl_hashencode!(FilterHeader);

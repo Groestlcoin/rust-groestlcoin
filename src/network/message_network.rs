@@ -18,8 +18,9 @@
 //! capabilities
 //!
 
-use std::io;
-use std::borrow::Cow;
+use prelude::*;
+
+use io;
 
 use network::address::Address;
 use network::constants::{self, ServiceFlags};
@@ -84,8 +85,8 @@ impl_consensus_encoding!(VersionMessage, version, services, timestamp,
                          receiver, sender, nonce,
                          user_agent, start_height, relay);
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 /// message rejection reason as a code
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum RejectReason {
     /// malformed message
     Malformed = 0x01,
@@ -106,7 +107,7 @@ pub enum RejectReason {
 }
 
 impl Encodable for RejectReason {
-    fn consensus_encode<W: io::Write>(&self, mut e: W) -> Result<usize, encode::Error> {
+    fn consensus_encode<W: io::Write>(&self, mut e: W) -> Result<usize, io::Error> {
         e.write_all(&[*self as u8])?;
         Ok(1)
     }
@@ -147,7 +148,7 @@ impl_consensus_encoding!(Reject, message, ccode, reason, hash);
 mod tests {
     use super::VersionMessage;
 
-    use hex::decode as hex_decode;
+    use hashes::hex::FromHex;
     use network::constants::ServiceFlags;
 
     use consensus::encode::{deserialize, serialize};
@@ -155,7 +156,7 @@ mod tests {
     #[test]
     fn version_message_test() {
         // This message is from my satoshi node, morning of May 27 2014
-        let from_sat = hex_decode("721101000100000000000000e6e0845300000000010000000000000000000000000000000000ffff0000000000000100000000000000fd87d87eeb4364f22cf54dca59412db7208d47d920cffce83ee8102f5361746f7368693a302e392e39392f2c9f040001").unwrap();
+        let from_sat = Vec::from_hex("721101000100000000000000e6e0845300000000010000000000000000000000000000000000ffff0000000000000100000000000000fd87d87eeb4364f22cf54dca59412db7208d47d920cffce83ee8102f5361746f7368693a302e392e39392f2c9f040001").unwrap();
 
         let decode: Result<VersionMessage, _> = deserialize(&from_sat);
         assert!(decode.is_ok());
