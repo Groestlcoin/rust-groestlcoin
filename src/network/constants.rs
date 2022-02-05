@@ -88,9 +88,9 @@ impl Network {
     pub fn from_magic(magic: u32) -> Option<Network> {
         // Note: any new entries here must be added to `magic` below
         match magic {
-            0xD4B4BEF9 => Some(Network::Groestlcoin),
+            0xD9B4BEF9 => Some(Network::Groestlcoin),
             0x0709110B => Some(Network::Testnet),
-            0x40CF030A => Some(Network::Signet),
+            0x40CF030A => Some(Network::Signet), // this is not correct
             0xDAB5BFFA => Some(Network::Regtest),
             _ => None
         }
@@ -107,10 +107,10 @@ impl Network {
     /// let network = Network::Groestlcoin;
     /// assert_eq!(network.magic(), 0xD9B4BEF9);
     /// ```
-    pub fn magic(self) -> u32 {
+    pub fn magic(&self) -> u32 {
         // Note: any new entries here must be added to `from_magic` above
         match *self {
-            Network::Groestlcoin => 0xD4B4BEF9,
+            Network::Groestlcoin => 0xD9B4BEF9,
             Network::Testnet => 0x0709110B,
             Network::Signet  => 0x40CF030A,
             Network::Regtest => 0xDAB5BFFA,
@@ -298,7 +298,7 @@ mod tests {
     fn serialize_test() {
         assert_eq!(
             serialize(&Network::Groestlcoin.magic()),
-            &[0xf9, 0xbe, 0xb4, 0xd4]
+            &[0xf9, 0xbe, 0xb4, 0xd9]
         );
         assert_eq!(
             serialize(&Network::Testnet.magic()),
