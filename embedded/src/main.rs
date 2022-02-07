@@ -37,7 +37,7 @@ fn main() -> ! {
     hprintln!("secp buf size {}", size*16).unwrap();
 
     // Load a private key
-    let raw = "L1HKVVLHXiUhecWnwFYF6L3shkf1E12HUmuZTESvBXUdx3yqVP1D";
+    let raw = "L1HKVVLHXiUhecWnwFYF6L3shkf1E12HUmuZTESvBXUdx3zcfamN";
     let pk = PrivateKey::from_wif(raw).unwrap();
     hprintln!("Seed WIF: {}", pk).unwrap();
 
@@ -49,7 +49,7 @@ fn main() -> ! {
     let address = Address::p2wpkh(&pubkey, Network::Groestlcoin).unwrap();
     hprintln!("Address: {}", address).unwrap();
 
-    assert_eq!(address.to_string(), "bc1qpx9t9pzzl4qsydmhyt6ctrxxjd4ep549np9993".to_string());
+    assert_eq!(address.to_string(), "grs1qpx9t9pzzl4qsydmhyt6ctrxxjd4ep549wseyus".to_string());
     // exit QEMU
     // NOTE do not run this on hardware; it can corrupt OpenOCD state
     debug::exit(debug::EXIT_SUCCESS);

@@ -19,7 +19,7 @@ fn main() {
     // prints out corresponding xpub,
     // calculates and prints out the first receiving segwit address.
     // Run this example with cargo and WIF argument:
-    // cargo run --example bip32 L1HKVVLHXiUhecWnwFYF6L3shkf1E12HUmuZTESvBXUdx3yqVP1D
+    // cargo run --example bip32 L1HKVVLHXiUhecWnwFYF6L3shkf1E12HUmuZTESvBXUdx3zcfamN
 
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {

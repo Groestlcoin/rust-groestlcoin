@@ -389,8 +389,6 @@ mod tests {
 
         let prevhash = Vec::from_hex("51f4bcc013edd897566497e64c35735d4320f52e4c64b59a4007000000000000").unwrap();
         let merkle = Vec::from_hex("163c9ba874a3e94426b379e769bdfd4df93117114c14d14111dd7f1aa0a375c9").unwrap();
-        //000000000000000000000000000000000000000000000
-        //                    115df65e243826f1e43
         let work = Uint256([0x6b9fa222841d9u64, 0, 0, 0]);
 
         assert!(decode.is_ok());

@@ -694,7 +694,7 @@ mod tests {
     fn test_bip173_350_vectors() {
         // Test vectors valid under both BIP-173 and BIP-350
         let valid_vectors = [
-            ("BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4", "0014751e76e8199196d454941c45d1b3a323f1433bd6"),
+            ("GRS1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7K3K4SJ5", "0014751e76e8199196d454941c45d1b3a323f1433bd6"),
             ("tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7", "00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262"),
             ("bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kt5nd6y", "5128751e76e8199196d454941c45d1b3a323f1433bd6751e76e8199196d454941c45d1b3a323f1433bd6"),
             ("BC1SW50QGDZ25J", "6002751e"),
@@ -817,11 +817,11 @@ mod tests {
             hex_script!("00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262")
         );
 
-        let addr = Address::from_str(" grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h").unwrap();
+        let addr = Address::from_str("grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h").unwrap();
         let json = serde_json::to_value(&addr).unwrap();
         assert_eq!(
             json,
-            serde_json::Value::String(" grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h".to_owned())
+            serde_json::Value::String("grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h".to_owned())
         );
         let into: Address = serde_json::from_value(json).unwrap();
         assert_eq!(addr.to_string(), into.to_string());
@@ -838,7 +838,7 @@ mod tests {
             assert_eq!(addr.to_qr_uri(), format!("groestlcoin:{}", el));
         }
 
-        for el in [" grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h", "grs1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxsphnwkk"].iter() {
+        for el in ["grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h", "grs1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxsphnwkk"].iter() {
             let addr = Address::from_str(el).unwrap();
             assert_eq!(addr.to_qr_uri(), format!("GROESTLCOIN:{}", el.to_ascii_uppercase()) );
         }
