@@ -67,22 +67,6 @@ do
     cargo test --verbose --features="$feature"
 done
 
-# Fuzz if told to
-if [ "$DO_FUZZ" = true ]
-then
-    (
-        cd fuzz
-        cargo test --verbose
-        ./travis-fuzz.sh
-    )
-fi
-
-# Bench if told to
-if [ "$DO_BENCH" = true ]
-then
-    cargo bench --features unstable
-fi
-
 # Use as dependency if told to
 if [ "$AS_DEPENDENCY" = true ]
 then

@@ -20,8 +20,6 @@ jobs:
               DO_NO_STD: true
           - rust: nightly
             env:
-              DO_FUZZ: true
-              DO_BENCH: true
               AS_DEPENDENCY: true
               DO_NO_STD: true
           - rust: 1.41.0
