@@ -16,7 +16,9 @@
 //!
 //! Functions needed by all parts of the Bitcoin library
 
+pub mod ecdsa;
 pub mod key;
+pub mod schnorr;
 pub mod address;
 pub mod amount;
 pub mod base58;
@@ -27,12 +29,16 @@ pub mod hash;
 pub mod merkleblock;
 pub mod misc;
 pub mod psbt;
+pub mod taproot;
 pub mod uint;
 pub mod bip158;
 
 pub(crate) mod endian;
 
-use std::{error, fmt};
+use prelude::*;
+use io;
+use core::fmt;
+#[cfg(feature = "std")] use std::error;
 
 use network;
 use consensus::encode;
@@ -77,26 +83,19 @@ impl fmt::Display for Error {
         match *self {
             Error::Encode(ref e) => fmt::Display::fmt(e, f),
             Error::Network(ref e) => fmt::Display::fmt(e, f),
-            Error::BlockBadProofOfWork | Error::BlockBadTarget => f.write_str(error::Error::description(self)),
+            Error::BlockBadProofOfWork => f.write_str("block target correct but not attained"),
+            Error::BlockBadTarget => f.write_str("block target incorrect"),
         }
     }
 }
 
-impl error::Error for Error {
-    fn cause(&self) -> Option<&error::Error> {
+#[cfg(feature = "std")]
+impl ::std::error::Error for Error {
+    fn cause(&self) -> Option<&dyn  error::Error> {
         match *self {
             Error::Encode(ref e) => Some(e),
             Error::Network(ref e) => Some(e),
             Error::BlockBadProofOfWork | Error::BlockBadTarget => None
-        }
-    }
-
-    fn description(&self) -> &str {
-        match *self {
-            Error::Encode(ref e) => e.description(),
-            Error::Network(ref e) => e.description(),
-            Error::BlockBadProofOfWork => "block target correct but not attained",
-            Error::BlockBadTarget => "block target incorrect",
         }
     }
 }
@@ -113,4 +112,19 @@ impl From<network::Error> for Error {
     fn from(e: network::Error) -> Error {
         Error::Network(e)
     }
+}
+
+// core2 doesn't have read_to_end
+pub(crate) fn read_to_end<D: io::Read>(mut d: D) -> Result<Vec<u8>, io::Error> {
+    let mut result = vec![];
+    let mut buf = [0u8; 64];
+    loop {
+        match d.read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => result.extend_from_slice(&buf[0..n]),
+            Err(ref e) if e.kind() == io::ErrorKind::Interrupted => {},
+            Err(e) => return Err(e.into()),
+        };
+    }
+    Ok(result)
 }

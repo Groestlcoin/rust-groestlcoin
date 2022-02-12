@@ -28,30 +28,47 @@
 //! # Example: encoding a network's magic bytes
 //!
 //! ```rust
-//! use bitcoin::network::constants::Network;
-//! use bitcoin::consensus::encode::serialize;
+//! use groestlcoin::network::constants::Network;
+//! use groestlcoin::consensus::encode::serialize;
 //!
 //! let network = Network::Groestlcoin;
 //! let bytes = serialize(&network.magic());
 //!
-//! assert_eq!(&bytes[..], &[0xF9, 0xBE, 0xB4, 0xD9]);
+//! assert_eq!(&bytes[..], &[0xF9, 0xBE, 0xB4, 0xD4]);
 //! ```
 
-use std::{fmt, io, ops};
+use core::{fmt, ops, convert::From};
 
+use io;
 use consensus::encode::{self, Encodable, Decodable};
 
 /// Version of the protocol as appearing in network message headers
+/// This constant is used to signal to other peers which features you support.
+/// Increasing it implies that your software also supports every feature prior to this version.
+/// Doing so without support may lead to you incorrectly banning other peers or other peers banning you.
+/// These are the features required for each version:
+/// 70016 - Support receiving `wtxidrelay` message between `version` and `verack` message
+/// 70015 - Support receiving invalid compact blocks from a peer without banning them
+/// 70014 - Support compact block messages `sendcmpct`, `cmpctblock`, `getblocktxn` and `blocktxn`
+/// 70013 - Support `feefilter` message
+/// 70012 - Support `sendheaders` message and announce new blocks via headers rather than inv
+/// 70011 - Support NODE_BLOOM service flag and don't support bloom filter messages if it is not set
+/// 70002 - Support `reject` message
+/// 70001 - Support bloom filter messages `filterload`, `filterclear` `filteradd`, `merkleblock` and FILTERED_BLOCK inventory type
+/// 60002 - Support `mempool` message
+/// 60001 - Support `pong` message and nonce in `ping` message
 pub const PROTOCOL_VERSION: u32 = 70001;
 
 user_enum! {
     /// The cryptocurrency to act on
-    #[derive(Copy, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+    #[derive(Copy, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Debug)]
     pub enum Network {
         /// Classic Groestlcoin
         Groestlcoin <-> "groestlcoin",
         /// Groestlcoin's testnet
         Testnet <-> "testnet",
+        /// Groestlcoin's signet
+        Signet <-> "signet",
         /// Groestlcoin's regtest
         Regtest <-> "regtest"
     }
@@ -63,9 +80,9 @@ impl Network {
     /// # Examples
     ///
     /// ```rust
-    /// use bitcoin::network::constants::Network;
+    /// use groestlcoin::network::constants::Network;
     ///
-    /// assert_eq!(Some(Network::Groestlcoin), Network::from_magic(0xD9B4BEF9));
+    /// assert_eq!(Some(Network::Groestlcoin), Network::from_magic(0xD4B4BEF9));
     /// assert_eq!(None, Network::from_magic(0xFFFFFFFF));
     /// ```
     pub fn from_magic(magic: u32) -> Option<Network> {
@@ -73,6 +90,7 @@ impl Network {
         match magic {
             0xD4B4BEF9 => Some(Network::Groestlcoin),
             0x0709110B => Some(Network::Testnet),
+            0x7696B422 => Some(Network::Signet),
             0xDAB5BFFA => Some(Network::Regtest),
             _ => None
         }
@@ -84,16 +102,17 @@ impl Network {
     /// # Examples
     ///
     /// ```rust
-    /// use bitcoin::network::constants::Network;
+    /// use groestlcoin::network::constants::Network;
     ///
     /// let network = Network::Groestlcoin;
-    /// assert_eq!(network.magic(), 0xD9B4BEF9);
+    /// assert_eq!(network.magic(), 0xD4B4BEF9);
     /// ```
     pub fn magic(&self) -> u32 {
         // Note: any new entries here must be added to `from_magic` above
         match *self {
             Network::Groestlcoin => 0xD4B4BEF9,
             Network::Testnet => 0x0709110B,
+            Network::Signet  => 0x7696B422,
             Network::Regtest => 0xDAB5BFFA,
         }
     }
@@ -125,7 +144,7 @@ impl ServiceFlags {
     /// WITNESS indicates that a node can be asked for blocks and transactions including witness
     /// data.
     pub const WITNESS: ServiceFlags = ServiceFlags(1 << 3);
-    
+
     /// COMPACT_FILTERS means the node will service basic block filter requests.
     /// See BIP157 and BIP158 for details on how this is implemented.
     pub const COMPACT_FILTERS: ServiceFlags = ServiceFlags(1 << 6);
@@ -154,12 +173,12 @@ impl ServiceFlags {
     }
 
     /// Check whether [ServiceFlags] are included in this one.
-    pub fn has(&self, flags: ServiceFlags) -> bool {
+    pub fn has(self, flags: ServiceFlags) -> bool {
         (self.0 | flags.0) == self.0
     }
 
     /// Get the integer representation of this [ServiceFlags].
-    pub fn as_u64(&self) -> u64 {
+    pub fn as_u64(self) -> u64 {
         self.0
     }
 }
@@ -178,11 +197,10 @@ impl fmt::UpperHex for ServiceFlags {
 
 impl fmt::Display for ServiceFlags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if *self == ServiceFlags::NONE {
+        let mut flags = *self;
+        if flags == ServiceFlags::NONE {
             return write!(f, "ServiceFlags(NONE)");
         }
-
-        let mut flags = self.clone();
         let mut first = true;
         macro_rules! write_flag {
             ($f:ident) => {
@@ -259,7 +277,7 @@ impl Encodable for ServiceFlags {
     fn consensus_encode<S: io::Write>(
         &self,
         mut s: S,
-    ) -> Result<usize, encode::Error> {
+    ) -> Result<usize, io::Error> {
         self.0.consensus_encode(&mut s)
     }
 }
@@ -287,6 +305,10 @@ mod tests {
             &[0x0b, 0x11, 0x09, 0x07]
         );
         assert_eq!(
+            serialize(&Network::Signet.magic()),
+            &[0x22, 0xb4, 0x96, 0x76]
+        );
+        assert_eq!(
             serialize(&Network::Regtest.magic()),
             &[0xfa, 0xbf, 0xb5, 0xda]
         );
@@ -300,6 +322,10 @@ mod tests {
             Some(Network::Testnet.magic())
         );
         assert_eq!(
+            deserialize(&[0x22, 0xb4, 0x96, 0x76]).ok(),
+            Some(Network::Signet.magic())
+        );
+        assert_eq!(
             deserialize(&[0xfa, 0xbf, 0xb5, 0xda]).ok(),
             Some(Network::Regtest.magic())
         );
@@ -310,10 +336,12 @@ mod tests {
         assert_eq!(Network::Groestlcoin.to_string(), "groestlcoin");
         assert_eq!(Network::Testnet.to_string(), "testnet");
         assert_eq!(Network::Regtest.to_string(), "regtest");
+        assert_eq!(Network::Signet.to_string(), "signet");
 
         assert_eq!("groestlcoin".parse::<Network>().unwrap(), Network::Groestlcoin);
         assert_eq!("testnet".parse::<Network>().unwrap(), Network::Testnet);
         assert_eq!("regtest".parse::<Network>().unwrap(), Network::Regtest);
+        assert_eq!("signet".parse::<Network>().unwrap(), Network::Signet);
         assert!("fakenet".parse::<Network>().is_err());
     }
 
@@ -343,7 +371,7 @@ mod tests {
 
         flags2 ^= ServiceFlags::WITNESS;
         assert_eq!(flags2, ServiceFlags::GETUTXO);
-        
+
         flags2 |= ServiceFlags::COMPACT_FILTERS;
         flags2 ^= ServiceFlags::GETUTXO;
         assert_eq!(flags2, ServiceFlags::COMPACT_FILTERS);
@@ -357,4 +385,3 @@ mod tests {
         assert_eq!("ServiceFlags(WITNESS|COMPACT_FILTERS|0xb0)", flag.to_string());
     }
 }
-

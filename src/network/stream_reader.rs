@@ -20,8 +20,10 @@
 //! (like can happen with reading from TCP socket)
 //!
 
-use std::fmt;
-use std::io::{self, Read};
+use prelude::*;
+
+use core::fmt;
+use io::{self, Read};
 
 use consensus::{encode, Decodable};
 
@@ -83,7 +85,7 @@ impl<R: Read> StreamReader<R> {
 mod test {
     use std::thread;
     use std::time::Duration;
-    use std::io::{self, BufReader, Write};
+    use io::{self, BufReader, Write};
     use std::net::{TcpListener, TcpStream, Shutdown};
     use std::thread::JoinHandle;
     use network::constants::ServiceFlags;
@@ -92,11 +94,11 @@ mod test {
     use network::message::{NetworkMessage, RawNetworkMessage};
 
     // First, let's define some byte arrays for sample messages - dumps are taken from live
-    // Groestlcoin Core node v0.17.1 with Wireshark
+    // Groestlcoin Core node v2.17.2 with Wireshark
     const MSG_VERSION: [u8; 126] = [
-        0xf9, 0xbe, 0xb4, 0xd9, 0x76, 0x65, 0x72, 0x73,
+        0xf9, 0xbe, 0xb4, 0xd4, 0x76, 0x65, 0x72, 0x73,
         0x69, 0x6f, 0x6e, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x66, 0x00, 0x00, 0x00, 0xbe, 0x61, 0xb8, 0x27,
+        0x66, 0x00, 0x00, 0x00, 0x37, 0x0e, 0xf2, 0xbf,
         0x7f, 0x11, 0x01, 0x00, 0x0d, 0x04, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0xf0, 0x0f, 0x4d, 0x5c,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -113,22 +115,22 @@ mod test {
     ];
 
     const MSG_VERACK: [u8; 24] = [
-        0xf9, 0xbe, 0xb4, 0xd9, 0x76, 0x65, 0x72, 0x61,
+        0xf9, 0xbe, 0xb4, 0xd4, 0x76, 0x65, 0x72, 0x61,
         0x63, 0x6b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x5d, 0xf6, 0xe0, 0xe2
+        0x00, 0x00, 0x00, 0x00, 0xfd, 0xfb, 0x14, 0xd3
     ];
 
     const MSG_PING: [u8; 32] = [
-        0xf9, 0xbe, 0xb4, 0xd9, 0x70, 0x69, 0x6e, 0x67,
+        0xf9, 0xbe, 0xb4, 0xd4, 0x70, 0x69, 0x6e, 0x67,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x08, 0x00, 0x00, 0x00, 0x24, 0x67, 0xf1, 0x1d,
+        0x08, 0x00, 0x00, 0x00, 0x1F, 0xb7, 0x6e, 0xd0,
         0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     ];
 
     const MSG_ALERT: [u8; 192] = [
-        0xf9, 0xbe, 0xb4, 0xd9, 0x61, 0x6c, 0x65, 0x72,
+        0xf9, 0xbe, 0xb4, 0xd4, 0x61, 0x6c, 0x65, 0x72,
         0x74, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0xa8, 0x00, 0x00, 0x00, 0x1b, 0xf9, 0xaa, 0xea,
+        0xa8, 0x00, 0x00, 0x00, 0x2b, 0x3f, 0x87, 0xf3,
         0x60, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
         0x7f, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
@@ -154,13 +156,13 @@ mod test {
 
     // Helper functions that checks parsed versions of the messages from the byte arrays above
     fn check_version_msg(msg: &RawNetworkMessage) {
-        assert_eq!(msg.magic, 0xd9b4bef9);
+        assert_eq!(msg.magic, 0xd4b4bef9);
         if let NetworkMessage::Version(ref version_msg) = msg.payload {
             assert_eq!(version_msg.version, 70015);
             assert_eq!(version_msg.services, ServiceFlags::NETWORK | ServiceFlags::BLOOM | ServiceFlags::WITNESS | ServiceFlags::NETWORK_LIMITED);
             assert_eq!(version_msg.timestamp, 1548554224);
             assert_eq!(version_msg.nonce, 13952548347456104954);
-            assert_eq!(version_msg.user_agent, "/Satoshi:0.17.1/");
+            assert_eq!(version_msg.user_agent, "/Satoshi:0.17.1/"); // not "/Groestlcoin:2.17.2", unless we change MSG_VERSION
             assert_eq!(version_msg.start_height, 560275);
             assert_eq!(version_msg.relay, true);
         } else {
@@ -169,7 +171,7 @@ mod test {
     }
 
     fn check_alert_msg(msg: &RawNetworkMessage) {
-        assert_eq!(msg.magic, 0xd9b4bef9);
+        assert_eq!(msg.magic, 0xd4b4bef9);
         if let NetworkMessage::Alert(ref alert) = msg.payload {
             assert_eq!(alert.clone(), [
                 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -225,7 +227,7 @@ mod test {
         check_version_msg(&message);
 
         let msg: RawNetworkMessage = reader.read_next().unwrap();
-        assert_eq!(msg.magic, 0xd9b4bef9);
+        assert_eq!(msg.magic, 0xd4b4bef9);
         if let NetworkMessage::Ping(nonce) = msg.payload {
             assert_eq!(nonce, 100);
         } else {
@@ -300,7 +302,7 @@ mod test {
 
         // Reading and checking the second message (Verack)
         let msg: RawNetworkMessage = reader.read_next().unwrap();
-        assert_eq!(msg.magic, 0xd9b4bef9);
+        assert_eq!(msg.magic, 0xd4b4bef9);
         assert_eq!(msg.payload, NetworkMessage::Verack, "Wrong message type, expected VerackMessage");
 
         // Reading and checking the third message (Alert)
@@ -313,15 +315,15 @@ mod test {
 
     #[test]
     fn read_block_from_file_test() {
-        use std::io;
+        use io;
         use consensus::serialize;
-        use hex::decode as hex_decode;
+        use hashes::hex::FromHex;
         use Block;
 
-        let normal_data = hex_decode("010000004ddccd549d28f385ab457e98d1b11ce80bfea2c5ab93015ade4973e400000000bf4473e53794beae34e64fccc471dace6ae544180816f89591894e0f417a914cd74d6e49ffff001d323b3a7b0201000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0804ffff001d026e04ffffffff0100f2052a0100000043410446ef0102d1ec5240f0d061a4246c1bdef63fc3dbab7733052fbbf0ecd8f41fc26bf049ebb4f9527f374280259e7cfa99c48b0e3f39c51347a19a5819651503a5ac00000000010000000321f75f3139a013f50f315b23b0c9a2b6eac31e2bec98e5891c924664889942260000000049483045022100cb2c6b346a978ab8c61b18b5e9397755cbd17d6eb2fe0083ef32e067fa6c785a02206ce44e613f31d9a6b0517e46f3db1576e9812cc98d159bfdaf759a5014081b5c01ffffffff79cda0945903627c3da1f85fc95d0b8ee3e76ae0cfdc9a65d09744b1f8fc85430000000049483045022047957cdd957cfd0becd642f6b84d82f49b6cb4c51a91f49246908af7c3cfdf4a022100e96b46621f1bffcf5ea5982f88cef651e9354f5791602369bf5a82a6cd61a62501fffffffffe09f5fe3ffbf5ee97a54eb5e5069e9da6b4856ee86fc52938c2f979b0f38e82000000004847304402204165be9a4cbab8049e1af9723b96199bfd3e85f44c6b4c0177e3962686b26073022028f638da23fc003760861ad481ead4099312c60030d4cb57820ce4d33812a5ce01ffffffff01009d966b01000000434104ea1feff861b51fe3f5f8a3b12d0f4712db80e919548a80839fc47c6a21e66d957e9c5d8cd108c7a2d2324bad71f9904ac0ae7336507d785b17a2c115e427a32fac00000000").unwrap();
-        let cutoff_data = hex_decode("010000004ddccd549d28f385ab457e98d1b11ce80bfea2c5ab93015ade4973e400000000bf4473e53794beae34e64fccc471dace6ae544180816f89591894e0f417a914cd74d6e49ffff001d323b3a7b0201000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0804ffff001d026e04ffffffff0100f2052a0100000043410446ef0102d1ec5240f0d061a4246c1bdef63fc3dbab7733052fbbf0ecd8f41fc26bf049ebb4f9527f374280259e7cfa99c48b0e3f39c51347a19a5819651503a5ac00000000010000000321f75f3139a013f50f315b23b0c9a2b6eac31e2bec98e5891c924664889942260000000049483045022100cb2c6b346a978ab8c61b18b5e9397755cbd17d6eb2fe0083ef32e067fa6c785a02206ce44e613f31d9a6b0517e46f3db1576e9812cc98d159bfdaf759a5014081b5c01ffffffff79cda0945903627c3da1f85fc95d0b8ee3e76ae0cfdc9a65d09744b1f8fc85430000000049483045022047957cdd957cfd0becd642f6b84d82f49b6cb4c51a91f49246908af7c3cfdf4a022100e96b46621f1bffcf5ea5982f88cef651e9354f5791602369bf5a82a6cd61a62501fffffffffe09f5fe3ffbf5ee97a54eb5e5069e9da6b4856ee86fc52938c2f979b0f38e82000000004847304402204165be9a4cbab8049e1af9723b96199bfd3e85f44c6b4c0177e3962686b26073022028f638da23fc003760861ad481ead4099312c60030d4cb57820ce4d33812a5ce01ffffffff01009d966b01000000434104ea1feff861b51fe3f5f8a3b12d0f4712db80e919548a80839fc47c6a21e66d957e9c5d8cd108c7a2d2324bad71f9904ac0ae7336507d785b17a2c115e427a32fac").unwrap();
-        let prevhash = hex_decode("4ddccd549d28f385ab457e98d1b11ce80bfea2c5ab93015ade4973e400000000").unwrap();
-        let merkle = hex_decode("bf4473e53794beae34e64fccc471dace6ae544180816f89591894e0f417a914c").unwrap();
+        let normal_data = Vec::from_hex("010000004ddccd549d28f385ab457e98d1b11ce80bfea2c5ab93015ade4973e400000000bf4473e53794beae34e64fccc471dace6ae544180816f89591894e0f417a914cd74d6e49ffff001d323b3a7b0201000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0804ffff001d026e04ffffffff0100f2052a0100000043410446ef0102d1ec5240f0d061a4246c1bdef63fc3dbab7733052fbbf0ecd8f41fc26bf049ebb4f9527f374280259e7cfa99c48b0e3f39c51347a19a5819651503a5ac00000000010000000321f75f3139a013f50f315b23b0c9a2b6eac31e2bec98e5891c924664889942260000000049483045022100cb2c6b346a978ab8c61b18b5e9397755cbd17d6eb2fe0083ef32e067fa6c785a02206ce44e613f31d9a6b0517e46f3db1576e9812cc98d159bfdaf759a5014081b5c01ffffffff79cda0945903627c3da1f85fc95d0b8ee3e76ae0cfdc9a65d09744b1f8fc85430000000049483045022047957cdd957cfd0becd642f6b84d82f49b6cb4c51a91f49246908af7c3cfdf4a022100e96b46621f1bffcf5ea5982f88cef651e9354f5791602369bf5a82a6cd61a62501fffffffffe09f5fe3ffbf5ee97a54eb5e5069e9da6b4856ee86fc52938c2f979b0f38e82000000004847304402204165be9a4cbab8049e1af9723b96199bfd3e85f44c6b4c0177e3962686b26073022028f638da23fc003760861ad481ead4099312c60030d4cb57820ce4d33812a5ce01ffffffff01009d966b01000000434104ea1feff861b51fe3f5f8a3b12d0f4712db80e919548a80839fc47c6a21e66d957e9c5d8cd108c7a2d2324bad71f9904ac0ae7336507d785b17a2c115e427a32fac00000000").unwrap();
+        let cutoff_data = Vec::from_hex("010000004ddccd549d28f385ab457e98d1b11ce80bfea2c5ab93015ade4973e400000000bf4473e53794beae34e64fccc471dace6ae544180816f89591894e0f417a914cd74d6e49ffff001d323b3a7b0201000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0804ffff001d026e04ffffffff0100f2052a0100000043410446ef0102d1ec5240f0d061a4246c1bdef63fc3dbab7733052fbbf0ecd8f41fc26bf049ebb4f9527f374280259e7cfa99c48b0e3f39c51347a19a5819651503a5ac00000000010000000321f75f3139a013f50f315b23b0c9a2b6eac31e2bec98e5891c924664889942260000000049483045022100cb2c6b346a978ab8c61b18b5e9397755cbd17d6eb2fe0083ef32e067fa6c785a02206ce44e613f31d9a6b0517e46f3db1576e9812cc98d159bfdaf759a5014081b5c01ffffffff79cda0945903627c3da1f85fc95d0b8ee3e76ae0cfdc9a65d09744b1f8fc85430000000049483045022047957cdd957cfd0becd642f6b84d82f49b6cb4c51a91f49246908af7c3cfdf4a022100e96b46621f1bffcf5ea5982f88cef651e9354f5791602369bf5a82a6cd61a62501fffffffffe09f5fe3ffbf5ee97a54eb5e5069e9da6b4856ee86fc52938c2f979b0f38e82000000004847304402204165be9a4cbab8049e1af9723b96199bfd3e85f44c6b4c0177e3962686b26073022028f638da23fc003760861ad481ead4099312c60030d4cb57820ce4d33812a5ce01ffffffff01009d966b01000000434104ea1feff861b51fe3f5f8a3b12d0f4712db80e919548a80839fc47c6a21e66d957e9c5d8cd108c7a2d2324bad71f9904ac0ae7336507d785b17a2c115e427a32fac").unwrap();
+        let prevhash = Vec::from_hex("4ddccd549d28f385ab457e98d1b11ce80bfea2c5ab93015ade4973e400000000").unwrap();
+        let merkle = Vec::from_hex("bf4473e53794beae34e64fccc471dace6ae544180816f89591894e0f417a914c").unwrap();
 
         let stream = io::BufReader::new(&normal_data[..]);
         let mut reader = StreamReader::new(stream, None);

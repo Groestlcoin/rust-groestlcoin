@@ -1,8 +1,8 @@
-extern crate bitcoin;
+extern crate groestlcoin;
 use std::str::FromStr;
 fn do_test(data: &[u8]) {
     let data_str = String::from_utf8_lossy(data);
-    let addr = match bitcoin::util::address::Address::from_str(&data_str) {
+    let addr = match groestlcoin::util::address::Address::from_str(&data_str) {
         Ok(addr) => addr,
         Err(_) => return,
     };
@@ -36,9 +36,9 @@ mod tests {
         for (idx, c) in hex.as_bytes().iter().enumerate() {
             b <<= 4;
             match *c {
-                b'A'...b'F' => b |= c - b'A' + 10,
-                b'a'...b'f' => b |= c - b'a' + 10,
-                b'0'...b'9' => b |= c - b'0',
+                b'A'..=b'F' => b |= c - b'A' + 10,
+                b'a'..=b'f' => b |= c - b'a' + 10,
+                b'0'..=b'9' => b |= c - b'0',
                 _ => panic!("Bad hex"),
             }
             if (idx & 1) == 1 {

@@ -15,8 +15,10 @@
 //!
 //! Utility functions related to hashing data, including merkleization
 
-use std::cmp::min;
-use std::io;
+use prelude::*;
+
+use io;
+use core::cmp::min;
 
 use hashes::Hash;
 use consensus::encode::Encodable;
@@ -30,7 +32,7 @@ pub fn bitcoin_merkle_root_inline<T>(data: &mut [T]) -> T
           <T as Hash>::Engine: io::Write,
 {
     // Base case
-    if data.len() < 1 {
+    if data.is_empty() {
         return Default::default();
     }
     if data.len() < 2 {
@@ -60,7 +62,7 @@ pub fn bitcoin_merkle_root<T, I>(mut iter: I) -> T
         return Default::default();
     }
     if iter.len() == 1 {
-        return T::from_inner(iter.nth(0).unwrap().into_inner());
+        return T::from_inner(iter.next().unwrap().into_inner());
     }
     // Recursion
     let half_len = iter.len() / 2 + iter.len() % 2;
@@ -74,10 +76,4 @@ pub fn bitcoin_merkle_root<T, I>(mut iter: I) -> T
         alloc.push(T::from_engine(encoder));
     }
     bitcoin_merkle_root_inline(&mut alloc)
-}
-
-/// Objects which are referred to by hash
-pub trait BitcoinHash<T: Hash> {
-    /// Produces a Sha256dHash which can be used to refer to the object
-    fn bitcoin_hash(&self) -> T;
 }

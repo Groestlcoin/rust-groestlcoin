@@ -15,16 +15,21 @@
 //! Pay-to-contract-hash support
 //!
 //! See Appendix A of the Blockstream sidechains whitepaper
-//! at http://blockstream.com/sidechains.pdf for details of
+//! at <http://blockstream.com/sidechains.pdf> for details of
 //! what this does.
+
+#![cfg_attr(not(test), deprecated)]
+
+use prelude::*;
+
+use core::fmt;
+#[cfg(feature = "std")] use std::error;
 
 use secp256k1::{self, Secp256k1};
 use PrivateKey;
 use PublicKey;
 use hashes::{sha256, Hash, HashEngine, Hmac, HmacEngine};
 use blockdata::{opcodes, script};
-
-use std::{error, fmt};
 
 use hash_types::ScriptHash;
 use network::constants::Network;
@@ -34,7 +39,7 @@ use util::address;
 static PUBKEY: u8 = 0xFE;
 
 /// A contract-hash error
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum Error {
     /// Other secp256k1 related error
     Secp(secp256k1::Error),
@@ -69,24 +74,13 @@ impl fmt::Display for Error {
     }
 }
 
-impl error::Error for Error {
-    fn cause(&self) -> Option<&error::Error> {
+#[cfg(feature = "std")]
+impl ::std::error::Error for Error {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             Error::Secp(ref e) => Some(e),
             Error::Script(ref e) => Some(e),
             _ => None
-        }
-    }
-
-    fn description(&self) -> &'static str {
-        match *self {
-            Error::Secp(_) => "libsecp256k1 error",
-            Error::Script(_) => "script error",
-            Error::UncompressedKey => "encountered uncompressed secp public key",
-            Error::ExpectedKey => "expected key when deserializing script",
-            Error::ExpectedChecksig => "expected OP_*CHECKSIG* when deserializing script",
-            Error::TooFewKeys(_) => "too few keys for template",
-            Error::TooManyKeys(_) => "too many keys for template"
         }
     }
 }
@@ -227,8 +221,11 @@ pub fn untemplate(script: &script::Script) -> Result<(Template, Vec<PublicKey>),
     }
 
     let mut mode = Mode::SeekingKeys;
-    for instruction in script.iter(false) {
-        match instruction {
+    for instruction in script.instructions() {
+        if let Err(e) = instruction {
+            return Err(Error::Script(e));
+        }
+        match instruction.unwrap() {
             script::Instruction::PushBytes(data) => {
                 let n = data.len();
                 ret = match PublicKey::from_slice(data) {
@@ -275,7 +272,6 @@ pub fn untemplate(script: &script::Script) -> Result<(Template, Vec<PublicKey>),
                 }
                 ret = ret.push_opcode(op);
             }
-            script::Instruction::Error(e) => { return Err(Error::Script(e)); }
         }
     }
     Ok((Template::from(&ret[..]), retkeys))
@@ -284,9 +280,9 @@ pub fn untemplate(script: &script::Script) -> Result<(Template, Vec<PublicKey>),
 #[cfg(test)]
 mod tests {
     use secp256k1::Secp256k1;
-    use hex::decode as hex_decode;
+    use hashes::hex::FromHex;
     use secp256k1::rand::thread_rng;
-    use std::str::FromStr;
+    use core::str::FromStr;
 
     use blockdata::script::Script;
     use network::constants::Network;
@@ -294,7 +290,7 @@ mod tests {
     use super::*;
     use PublicKey;
 
-    macro_rules! hex (($hex:expr) => (hex_decode($hex).unwrap()));
+    macro_rules! hex (($hex:expr) => (Vec::from_hex($hex).unwrap()));
     macro_rules! hex_key (($hex:expr) => (PublicKey::from_slice(&hex!($hex)).unwrap()));
     macro_rules! alpha_template(() => (Template::from(&hex!("55fefefefefefefe57AE")[..])));
     macro_rules! alpha_keys(() => (
@@ -337,25 +333,13 @@ mod tests {
         let (sk2, pk2) = secp.generate_keypair(&mut thread_rng());
         let (sk3, pk3) = secp.generate_keypair(&mut thread_rng());
 
-        let sk1 = PrivateKey {
-            key: sk1,
-            compressed: true,
-            network: Network::Groestlcoin,
-        };
-        let sk2 = PrivateKey {
-            key: sk2,
-            compressed: false,
-            network: Network::Groestlcoin,
-        };
-        let sk3 = PrivateKey {
-            key: sk3,
-            compressed: true,
-            network: Network::Groestlcoin,
-        };
+        let sk1 = PrivateKey::new(sk1, Network::Groestlcoin);
+        let sk2 = PrivateKey::new_uncompressed(sk2, Network::Groestlcoin);
+        let sk3 = PrivateKey::new(sk3, Network::Groestlcoin);
         let pks = [
-            PublicKey { key: pk1, compressed: true },
-            PublicKey { key: pk2, compressed: false },
-            PublicKey { key: pk3, compressed: true },
+            PublicKey::new(pk1),
+            PublicKey::new_uncompressed(pk2),
+            PublicKey::new(pk3),
         ];
         let contract = b"if bottle mt dont remembr drink wont pay";
 

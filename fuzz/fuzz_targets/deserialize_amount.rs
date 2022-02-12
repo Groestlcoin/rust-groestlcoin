@@ -1,25 +1,25 @@
-extern crate bitcoin;
+extern crate groestlcoin;
 use std::str::FromStr;
 fn do_test(data: &[u8]) {
     let data_str = String::from_utf8_lossy(data);
 
     // signed
-    let samt = match bitcoin::util::amount::SignedAmount::from_str(&data_str) {
+    let samt = match groestlcoin::util::amount::SignedAmount::from_str(&data_str) {
         Ok(amt) => amt,
         Err(_) => return,
     };
-    let samt_roundtrip = match bitcoin::util::amount::SignedAmount::from_str(&samt.to_string()) {
+    let samt_roundtrip = match groestlcoin::util::amount::SignedAmount::from_str(&samt.to_string()) {
         Ok(amt) => amt,
         Err(_) => return,
     };
     assert_eq!(samt, samt_roundtrip);
 
     // unsigned
-    let amt = match bitcoin::util::amount::Amount::from_str(&data_str) {
+    let amt = match groestlcoin::util::amount::Amount::from_str(&data_str) {
         Ok(amt) => amt,
         Err(_) => return,
     };
-    let amt_roundtrip = match bitcoin::util::amount::Amount::from_str(&amt.to_string()) {
+    let amt_roundtrip = match groestlcoin::util::amount::Amount::from_str(&amt.to_string()) {
         Ok(amt) => amt,
         Err(_) => return,
     };
@@ -53,9 +53,9 @@ mod tests {
         for (idx, c) in hex.as_bytes().iter().enumerate() {
             b <<= 4;
             match *c {
-                b'A'...b'F' => b |= c - b'A' + 10,
-                b'a'...b'f' => b |= c - b'a' + 10,
-                b'0'...b'9' => b |= c - b'0',
+                b'A'..=b'F' => b |= c - b'A' + 10,
+                b'a'..=b'f' => b |= c - b'a' + 10,
+                b'0'..=b'9' => b |= c - b'0',
                 _ => panic!("Bad hex"),
             }
             if (idx & 1) == 1 {

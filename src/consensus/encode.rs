@@ -29,20 +29,23 @@
 //! big-endian decimals, etc.)
 //!
 
-use std::{fmt, error, io, mem, u32};
-use std::borrow::Cow;
-use std::io::{Cursor, Read, Write};
-use hashes::hex::ToHex;
+use prelude::*;
 
-use hashes::{sha256d, Hash, sha256, groestld};
-use hash_types::{BlockHash, FilterHash, TxMerkleNode};
+use core::{fmt, mem, u32, convert::From};
+#[cfg(feature = "std")] use std::error;
+
+use hashes::{sha256, sha256d, Hash, groestld};
+use hash_types::{BlockHash, FilterHash, TxMerkleNode, FilterHeader};
+
+use io::{self, Cursor, Read};
 
 use util::endian;
 use util::psbt;
+use hashes::hex::ToHex;
 
 use blockdata::transaction::{TxOut, Transaction, TxIn};
-use network::message_blockdata::Inventory;
-use network::address::Address;
+#[cfg(feature = "std")]
+use network::{message_blockdata::Inventory, address::{Address, AddrV2Message}};
 
 /// Encoding error
 #[derive(Debug)]
@@ -80,10 +83,6 @@ pub enum Error {
     ParseFailed(&'static str),
     /// Unsupported Segwit flag
     UnsupportedSegwitFlag(u8),
-    /// Unrecognized network command
-    UnrecognizedNetworkCommand(String),
-    /// Invalid Inventory type
-    UnknownInventoryType(u32),
 }
 
 impl fmt::Display for Error {
@@ -102,15 +101,13 @@ impl fmt::Display for Error {
             Error::ParseFailed(ref e) => write!(f, "parse failed: {}", e),
             Error::UnsupportedSegwitFlag(ref swflag) => write!(f,
                 "unsupported segwit version: {}", swflag),
-            Error::UnrecognizedNetworkCommand(ref nwcmd) => write!(f,
-                "unrecognized network command: {}", nwcmd),
-            Error::UnknownInventoryType(ref tp) => write!(f, "Unknown Inventory type: {}", tp),
         }
     }
 }
 
-impl error::Error for Error {
-    fn cause(&self) -> Option<&error::Error> {
+#[cfg(feature = "std")]
+impl ::std::error::Error for Error {
+    fn cause(&self) -> Option<&dyn  error::Error> {
         match *self {
             Error::Io(ref e) => Some(e),
             Error::Psbt(ref e) => Some(e),
@@ -120,18 +117,10 @@ impl error::Error for Error {
             | Error::NonMinimalVarInt
             | Error::UnknownNetworkMagic(..)
             | Error::ParseFailed(..)
-            | Error::UnsupportedSegwitFlag(..)
-            | Error::UnrecognizedNetworkCommand(..)
-            | Error::UnknownInventoryType(..) => None,
+            | Error::UnsupportedSegwitFlag(..) => None,
         }
     }
-
-    fn description(&self) -> &str {
-        "Groestlcoin encoding error"
-    }
 }
-
-#[doc(hidden)]
 
 #[doc(hidden)]
 impl From<io::Error> for Error {
@@ -149,9 +138,10 @@ impl From<psbt::Error> for Error {
 
 /// Encode an object into a vector
 pub fn serialize<T: Encodable + ?Sized>(data: &T) -> Vec<u8> {
-    let mut encoder = Cursor::new(vec![]);
-    data.consensus_encode(&mut encoder).unwrap();
-    encoder.into_inner()
+    let mut encoder = Vec::new();
+    let len = data.consensus_encode(&mut encoder).unwrap();
+    debug_assert_eq!(len, encoder.len());
+    encoder
 }
 
 /// Encode an object into a hex-encoded string
@@ -161,7 +151,7 @@ pub fn serialize_hex<T: Encodable + ?Sized>(data: &T) -> String {
 
 /// Deserialize an object from a vector, will error if said deserialization
 /// doesn't consume the entire vector.
-pub fn deserialize<'a, T: Decodable>(data: &'a [u8]) -> Result<T, Error> {
+pub fn deserialize<T: Decodable>(data: &[u8]) -> Result<T, Error> {
     let (rv, consumed) = deserialize_partial(data)?;
 
     // Fail if data are not consumed entirely.
@@ -174,8 +164,8 @@ pub fn deserialize<'a, T: Decodable>(data: &'a [u8]) -> Result<T, Error> {
 
 /// Deserialize an object from a vector, but will not report an error if said deserialization
 /// doesn't consume the entire vector.
-pub fn deserialize_partial<'a, T: Decodable>(
-    data: &'a [u8],
+pub fn deserialize_partial<T: Decodable>(
+    data: &[u8],
 ) -> Result<(T, usize), Error> {
     let mut decoder = Cursor::new(data);
     let rv = Decodable::consensus_decode(&mut decoder)?;
@@ -188,28 +178,28 @@ pub fn deserialize_partial<'a, T: Decodable>(
 /// Extensions of `Write` to encode data as per Groestlcoin consensus
 pub trait WriteExt {
     /// Output a 64-bit uint
-    fn emit_u64(&mut self, v: u64) -> Result<(), Error>;
+    fn emit_u64(&mut self, v: u64) -> Result<(), io::Error>;
     /// Output a 32-bit uint
-    fn emit_u32(&mut self, v: u32) -> Result<(), Error>;
+    fn emit_u32(&mut self, v: u32) -> Result<(), io::Error>;
     /// Output a 16-bit uint
-    fn emit_u16(&mut self, v: u16) -> Result<(), Error>;
+    fn emit_u16(&mut self, v: u16) -> Result<(), io::Error>;
     /// Output a 8-bit uint
-    fn emit_u8(&mut self, v: u8) -> Result<(), Error>;
+    fn emit_u8(&mut self, v: u8) -> Result<(), io::Error>;
 
     /// Output a 64-bit int
-    fn emit_i64(&mut self, v: i64) -> Result<(), Error>;
+    fn emit_i64(&mut self, v: i64) -> Result<(), io::Error>;
     /// Output a 32-bit int
-    fn emit_i32(&mut self, v: i32) -> Result<(), Error>;
+    fn emit_i32(&mut self, v: i32) -> Result<(), io::Error>;
     /// Output a 16-bit int
-    fn emit_i16(&mut self, v: i16) -> Result<(), Error>;
+    fn emit_i16(&mut self, v: i16) -> Result<(), io::Error>;
     /// Output a 8-bit int
-    fn emit_i8(&mut self, v: i8) -> Result<(), Error>;
+    fn emit_i8(&mut self, v: i8) -> Result<(), io::Error>;
 
     /// Output a boolean
-    fn emit_bool(&mut self, v: bool) -> Result<(), Error>;
+    fn emit_bool(&mut self, v: bool) -> Result<(), io::Error>;
 
     /// Output a byte slice
-    fn emit_slice(&mut self, v: &[u8]) -> Result<(), Error>;
+    fn emit_slice(&mut self, v: &[u8]) -> Result<(), io::Error>;
 }
 
 /// Extensions of `Read` to decode data as per Groestlcoin consensus
@@ -242,8 +232,8 @@ pub trait ReadExt {
 macro_rules! encoder_fn {
     ($name:ident, $val_type:ty, $writefn:ident) => {
         #[inline]
-        fn $name(&mut self, v: $val_type) -> Result<(), Error> {
-            self.write_all(&endian::$writefn(v)).map_err(Error::Io)
+        fn $name(&mut self, v: $val_type) -> Result<(), io::Error> {
+            self.write_all(&endian::$writefn(v))
         }
     }
 }
@@ -252,7 +242,7 @@ macro_rules! decoder_fn {
     ($name:ident, $val_type:ty, $readfn:ident, $byte_len: expr) => {
         #[inline]
         fn $name(&mut self) -> Result<$val_type, Error> {
-            assert_eq!(::std::mem::size_of::<$val_type>(), $byte_len); // size_of isn't a constfn in 1.22
+            debug_assert_eq!(::core::mem::size_of::<$val_type>(), $byte_len); // size_of isn't a constfn in 1.22
             let mut val = [0; $byte_len];
             self.read_exact(&mut val[..]).map_err(Error::Io)?;
             Ok(endian::$readfn(&val))
@@ -260,7 +250,7 @@ macro_rules! decoder_fn {
     }
 }
 
-impl<W: Write> WriteExt for W {
+impl<W: io::Write> WriteExt for W {
     encoder_fn!(emit_u64, u64, u64_to_array_le);
     encoder_fn!(emit_u32, u32, u32_to_array_le);
     encoder_fn!(emit_u16, u16, u16_to_array_le);
@@ -269,20 +259,20 @@ impl<W: Write> WriteExt for W {
     encoder_fn!(emit_i16, i16, i16_to_array_le);
 
     #[inline]
-    fn emit_i8(&mut self, v: i8) -> Result<(), Error> {
-        self.write_all(&[v as u8]).map_err(Error::Io)
+    fn emit_i8(&mut self, v: i8) -> Result<(), io::Error> {
+        self.write_all(&[v as u8])
     }
     #[inline]
-    fn emit_u8(&mut self, v: u8) -> Result<(), Error> {
-        self.write_all(&[v]).map_err(Error::Io)
+    fn emit_u8(&mut self, v: u8) -> Result<(), io::Error> {
+        self.write_all(&[v])
     }
     #[inline]
-    fn emit_bool(&mut self, v: bool) -> Result<(), Error> {
-        self.write_all(&[if v {1} else {0}]).map_err(Error::Io)
+    fn emit_bool(&mut self, v: bool) -> Result<(), io::Error> {
+        self.write_all(&[v as u8])
     }
     #[inline]
-    fn emit_slice(&mut self, v: &[u8]) -> Result<(), Error> {
-        self.write_all(v).map_err(Error::Io)
+    fn emit_slice(&mut self, v: &[u8]) -> Result<(), io::Error> {
+        self.write_all(v)
     }
 }
 
@@ -321,10 +311,11 @@ pub const MAX_VEC_SIZE: usize = 4_000_000;
 
 /// Data which can be encoded in a consensus-consistent way
 pub trait Encodable {
-    /// Encode an object with a well-defined format, should only ever error if
-    /// the underlying `Write` errors. Returns the number of bytes written on
-    /// success
-    fn consensus_encode<W: io::Write>(&self, e: W) -> Result<usize, Error>;
+    /// Encode an object with a well-defined format.
+    /// Returns the number of bytes written on success.
+    ///
+    /// The only errors returned are errors propagated from the writer.
+    fn consensus_encode<W: io::Write>(&self, writer: W) -> Result<usize, io::Error>;
 }
 
 /// Data which can be encoded in a consensus-consistent way
@@ -347,17 +338,16 @@ macro_rules! impl_int_encodable{
         impl Decodable for $ty {
             #[inline]
             fn consensus_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-                ReadExt::$meth_dec(&mut d).map($ty::from_le)
+                ReadExt::$meth_dec(&mut d)
             }
         }
-
         impl Encodable for $ty {
             #[inline]
             fn consensus_encode<S: WriteExt>(
                 &self,
                 mut s: S,
-            ) -> Result<usize, self::Error> {
-                s.$meth_enc(self.to_le())?;
+            ) -> Result<usize, io::Error> {
+                s.$meth_enc(*self)?;
                 Ok(mem::size_of::<$ty>())
             }
         }
@@ -375,14 +365,14 @@ impl_int_encodable!(i64, read_i64, emit_i64);
 
 impl VarInt {
     /// Gets the length of this VarInt when encoded.
-    /// Returns 1 for 0...0xFC, 3 for 0xFD...(2^16-1), 5 for 0x10000...(2^32-1),
+    /// Returns 1 for 0..=0xFC, 3 for 0xFD..=(2^16-1), 5 for 0x10000..=(2^32-1),
     /// and 9 otherwise.
     #[inline]
     pub fn len(&self) -> usize {
         match self.0 {
-            0...0xFC             => { 1 }
-            0xFD...0xFFFF        => { 3 }
-            0x10000...0xFFFFFFFF => { 5 }
+            0..=0xFC             => { 1 }
+            0xFD..=0xFFFF        => { 3 }
+            0x10000..=0xFFFFFFFF => { 5 }
             _                    => { 9 }
         }
     }
@@ -390,18 +380,18 @@ impl VarInt {
 
 impl Encodable for VarInt {
     #[inline]
-    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, Error> {
+    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, io::Error> {
         match self.0 {
-            0...0xFC => {
+            0..=0xFC => {
                 (self.0 as u8).consensus_encode(s)?;
                 Ok(1)
             },
-            0xFD...0xFFFF => {
+            0xFD..=0xFFFF => {
                 s.emit_u8(0xFD)?;
                 (self.0 as u16).consensus_encode(s)?;
                 Ok(3)
             },
-            0x10000...0xFFFFFFFF => {
+            0x10000..=0xFFFFFFFF => {
                 s.emit_u8(0xFE)?;
                 (self.0 as u32).consensus_encode(s)?;
                 Ok(5)
@@ -453,8 +443,8 @@ impl Decodable for VarInt {
 // Booleans
 impl Encodable for bool {
     #[inline]
-    fn consensus_encode<S: WriteExt>(&self, mut s: S) -> Result<usize, Error> {
-        s.emit_u8(if *self {1} else {0})?;
+    fn consensus_encode<S: WriteExt>(&self, mut s: S) -> Result<usize, io::Error> {
+        s.emit_bool(*self)?;
         Ok(1)
     }
 }
@@ -462,14 +452,14 @@ impl Encodable for bool {
 impl Decodable for bool {
     #[inline]
     fn consensus_decode<D: io::Read>(mut d: D) -> Result<bool, Error> {
-        ReadExt::read_u8(&mut d).map(|n| n != 0)
+        ReadExt::read_bool(&mut d)
     }
 }
 
 // Strings
 impl Encodable for String {
     #[inline]
-    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, Error> {
+    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, io::Error> {
         let b = self.as_bytes();
         let vi_len = VarInt(b.len() as u64).consensus_encode(&mut s)?;
         s.emit_slice(&b)?;
@@ -488,7 +478,7 @@ impl Decodable for String {
 // Cow<'static, str>
 impl Encodable for Cow<'static, str> {
     #[inline]
-    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, Error> {
+    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, io::Error> {
         let b = self.as_bytes();
         let vi_len = VarInt(b.len() as u64).consensus_encode(&mut s)?;
         s.emit_slice(&b)?;
@@ -514,7 +504,7 @@ macro_rules! impl_array {
             fn consensus_encode<S: WriteExt>(
                 &self,
                 mut s: S,
-            ) -> Result<usize, Error> {
+            ) -> Result<usize, io::Error> {
                 s.emit_slice(&self[..])?;
                 Ok(self.len())
             }
@@ -534,6 +524,7 @@ macro_rules! impl_array {
 impl_array!(2);
 impl_array!(4);
 impl_array!(8);
+impl_array!(10);
 impl_array!(12);
 impl_array!(16);
 impl_array!(32);
@@ -543,8 +534,8 @@ impl Decodable for [u16; 8] {
     #[inline]
     fn consensus_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
         let mut res = [0; 8];
-        for i in 0..8 {
-            res[i] = Decodable::consensus_decode(&mut d)?;
+        for item in &mut res {
+            *item = Decodable::consensus_decode(&mut d)?;
         }
         Ok(res)
     }
@@ -552,7 +543,7 @@ impl Decodable for [u16; 8] {
 
 impl Encodable for [u16; 8] {
     #[inline]
-    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, Error> {
+    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, io::Error> {
         for c in self.iter() { c.consensus_encode(&mut s)?; }
         Ok(16)
     }
@@ -566,7 +557,7 @@ macro_rules! impl_vec {
             fn consensus_encode<S: io::Write>(
                 &self,
                 mut s: S,
-            ) -> Result<usize, Error> {
+            ) -> Result<usize, io::Error> {
                 let mut len = 0;
                 len += VarInt(self.len() as u64).consensus_encode(&mut s)?;
                 for c in self.iter() {
@@ -575,7 +566,6 @@ macro_rules! impl_vec {
                 Ok(len)
             }
         }
-
         impl Decodable for Vec<$type> {
             #[inline]
             fn consensus_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
@@ -587,6 +577,7 @@ macro_rules! impl_vec {
                     return Err(self::Error::OversizedVectorAllocation { requested: byte_size, max: MAX_VEC_SIZE })
                 }
                 let mut ret = Vec::with_capacity(len as usize);
+                let mut d = d.take(MAX_VEC_SIZE as u64);
                 for _ in 0..len {
                     ret.push(Decodable::consensus_decode(&mut d)?);
                 }
@@ -597,21 +588,29 @@ macro_rules! impl_vec {
 }
 impl_vec!(BlockHash);
 impl_vec!(FilterHash);
+impl_vec!(FilterHeader);
 impl_vec!(TxMerkleNode);
 impl_vec!(Transaction);
 impl_vec!(TxOut);
 impl_vec!(TxIn);
-impl_vec!(Inventory);
 impl_vec!(Vec<u8>);
-impl_vec!((u32, Address));
 impl_vec!(u64);
+
+#[cfg(feature = "std")] impl_vec!(Inventory);
+#[cfg(feature = "std")] impl_vec!((u32, Address));
+#[cfg(feature = "std")] impl_vec!(AddrV2Message);
+
+fn consensus_encode_with_size<S: io::Write>(data: &[u8], mut s: S) -> Result<usize, io::Error> {
+    let vi_len = VarInt(data.len() as u64).consensus_encode(&mut s)?;
+    s.emit_slice(&data)?;
+    Ok(vi_len + data.len())
+}
+
 
 impl Encodable for Vec<u8> {
     #[inline]
-    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, Error> {
-        let vi_len = VarInt(self.len() as u64).consensus_encode(&mut s)?;
-        s.emit_slice(&self)?;
-        Ok(vi_len + self.len())
+    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, io::Error> {
+        consensus_encode_with_size(self, s)
     }
 }
 
@@ -622,8 +621,7 @@ impl Decodable for Vec<u8> {
         if len > MAX_VEC_SIZE {
             return Err(self::Error::OversizedVectorAllocation { requested: len, max: MAX_VEC_SIZE })
         }
-        let mut ret = Vec::with_capacity(len);
-        ret.resize(len, 0);
+        let mut ret = vec![0u8; len];
         d.read_slice(&mut ret)?;
         Ok(ret)
     }
@@ -631,25 +629,15 @@ impl Decodable for Vec<u8> {
 
 impl Encodable for Box<[u8]> {
     #[inline]
-    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, Error> {
-        let vi_len = VarInt(self.len() as u64).consensus_encode(&mut s)?;
-        s.emit_slice(&self)?;
-        Ok(vi_len + self.len())
+    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, io::Error> {
+        consensus_encode_with_size(self, s)
     }
 }
 
 impl Decodable for Box<[u8]> {
     #[inline]
-    fn consensus_decode<D: io::Read>(mut d: D) -> Result<Self, Error> {
-        let len = VarInt::consensus_decode(&mut d)?.0;
-        let len = len as usize;
-        if len > MAX_VEC_SIZE {
-            return Err(self::Error::OversizedVectorAllocation { requested: len, max: MAX_VEC_SIZE })
-        }
-        let mut ret = Vec::with_capacity(len);
-        ret.resize(len, 0);
-        d.read_slice(&mut ret)?;
-        Ok(ret.into_boxed_slice())
+    fn consensus_decode<D: io::Read>(d: D) -> Result<Self, Error> {
+        <Vec<u8>>::consensus_decode(d).map(From::from)
     }
 }
 
@@ -660,7 +648,7 @@ impl Decodable for Box<[u8]> {
 //    [checksum[0], checksum[1], checksum[2], checksum[3]]
 //}
 
-/// Do a double-SHA256 on some data and return the first 4 bytes
+/// Do a double-GROESTL512 on some data and return the first 4 bytes
 fn groestl2_checksum(data: &[u8]) -> [u8; 4] {
     let checksum = <groestld::Hash as Hash>::hash(data);
     [checksum[0], checksum[1], checksum[2], checksum[3]]
@@ -669,7 +657,7 @@ fn groestl2_checksum(data: &[u8]) -> [u8; 4] {
 // Checked data
 impl Encodable for CheckedData {
     #[inline]
-    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, Error> {
+    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, io::Error> {
         (self.0.len() as u32).consensus_encode(&mut s)?;
         groestl2_checksum(&self.0).consensus_encode(&mut s)?;
         s.emit_slice(&self.0)?;
@@ -688,8 +676,7 @@ impl Decodable for CheckedData {
             });
         }
         let checksum = <[u8; 4]>::consensus_decode(&mut d)?;
-        let mut ret = Vec::with_capacity(len as usize);
-        ret.resize(len as usize, 0);
+        let mut ret = vec![0u8; len as usize];
         d.read_slice(&mut ret)?;
         let expected_checksum = groestl2_checksum(&ret);
         if expected_checksum != checksum {
@@ -703,6 +690,31 @@ impl Decodable for CheckedData {
     }
 }
 
+// References
+impl<'a, T: Encodable> Encodable for &'a T {
+    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, io::Error> {
+        (&**self).consensus_encode(s)
+    }
+}
+
+impl<'a, T: Encodable> Encodable for &'a mut T {
+    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, io::Error> {
+        (&**self).consensus_encode(s)
+    }
+}
+
+impl<T: Encodable> Encodable for rc::Rc<T> {
+    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, io::Error> {
+        (&**self).consensus_encode(s)
+    }
+}
+
+impl<T: Encodable> Encodable for sync::Arc<T> {
+    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, io::Error> {
+        (&**self).consensus_encode(s)
+    }
+}
+
 // Tuples
 macro_rules! tuple_encode {
     ($($x:ident),*) => (
@@ -712,7 +724,7 @@ macro_rules! tuple_encode {
             fn consensus_encode<S: io::Write>(
                 &self,
                 mut s: S,
-            ) -> Result<usize, self::Error> {
+            ) -> Result<usize, io::Error> {
                 let &($(ref $x),*) = self;
                 let mut len = 0;
                 $(len += $x.consensus_encode(&mut s)?;)*
@@ -731,12 +743,15 @@ macro_rules! tuple_encode {
 }
 
 tuple_encode!(T0, T1);
+tuple_encode!(T0, T1, T2);
 tuple_encode!(T0, T1, T2, T3);
+tuple_encode!(T0, T1, T2, T3, T4);
 tuple_encode!(T0, T1, T2, T3, T4, T5);
+tuple_encode!(T0, T1, T2, T3, T4, T5, T6);
 tuple_encode!(T0, T1, T2, T3, T4, T5, T6, T7);
 
 impl Encodable for sha256d::Hash {
-    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, Error> {
+    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, io::Error> {
         self.into_inner().consensus_encode(s)
     }
 }
@@ -748,7 +763,7 @@ impl Decodable for sha256d::Hash {
 }
 
 impl Encodable for sha256::Hash {
-    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, Error> {
+    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, io::Error> {
         self.into_inner().consensus_encode(s)
     }
 }
@@ -760,7 +775,7 @@ impl Decodable for sha256::Hash {
 }
 
 impl Encodable for groestld::Hash {
-    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, Error> {
+    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, io::Error> {
         self.into_inner().consensus_encode(s)
     }
 }
@@ -774,9 +789,15 @@ impl Decodable for groestld::Hash {
 // Tests
 #[cfg(test)]
 mod tests {
-    use super::{CheckedData, VarInt};
-
-    use super::{deserialize, serialize, Error};
+    use super::*;
+    use core::{mem::{self, discriminant}, fmt};
+    use super::{deserialize, serialize, Error, CheckedData, VarInt};
+    use super::{Transaction, BlockHash, FilterHash, TxMerkleNode, TxOut, TxIn};
+    use consensus::{Encodable, deserialize_partial, Decodable};
+    use util::endian::{u64_to_array_le, u32_to_array_le, u16_to_array_le};
+    use secp256k1::rand::{thread_rng, Rng};
+    #[cfg(feature = "std")]
+    use network::{Address, message_blockdata::Inventory};
 
     #[test]
     fn serialize_int_test() {
@@ -835,34 +856,59 @@ mod tests {
         assert_eq!(serialize(&VarInt(0xFFF)), vec![0xFDu8, 0xFF, 0xF]);
         assert_eq!(serialize(&VarInt(0xF0F0F0F)), vec![0xFEu8, 0xF, 0xF, 0xF, 0xF]);
         assert_eq!(serialize(&VarInt(0xF0F0F0F0F0E0)), vec![0xFFu8, 0xE0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0, 0]);
+        assert_eq!(test_varint_encode(0xFF, &u64_to_array_le(0x100000000)).unwrap(), VarInt(0x100000000));
+        assert_eq!(test_varint_encode(0xFE, &u64_to_array_le(0x10000)).unwrap(), VarInt(0x10000));
+        assert_eq!(test_varint_encode(0xFD, &u64_to_array_le(0xFD)).unwrap(), VarInt(0xFD));
+
+        // Test that length calc is working correctly
+        test_varint_len(VarInt(0), 1);
+        test_varint_len(VarInt(0xFC), 1);
+        test_varint_len(VarInt(0xFD), 3);
+        test_varint_len(VarInt(0xFFFF), 3);
+        test_varint_len(VarInt(0x10000), 5);
+        test_varint_len(VarInt(0xFFFFFFFF), 5);
+        test_varint_len(VarInt(0xFFFFFFFF+1), 9);
+        test_varint_len(VarInt(u64::max_value()), 9);
+    }
+
+    fn test_varint_len(varint: VarInt, expected: usize) {
+        let mut encoder = vec![];
+        assert_eq!(varint.consensus_encode(&mut encoder).unwrap(), expected);
+        assert_eq!(varint.len(), expected);
+    }
+
+    fn test_varint_encode(n: u8, x: &[u8]) -> Result<VarInt, Error> {
+        let mut input = [0u8; 9];
+        input[0] = n;
+        input[1..x.len()+1].copy_from_slice(x);
+        deserialize_partial::<VarInt>(&input).map(|t|t.0)
     }
 
     #[test]
     fn deserialize_nonminimal_vec() {
-        match deserialize::<Vec<u8>>(&[0xfd, 0x00, 0x00]) {
-            Err(Error::NonMinimalVarInt) => {},
-            x => panic!(x)
-        }
-        match deserialize::<Vec<u8>>(&[0xfd, 0xfc, 0x00]) {
-            Err(Error::NonMinimalVarInt) => {},
-            x => panic!(x)
-        }
-        match deserialize::<Vec<u8>>(&[0xfe, 0xff, 0x00, 0x00, 0x00]) {
-            Err(Error::NonMinimalVarInt) => {},
-            x => panic!(x)
-        }
-        match deserialize::<Vec<u8>>(&[0xfe, 0xff, 0xff, 0x00, 0x00]) {
-            Err(Error::NonMinimalVarInt) => {},
-            x => panic!(x)
-        }
-        match deserialize::<Vec<u8>>(&[0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]) {
-            Err(Error::NonMinimalVarInt) => {},
-            x => panic!(x)
-        }
-        match deserialize::<Vec<u8>>(&[0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00]) {
-            Err(Error::NonMinimalVarInt) => {},
-            x => panic!(x)
-        }
+        // Check the edges for variant int
+        assert_eq!(discriminant(&test_varint_encode(0xFF, &u64_to_array_le(0x100000000-1)).unwrap_err()),
+                   discriminant(&Error::NonMinimalVarInt));
+        assert_eq!(discriminant(&test_varint_encode(0xFE, &u32_to_array_le(0x10000-1)).unwrap_err()),
+                   discriminant(&Error::NonMinimalVarInt));
+        assert_eq!(discriminant(&test_varint_encode(0xFD, &u16_to_array_le(0xFD-1)).unwrap_err()),
+                   discriminant(&Error::NonMinimalVarInt));
+
+        assert_eq!(discriminant(&deserialize::<Vec<u8>>(&[0xfd, 0x00, 0x00]).unwrap_err()),
+                   discriminant(&Error::NonMinimalVarInt));
+        assert_eq!(discriminant(&deserialize::<Vec<u8>>(&[0xfd, 0xfc, 0x00]).unwrap_err()),
+                   discriminant(&Error::NonMinimalVarInt));
+        assert_eq!(discriminant(&deserialize::<Vec<u8>>(&[0xfd, 0xfc, 0x00]).unwrap_err()),
+                   discriminant(&Error::NonMinimalVarInt));
+        assert_eq!(discriminant(&deserialize::<Vec<u8>>(&[0xfe, 0xff, 0x00, 0x00, 0x00]).unwrap_err()),
+                   discriminant(&Error::NonMinimalVarInt));
+        assert_eq!(discriminant(&deserialize::<Vec<u8>>(&[0xfe, 0xff, 0xff, 0x00, 0x00]).unwrap_err()),
+                   discriminant(&Error::NonMinimalVarInt));
+        assert_eq!(discriminant(&deserialize::<Vec<u8>>(&[0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]).unwrap_err()),
+                   discriminant(&Error::NonMinimalVarInt));
+        assert_eq!(discriminant(&deserialize::<Vec<u8>>(&[0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00]).unwrap_err()),
+                   discriminant(&Error::NonMinimalVarInt));
+
 
         let mut vec_256 = vec![0; 259];
         vec_256[0] = 0xfd;
@@ -942,6 +988,34 @@ mod tests {
         assert!((deserialize(&[4u8, 2, 3, 4, 5, 6]) as Result<Vec<u8>, _>).is_err());
         // found by cargo fuzz
         assert!(deserialize::<Vec<u64>>(&[0xff,0xff,0xff,0xff,0x6b,0x6b,0x6b,0x6b,0x6b,0x6b,0x6b,0x6b,0x6b,0x6b,0x6b,0x6b,0xa,0xa,0x3a]).is_err());
+
+        let rand_io_err = Error::Io(io::Error::new(io::ErrorKind::Other, ""));
+
+        // Check serialization that `if len > MAX_VEC_SIZE {return err}` isn't inclusive,
+        // by making sure it fails with IO Error and not an `OversizedVectorAllocation` Error.
+        let err = deserialize::<CheckedData>(&serialize(&(super::MAX_VEC_SIZE as u32))).unwrap_err();
+        assert_eq!(discriminant(&err), discriminant(&rand_io_err));
+
+        test_len_is_max_vec::<u8>();
+        test_len_is_max_vec::<BlockHash>();
+        test_len_is_max_vec::<FilterHash>();
+        test_len_is_max_vec::<TxMerkleNode>();
+        test_len_is_max_vec::<Transaction>();
+        test_len_is_max_vec::<TxOut>();
+        test_len_is_max_vec::<TxIn>();
+        test_len_is_max_vec::<Vec<u8>>();
+        test_len_is_max_vec::<u64>();
+        #[cfg(feature = "std")]
+        test_len_is_max_vec::<(u32, Address)>();
+        #[cfg(feature = "std")]
+        test_len_is_max_vec::<Inventory>();
+    }
+
+    fn test_len_is_max_vec<T>() where Vec<T>: Decodable, T: fmt::Debug {
+        let rand_io_err = Error::Io(io::Error::new(io::ErrorKind::Other, ""));
+        let varint = VarInt((super::MAX_VEC_SIZE / mem::size_of::<T>()) as u64);
+        let err = deserialize::<Vec<T>>(&serialize(&varint)).unwrap_err();
+        assert_eq!(discriminant(&err), discriminant(&rand_io_err));
     }
 
     #[test]
@@ -949,7 +1023,7 @@ mod tests {
         assert_eq!(deserialize(&[6u8, 0x41, 0x6e, 0x64, 0x72, 0x65, 0x77]).ok(), Some("Andrew".to_string()));
         assert_eq!(
             deserialize(&[6u8, 0x41, 0x6e, 0x64, 0x72, 0x65, 0x77]).ok(),
-            Some(::std::borrow::Cow::Borrowed("Andrew"))
+            Some(Cow::Borrowed("Andrew"))
         );
     }
 
@@ -958,5 +1032,52 @@ mod tests {
         let cd: Result<CheckedData, _> = deserialize(&[5u8, 0, 0, 0, 134, 30, 66, 180, 1, 2, 3, 4, 5]);
         assert_eq!(cd.ok(), Some(CheckedData(vec![1u8, 2, 3, 4, 5])));
     }
-}
 
+    #[test]
+    fn limit_read_test() {
+        let witness = vec![vec![0u8; 3_999_999]; 2];
+        let ser = serialize(&witness);
+        let mut reader = io::Cursor::new(ser);
+        let err  = Vec::<Vec<u8>>::consensus_decode(&mut reader);
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn serialization_round_trips() {
+        macro_rules! round_trip {
+            ($($val_type:ty),*) => {
+                $(
+                    let r: $val_type = thread_rng().gen();
+                    assert_eq!(deserialize::<$val_type>(&serialize(&r)).unwrap(), r);
+                )*
+            };
+        }
+        macro_rules! round_trip_bytes {
+            ($(($val_type:ty, $data:expr)),*) => {
+                $(
+                    thread_rng().fill(&mut $data[..]);
+                    assert_eq!(deserialize::<$val_type>(&serialize(&$data)).unwrap()[..], $data[..]);
+                )*
+            };
+        }
+
+        let mut data = Vec::with_capacity(256);
+        let mut data64 = Vec::with_capacity(256);
+        for _ in 0..10 {
+            round_trip!{bool, i8, u8, i16, u16, i32, u32, i64, u64,
+            (bool, i8, u16, i32), (u64, i64, u32, i32, u16, i16), (i8, u8, i16, u16, i32, u32, i64, u64),
+            [u8; 2], [u8; 4], [u8; 8], [u8; 12], [u8; 16], [u8; 32]};
+
+            data.clear();
+            data64.clear();
+            let len = thread_rng().gen_range(1, 256);
+            data.resize(len, 0u8);
+            data64.resize(len, 0u64);
+            let mut arr33 = [0u8; 33];
+            let mut arr16 = [0u16; 8];
+            round_trip_bytes!{(Vec<u8>, data), ([u8; 33], arr33), ([u16; 8], arr16), (Vec<u64>, data64)};
+
+
+        }
+    }
+}
