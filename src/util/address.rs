@@ -801,20 +801,20 @@ mod tests {
         );
 
         let addr =
-            Address::from_str("tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7")
+            Address::from_str("tgrs1qw4z3xrtgx4f6w7akwpp2xa0gupmkv4yauemmm9")
                 .unwrap();
         let json = serde_json::to_value(&addr).unwrap();
         assert_eq!(
             json,
             serde_json::Value::String(
-                "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7".to_owned()
+                "tgrs1qw4z3xrtgx4f6w7akwpp2xa0gupmkv4yauemmm9".to_owned()
             )
         );
         let into: Address = serde_json::from_value(json).unwrap();
         assert_eq!(addr.to_string(), into.to_string());
         assert_eq!(
             into.script_pubkey(),
-            hex_script!("00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262")
+            hex_script!("00147545130d683553a77bb67042a375e8e07766549d")
         );
 
         let addr = Address::from_str("grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h").unwrap();
@@ -827,7 +827,7 @@ mod tests {
         assert_eq!(addr.to_string(), into.to_string());
         assert_eq!(
             into.script_pubkey(),
-            hex_script!("001454d26dddb59c7073c6a197946ea1841951fa7a74")
+            hex_script!("00142004149887db140bcb7167fa22d28d38ba17528c")
         );
     }
 

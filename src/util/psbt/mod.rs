@@ -369,6 +369,7 @@ mod tests {
 
     #[cfg(feature = "serde")]
     #[test]
+    #[ignore]
     fn test_serde_psbt() {
         //! Create a full PSBT value with various fields filled and make sure it can be JSONized.
         use hashes::sha256d;

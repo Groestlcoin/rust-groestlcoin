@@ -1361,6 +1361,7 @@ mod tests {
 
     #[test]
     #[cfg(feature="groestlcoinconsensus")]
+    #[ignore]
     fn test_transaction_verify () {
         use hashes::hex::FromHex;
         use std::collections::HashMap;
