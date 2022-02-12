@@ -35,7 +35,7 @@ mod message_signing {
     use core::fmt;
     #[cfg(feature = "std")] use std::error;
 
-    use hashes::sha256d;
+    use hashes::sha256;
     use secp256k1;
     use secp256k1::recovery::{RecoveryId, RecoverableSignature};
 
@@ -137,7 +137,7 @@ mod message_signing {
         pub fn recover_pubkey<C: secp256k1::Verification>(
             &self,
             secp_ctx: &secp256k1::Secp256k1<C>,
-            msg_hash: sha256d::Hash
+            msg_hash: sha256::Hash
         ) -> Result<PublicKey, secp256k1::Error> {
             let msg = secp256k1::Message::from_slice(&msg_hash[..])?;
             let pubkey = secp_ctx.recover(&msg, &self.signature)?;
@@ -154,7 +154,7 @@ mod message_signing {
             &self,
             secp_ctx: &secp256k1::Secp256k1<C>,
             address: &Address,
-            msg_hash: sha256d::Hash
+            msg_hash: sha256::Hash
         ) -> Result<bool, secp256k1::Error> {
             let pubkey = self.recover_pubkey(&secp_ctx, msg_hash)?;
             Ok(match address.address_type() {
