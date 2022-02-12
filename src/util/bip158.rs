@@ -523,7 +523,7 @@ mod test {
     use consensus::encode::deserialize;
     use std::collections::HashMap;
 
-    #[test]
+    #[test] #[ignore]
     fn test_blockfilters() {
 
         // test vectors from: https://github.com/jimpo/bitcoin/blob/c7efb652f3543b001b4dd22186a354605b14f47e/src/test/data/blockfilters.json
