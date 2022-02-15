@@ -14,7 +14,7 @@
 
 //! # Rust Groestlcoin Library
 //!
-//! This is a library for which supports the Groestlcoin network protocol and associated
+//! This is a library that supports the Groestlcoin network protocol and associated
 //! primitives. It is designed for Rust programs built to work with the Groestlcoin
 //! network.
 //!
@@ -22,11 +22,30 @@
 //! safety, including ownership and lifetime, for financial and/or cryptographic
 //! software.
 //!
+//! See README.md for detailed documentation about development and supported
+//! environments.
+//!
+//! ## Available feature flags
+//!
+//! * `std` - the usual dependency on `std` (default).
+//! * `secp-recovery` - enables calculating public key from a signature and message.
+//! * `base64` - (dependency), enables encoding of PSBTs and message signatures.
+//! * `unstable` - enables unstable features for testing.
+//! * `rand` - (dependency), makes it more convenient to generate random values.
+//! * `use-serde` - (dependency), implements `serde`-based serialization and
+//!                 deserialization.
+//! * `secp-lowmemory` - optimizations for low-memory devices.
+//! * `no-std` - enables additional features required for this crate to be usable
+//!              without std. Does **not** disable `std`. Depends on `hashbrown`
+//!              and `core2`.
+//!
 
 #![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
 
 // Experimental features we need
 #![cfg_attr(all(test, feature = "unstable"), feature(test))]
+
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 // Coding conventions
 #![forbid(unsafe_code)]
@@ -42,6 +61,12 @@
 
 #[cfg(not(any(feature = "std", feature = "no-std")))]
 compile_error!("at least one of the `std` or `no-std` features must be enabled");
+
+// Disable 16-bit support at least for now as we can't guarantee it yet.
+#[cfg(target_pointer_width = "16")]
+compile_error!("rust-bitcoin currently only supports architectures with pointers wider
+                than 16 bits, let us know if you want 16-bit support. Note that we do
+                NOT guarantee that we will implement it!");
 
 #[cfg(feature = "no-std")]
 #[macro_use]
@@ -60,7 +85,9 @@ pub extern crate bech32;
 #[cfg(feature = "no-std")]
 extern crate hashbrown;
 
-#[cfg(feature = "base64")] pub extern crate base64;
+#[cfg(feature = "base64")]
+#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
+pub extern crate base64;
 
 #[cfg(feature="groestlcoinconsensus")] extern crate groestlcoinconsensus;
 #[cfg(feature = "serde")] #[macro_use] extern crate serde;
@@ -96,7 +123,8 @@ pub use blockdata::transaction::Transaction;
 pub use blockdata::transaction::TxIn;
 pub use blockdata::transaction::TxOut;
 pub use blockdata::transaction::OutPoint;
-pub use blockdata::transaction::SigHashType;
+pub use blockdata::transaction::EcdsaSigHashType;
+pub use blockdata::witness::Witness;
 pub use consensus::encode::VarInt;
 pub use network::constants::Network;
 pub use util::Error;
@@ -106,13 +134,14 @@ pub use util::amount::Amount;
 pub use util::amount::Denomination;
 pub use util::amount::SignedAmount;
 pub use util::merkleblock::MerkleBlock;
+pub use util::sighash::SchnorrSigHashType;
 
-pub use util::ecdsa;
-pub use util::schnorr;
-#[deprecated(since = "0.26.1", note = "Please use `ecdsa::PrivateKey` instead")]
-pub use util::ecdsa::PrivateKey;
-#[deprecated(since = "0.26.1", note = "Please use `ecdsa::PublicKey` instead")]
-pub use util::ecdsa::PublicKey;
+pub use util::ecdsa::{self, EcdsaSig, EcdsaSigError};
+pub use util::schnorr::{self, SchnorrSig, SchnorrSigError};
+pub use util::key::{PrivateKey, PublicKey, XOnlyPublicKey, KeyPair};
+pub use util::psbt;
+#[allow(deprecated)]
+pub use blockdata::transaction::SigHashType;
 
 #[cfg(feature = "std")]
 use std::io;
@@ -152,10 +181,10 @@ mod prelude {
     pub use std::{string::{String, ToString}, vec::Vec, boxed::Box, borrow::{Cow, ToOwned}, slice, rc, sync};
 
     #[cfg(all(not(feature = "std"), not(test)))]
-    pub use alloc::collections::{BTreeMap, btree_map};
+    pub use alloc::collections::{BTreeMap, BTreeSet, btree_map, BinaryHeap};
 
     #[cfg(any(feature = "std", test))]
-    pub use std::collections::{BTreeMap, btree_map};
+    pub use std::collections::{BTreeMap, BTreeSet, btree_map, BinaryHeap};
 
     #[cfg(feature = "std")]
     pub use std::io::sink;

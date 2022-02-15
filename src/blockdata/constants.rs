@@ -12,11 +12,11 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Blockdata constants
+//! Blockdata constants.
 //!
 //! This module provides various constants relating to the blockchain and
 //! consensus code. In particular, it defines the genesis block and its
-//! single transaction
+//! single transaction.
 //!
 
 use prelude::*;
@@ -29,6 +29,7 @@ use blockdata::opcodes;
 use blockdata::script;
 use blockdata::transaction::{OutPoint, Transaction, TxOut, TxIn};
 use blockdata::block::{Block, BlockHeader};
+use blockdata::witness::Witness;
 use network::constants::Network;
 use util::uint::Uint256;
 
@@ -50,6 +51,18 @@ pub const MIN_TRANSACTION_WEIGHT: u32 = 4 * 60;
 pub const WITNESS_SCALE_FACTOR: usize = 4;
 /// The maximum allowed number of signature check operations in a block
 pub const MAX_BLOCK_SIGOPS_COST: i64 = 80_000;
+/// Mainnet (bitcoin) pubkey address prefix.
+pub const PUBKEY_ADDRESS_PREFIX_MAIN: u8 = 0; // 0x00
+/// Mainnet (bitcoin) script address prefix.
+pub const SCRIPT_ADDRESS_PREFIX_MAIN: u8 = 5; // 0x05
+/// Test (tesnet, signet, regtest) pubkey address prefix.
+pub const PUBKEY_ADDRESS_PREFIX_TEST: u8 = 111; // 0x6f
+/// Test (tesnet, signet, regtest) script address prefix.
+pub const SCRIPT_ADDRESS_PREFIX_TEST: u8 = 196; // 0xc4
+/// The maximum allowed script size.
+pub const MAX_SCRIPT_ELEMENT_SIZE: usize = 520;
+/// How may blocks between halvings.
+pub const SUBSIDY_HALVING_INTERVAL: u32 = 210_000;
 
 /// In Bitcoind this is insanely described as ~((u256)0 >> 32)
 pub fn max_target(_: Network) -> Uint256 {
@@ -82,7 +95,7 @@ fn bitcoin_genesis_tx() -> Transaction {
         previous_output: OutPoint::null(),
         script_sig: in_script,
         sequence: MAX_SEQUENCE,
-        witness: vec![],
+        witness: Witness::default(),
     });
 
     // Outputs
@@ -118,7 +131,7 @@ pub fn genesis_block(network: Network) -> Block {
                     bits: 0x1e0fffff,
                     nonce: 220035
                 },
-                txdata: txdata
+                txdata,
             }
         }
         Network::Testnet => {
@@ -131,7 +144,7 @@ pub fn genesis_block(network: Network) -> Block {
                     bits: 0x1e00ffff,
                     nonce: 6556309
                 },
-                txdata: txdata
+                txdata,
             }
         }
         Network::Signet => {
@@ -144,7 +157,7 @@ pub fn genesis_block(network: Network) -> Block {
                     bits: 0x1e0377ae,
                     nonce: 52613770
                 },
-                txdata: txdata
+                txdata,
             }
         }
         Network::Regtest => {
@@ -157,7 +170,7 @@ pub fn genesis_block(network: Network) -> Block {
                     bits: 0x1e00ffff,
                     nonce: 6556309
                 },
-                txdata: txdata
+                txdata,
             }
         }
     }

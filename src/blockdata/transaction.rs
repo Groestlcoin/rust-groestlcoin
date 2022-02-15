@@ -12,7 +12,7 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Groestlcoin Transaction
+//! Groestlcoin transactions.
 //!
 //! A transaction describes a transfer of money. It consumes previously-unspent
 //! transaction outputs and produces new ones, satisfying the condition to spend
@@ -36,6 +36,7 @@ use util::endian;
 use blockdata::constants::WITNESS_SCALE_FACTOR;
 #[cfg(feature="groestlcoinconsensus")] use blockdata::script;
 use blockdata::script::Script;
+use blockdata::witness::Witness;
 use consensus::{encode, Decodable, Encodable};
 use consensus::encode::MAX_VEC_SIZE;
 use hash_types::{SigHash, Txid, Wtxid, WtxidInternal};
@@ -56,8 +57,8 @@ impl OutPoint {
     #[inline]
     pub fn new(txid: Txid, vout: u32) -> OutPoint {
         OutPoint {
-            txid: txid,
-            vout: vout,
+            txid,
+            vout,
         }
     }
 
@@ -133,6 +134,7 @@ impl fmt::Display for ParseOutPointError {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl  error::Error for ParseOutPointError {
     fn cause(&self) -> Option<&dyn  error::Error> {
         match *self {
@@ -152,7 +154,7 @@ fn parse_vout(s: &str) -> Result<u32, ParseOutPointError> {
             return Err(ParseOutPointError::VoutNotCanonical);
         }
     }
-    Ok(s.parse().map_err(ParseOutPointError::Vout)?)
+    s.parse().map_err(ParseOutPointError::Vout)
 }
 
 impl ::core::str::FromStr for OutPoint {
@@ -196,7 +198,7 @@ pub struct TxIn {
     /// Encodable/Decodable, as it is (de)serialized at the end of the full
     /// Transaction. It *is* (de)serialized with the rest of the TxIn in other
     /// (de)serialization routines.
-    pub witness: Vec<Vec<u8>>
+    pub witness: Witness
 }
 
 impl Default for TxIn {
@@ -205,7 +207,7 @@ impl Default for TxIn {
             previous_output: OutPoint::default(),
             script_sig: Script::new(),
             sequence: u32::max_value(),
-            witness: Vec::new(),
+            witness: Witness::default(),
         }
     }
 }
@@ -279,7 +281,7 @@ impl Transaction {
         let cloned_tx = Transaction {
             version: self.version,
             lock_time: self.lock_time,
-            input: self.input.iter().map(|txin| TxIn { script_sig: Script::new(), witness: vec![], .. *txin }).collect(),
+            input: self.input.iter().map(|txin| TxIn { script_sig: Script::new(), witness: Witness::default(), .. *txin }).collect(),
             output: self.output.clone(),
         };
         cloned_tx.txid().into()
@@ -290,21 +292,21 @@ impl Transaction {
     /// this will give the correct txid (not including witnesses) while `wtxid`
     /// will also hash witnesses.
     pub fn txid(&self) -> Txid {
-        let mut enc = TxidInternal::engine();
-        self.version.consensus_encode(&mut enc).unwrap();
-        self.input.consensus_encode(&mut enc).unwrap();
-        self.output.consensus_encode(&mut enc).unwrap();
-        self.lock_time.consensus_encode(&mut enc).unwrap();
-        Txid::from(TxidInternal::from_engine(enc))
+        let mut enc = Txid::engine();
+        self.version.consensus_encode(&mut enc).expect("engines don't error");
+        self.input.consensus_encode(&mut enc).expect("engines don't error");
+        self.output.consensus_encode(&mut enc).expect("engines don't error");
+        self.lock_time.consensus_encode(&mut enc).expect("engines don't error");
+        Txid::from_engine(enc)
     }
 
     /// Computes SegWit-version of the transaction id (wtxid). For transaction with the witness
     /// data this hash includes witness, for pre-witness transaction it is equal to the normal
     /// value returned by txid() function.
     pub fn wtxid(&self) -> Wtxid {
-        let mut enc = WtxidInternal::engine();
-        self.consensus_encode(&mut enc).unwrap();
-        Wtxid::from(WtxidInternal::from_engine(enc))
+        let mut enc = Wtxid::engine();
+        self.consensus_encode(&mut enc).expect("engines don't error");
+        Wtxid::from_engine(enc)
     }
 
     /// Encodes the signing data from which a signature hash for a given input index with a given
@@ -332,10 +334,10 @@ impl Transaction {
         let sighash_type : u32 = sighash_type.into();
         assert!(input_index < self.input.len());  // Panic on OOB
 
-        let (sighash, anyone_can_pay) = SigHashType::from_u32_consensus(sighash_type).split_anyonecanpay_flag();
+        let (sighash, anyone_can_pay) = EcdsaSigHashType::from_u32_consensus(sighash_type).split_anyonecanpay_flag();
 
         // Special-case sighash_single bug because this is easy enough.
-        if sighash == SigHashType::Single && input_index >= self.output.len() {
+        if sighash == EcdsaSigHashType::Single && input_index >= self.output.len() {
             writer.write_all(&[1, 0, 0, 0, 0, 0, 0, 0,
                                0, 0, 0, 0, 0, 0, 0, 0,
                                0, 0, 0, 0, 0, 0, 0, 0,
@@ -356,7 +358,7 @@ impl Transaction {
                 previous_output: self.input[input_index].previous_output,
                 script_sig: script_pubkey.clone(),
                 sequence: self.input[input_index].sequence,
-                witness: vec![],
+                witness: Witness::default(),
             }];
         } else {
             tx.input = Vec::with_capacity(self.input.len());
@@ -364,22 +366,22 @@ impl Transaction {
                 tx.input.push(TxIn {
                     previous_output: input.previous_output,
                     script_sig: if n == input_index { script_pubkey.clone() } else { Script::new() },
-                    sequence: if n != input_index && (sighash == SigHashType::Single || sighash == SigHashType::None) { 0 } else { input.sequence },
-                    witness: vec![],
+                    sequence: if n != input_index && (sighash == EcdsaSigHashType::Single || sighash == EcdsaSigHashType::None) { 0 } else { input.sequence },
+                    witness: Witness::default(),
                 });
             }
         }
         // ..then all outputs
         tx.output = match sighash {
-            SigHashType::All => self.output.clone(),
-            SigHashType::Single => {
+            EcdsaSigHashType::All => self.output.clone(),
+            EcdsaSigHashType::Single => {
                 let output_iter = self.output.iter()
                                       .take(input_index + 1)  // sign all outputs up to and including this one, but erase
                                       .enumerate()            // all of them except for this one
                                       .map(|(n, out)| if n == input_index { out.clone() } else { TxOut::default() });
                 output_iter.collect()
             }
-            SigHashType::None => vec![],
+            EcdsaSigHashType::None => vec![],
             _ => unreachable!()
         };
         // hash the result
@@ -429,6 +431,46 @@ impl Transaction {
         self.get_scaled_size(1)
     }
 
+    /// Gets the "vsize" of this transaction. Will be `ceil(weight / 4.0)`.
+    /// Note this implements the virtual size as per [`bip141`], which is different
+    /// to what is implemented in Bitcoin Core. The computation should be the same
+    /// for any remotely sane transaction, and a standardness-rule-correct version
+    /// is available in the [`policy`] module.
+    ///
+    /// [`bip141`]: https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
+    /// [`policy`]: ../policy/mod.rs.html
+    #[inline]
+    pub fn get_vsize(&self) -> usize {
+        let weight = self.get_weight();
+        (weight + WITNESS_SCALE_FACTOR - 1) / WITNESS_SCALE_FACTOR
+    }
+
+    /// Gets the size of this transaction excluding the witness data.
+    pub fn get_strippedsize(&self) -> usize {
+        let mut input_size = 0;
+        for input in &self.input {
+            input_size += 32 + 4 + 4 + // outpoint (32+4) + nSequence
+                VarInt(input.script_sig.len() as u64).len() +
+                input.script_sig.len();
+        }
+        let mut output_size = 0;
+        for output in &self.output {
+            output_size += 8 + // value
+                VarInt(output.script_pubkey.len() as u64).len() +
+                output.script_pubkey.len();
+        }
+        let non_input_size =
+        // version:
+        4 +
+        // count varints:
+        VarInt(self.input.len() as u64).len() +
+        VarInt(self.output.len() as u64).len() +
+        output_size +
+        // lock_time
+        4;
+        non_input_size + input_size
+    }
+
     /// Internal utility function for get_{size,weight}
     fn get_scaled_size(&self, scale_factor: usize) -> usize {
         let mut input_weight = 0;
@@ -439,10 +481,7 @@ impl Transaction {
                 input.script_sig.len());
             if !input.witness.is_empty() {
                 inputs_with_witnesses += 1;
-                input_weight += VarInt(input.witness.len() as u64).len();
-                for elem in &input.witness {
-                    input_weight += VarInt(elem.len() as u64).len() + elem.len();
-                }
+                input_weight += input.witness.serialized_len();
             }
         }
         let mut output_size = 0;
@@ -467,16 +506,18 @@ impl Transaction {
         }
     }
 
-    #[cfg(feature="groestlcoinconsensus")]
     /// Shorthand for [Self::verify_with_flags] with flag [groestlcoinconsensus::VERIFY_ALL]
+    #[cfg(feature="groestlcoinconsensus")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
     pub fn verify<S>(&self, spent: S) -> Result<(), script::Error>
         where S: FnMut(&OutPoint) -> Option<TxOut> {
         self.verify_with_flags(spent, ::groestlcoinconsensus::VERIFY_ALL)
     }
 
-    #[cfg(feature="groestlcoinconsensus")]
     /// Verify that this transaction is able to spend its inputs
     /// The lambda spent should not return the same TxOut twice!
+    #[cfg(feature="groestlcoinconsensus")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
     pub fn verify_with_flags<S, F>(&self, mut spent: S, flags: F) -> Result<(), script::Error>
         where S: FnMut(&OutPoint) -> Option<TxOut>, F : Into<u32> {
         let tx = encode::serialize(&*self);
@@ -542,7 +583,7 @@ impl Decodable for TxIn {
             previous_output: Decodable::consensus_decode(&mut d)?,
             script_sig: Decodable::consensus_decode(&mut d)?,
             sequence: Decodable::consensus_decode(d)?,
-            witness: vec![],
+            witness: Witness::default(),
         })
     }
 }
@@ -598,9 +639,9 @@ impl Decodable for Transaction {
                         Err(encode::Error::ParseFailed("witness flag set but no witnesses present"))
                     } else {
                         Ok(Transaction {
-                            version: version,
-                            input: input,
-                            output: output,
+                            version,
+                            input,
+                            output,
                             lock_time: Decodable::consensus_decode(d)?,
                         })
                     }
@@ -613,8 +654,8 @@ impl Decodable for Transaction {
         // non-segwit
         } else {
             Ok(Transaction {
-                version: version,
-                input: input,
+                version,
+                input,
                 output: Decodable::consensus_decode(&mut d)?,
                 lock_time: Decodable::consensus_decode(d)?,
             })
@@ -625,21 +666,27 @@ impl Decodable for Transaction {
 /// This type is consensus valid but an input including it would prevent the transaction from
 /// being relayed on today's Bitcoin network.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct NonStandardSigHashType;
+pub struct NonStandardSigHashType(pub u32);
 
 impl fmt::Display for NonStandardSigHashType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Non standard sighash type")
+        write!(f, "Non standard sighash type {}", self.0)
     }
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl error::Error for NonStandardSigHashType {}
+
+/// Legacy Hashtype of an input's signature
+#[deprecated(since="0.28.0", note="Please use [`EcdsaSigHashType`] instead")]
+pub type SigHashType = EcdsaSigHashType;
 
 /// Hashtype of an input's signature, encoded in the last byte of the signature
 /// Fixed values so they can be casted as integer types for encoding
+/// See also [`crate::SchnorrSigHashType`]
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
-pub enum SigHashType {
+pub enum EcdsaSigHashType {
     /// 0x1: Sign all outputs
     All		= 0x01,
     /// 0x2: Sign no outputs --- anyone can choose the destination
@@ -656,105 +703,127 @@ pub enum SigHashType {
     /// 0x83: Sign one output and only this input (see `Single` for what "one output" means)
     SinglePlusAnyoneCanPay	= 0x83
 }
-serde_string_impl!(SigHashType, "a SigHashType data");
+serde_string_impl!(EcdsaSigHashType, "a EcdsaSigHashType data");
 
-impl fmt::Display for SigHashType {
+impl fmt::Display for EcdsaSigHashType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            SigHashType::All => "SIGHASH_ALL",
-            SigHashType::None => "SIGHASH_NONE",
-            SigHashType::Single => "SIGHASH_SINGLE",
-            SigHashType::AllPlusAnyoneCanPay => "SIGHASH_ALL|SIGHASH_ANYONECANPAY",
-            SigHashType::NonePlusAnyoneCanPay => "SIGHASH_NONE|SIGHASH_ANYONECANPAY",
-            SigHashType::SinglePlusAnyoneCanPay => "SIGHASH_SINGLE|SIGHASH_ANYONECANPAY",
+            EcdsaSigHashType::All => "SIGHASH_ALL",
+            EcdsaSigHashType::None => "SIGHASH_NONE",
+            EcdsaSigHashType::Single => "SIGHASH_SINGLE",
+            EcdsaSigHashType::AllPlusAnyoneCanPay => "SIGHASH_ALL|SIGHASH_ANYONECANPAY",
+            EcdsaSigHashType::NonePlusAnyoneCanPay => "SIGHASH_NONE|SIGHASH_ANYONECANPAY",
+            EcdsaSigHashType::SinglePlusAnyoneCanPay => "SIGHASH_SINGLE|SIGHASH_ANYONECANPAY",
         };
         f.write_str(s)
     }
 }
 
-impl str::FromStr for SigHashType {
-    type Err = String;
+impl str::FromStr for EcdsaSigHashType {
+    type Err = SigHashTypeParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.as_ref() {
-            "SIGHASH_ALL" => Ok(SigHashType::All),
-            "SIGHASH_NONE" => Ok(SigHashType::None),
-            "SIGHASH_SINGLE" => Ok(SigHashType::Single),
-            "SIGHASH_ALL|SIGHASH_ANYONECANPAY" => Ok(SigHashType::AllPlusAnyoneCanPay),
-            "SIGHASH_NONE|SIGHASH_ANYONECANPAY" => Ok(SigHashType::NonePlusAnyoneCanPay),
-            "SIGHASH_SINGLE|SIGHASH_ANYONECANPAY" => Ok(SigHashType::SinglePlusAnyoneCanPay),
-            _ => Err("can't recognize SIGHASH string".to_string())
+        match s {
+            "SIGHASH_ALL" => Ok(EcdsaSigHashType::All),
+            "SIGHASH_NONE" => Ok(EcdsaSigHashType::None),
+            "SIGHASH_SINGLE" => Ok(EcdsaSigHashType::Single),
+            "SIGHASH_ALL|SIGHASH_ANYONECANPAY" => Ok(EcdsaSigHashType::AllPlusAnyoneCanPay),
+            "SIGHASH_NONE|SIGHASH_ANYONECANPAY" => Ok(EcdsaSigHashType::NonePlusAnyoneCanPay),
+            "SIGHASH_SINGLE|SIGHASH_ANYONECANPAY" => Ok(EcdsaSigHashType::SinglePlusAnyoneCanPay),
+            _ => Err(SigHashTypeParseError { string: s.to_owned() }),
         }
     }
 }
 
-impl SigHashType {
-     /// Break the sighash flag into the "real" sighash flag and the ANYONECANPAY boolean
-     pub(crate) fn split_anyonecanpay_flag(self) -> (SigHashType, bool) {
-         match self {
-             SigHashType::All		=> (SigHashType::All, false),
-             SigHashType::None		=> (SigHashType::None, false),
-             SigHashType::Single	=> (SigHashType::Single, false),
-             SigHashType::AllPlusAnyoneCanPay		=> (SigHashType::All, true),
-             SigHashType::NonePlusAnyoneCanPay		=> (SigHashType::None, true),
-             SigHashType::SinglePlusAnyoneCanPay	=> (SigHashType::Single, true)
-         }
-     }
+impl EcdsaSigHashType {
+    /// Break the sighash flag into the "real" sighash flag and the ANYONECANPAY boolean
+    pub(crate) fn split_anyonecanpay_flag(self) -> (EcdsaSigHashType, bool) {
+        match self {
+            EcdsaSigHashType::All		=> (EcdsaSigHashType::All, false),
+            EcdsaSigHashType::None		=> (EcdsaSigHashType::None, false),
+            EcdsaSigHashType::Single	=> (EcdsaSigHashType::Single, false),
+            EcdsaSigHashType::AllPlusAnyoneCanPay		=> (EcdsaSigHashType::All, true),
+            EcdsaSigHashType::NonePlusAnyoneCanPay		=> (EcdsaSigHashType::None, true),
+            EcdsaSigHashType::SinglePlusAnyoneCanPay	=> (EcdsaSigHashType::Single, true)
+        }
+    }
 
-     /// Reads a 4-byte uint32 as a sighash type.
-     #[deprecated(since="0.26.1", note="please use `from_u32_consensus` or `from_u32_standard` instead")]
-     pub fn from_u32(n: u32) -> SigHashType {
-         Self::from_u32_consensus(n)
-     }
+    /// Reads a 4-byte uint32 as a sighash type.
+    #[deprecated(since="0.26.1", note="please use `from_u32_consensus` or `from_u32_standard` instead")]
+    pub fn from_u32(n: u32) -> EcdsaSigHashType {
+        Self::from_u32_consensus(n)
+    }
 
-     /// Reads a 4-byte uint32 as a sighash type.
-     ///
-     /// **Note**: this replicates consensus behaviour, for current standardness rules correctness
-     /// you probably want [Self::from_u32_standard].
-     pub fn from_u32_consensus(n: u32) -> SigHashType {
-         // In Bitcoin Core, the SignatureHash function will mask the (int32) value with
-         // 0x1f to (apparently) deactivate ACP when checking for SINGLE and NONE bits.
-         // We however want to be matching also against on ACP-masked ALL, SINGLE, and NONE.
-         // So here we re-activate ACP.
-         let mask = 0x1f | 0x80;
-         match n & mask {
-             // "real" sighashes
-             0x01 => SigHashType::All,
-             0x02 => SigHashType::None,
-             0x03 => SigHashType::Single,
-             0x81 => SigHashType::AllPlusAnyoneCanPay,
-             0x82 => SigHashType::NonePlusAnyoneCanPay,
-             0x83 => SigHashType::SinglePlusAnyoneCanPay,
-             // catchalls
-             x if x & 0x80 == 0x80 => SigHashType::AllPlusAnyoneCanPay,
-             _ => SigHashType::All
-         }
-     }
+    /// Reads a 4-byte uint32 as a sighash type.
+    ///
+    /// **Note**: this replicates consensus behaviour, for current standardness rules correctness
+    /// you probably want [Self::from_u32_standard].
+    /// This might cause unexpected behavior because it does not roundtrip. That is,
+    /// `EcdsaSigHashType::from_u32_consensus(n) as u32 != n` for non-standard values of
+    /// `n`. While verifying signatures, the user should retain the `n` and use it compute the
+    /// signature hash message.
+    pub fn from_u32_consensus(n: u32) -> EcdsaSigHashType {
+        // In Bitcoin Core, the SignatureHash function will mask the (int32) value with
+        // 0x1f to (apparently) deactivate ACP when checking for SINGLE and NONE bits.
+        // We however want to be matching also against on ACP-masked ALL, SINGLE, and NONE.
+        // So here we re-activate ACP.
+        let mask = 0x1f | 0x80;
+        match n & mask {
+            // "real" sighashes
+            0x01 => EcdsaSigHashType::All,
+            0x02 => EcdsaSigHashType::None,
+            0x03 => EcdsaSigHashType::Single,
+            0x81 => EcdsaSigHashType::AllPlusAnyoneCanPay,
+            0x82 => EcdsaSigHashType::NonePlusAnyoneCanPay,
+            0x83 => EcdsaSigHashType::SinglePlusAnyoneCanPay,
+            // catchalls
+            x if x & 0x80 == 0x80 => EcdsaSigHashType::AllPlusAnyoneCanPay,
+            _ => EcdsaSigHashType::All
+        }
+    }
 
-     /// Read a 4-byte uint32 as a standard sighash type, returning an error if the type
-     /// is non standard.
-     pub fn from_u32_standard(n: u32) -> Result<SigHashType, NonStandardSigHashType> {
-         match n {
-             // Standard sighashes, see https://github.com/bitcoin/bitcoin/blob/b805dbb0b9c90dadef0424e5b3bf86ac308e103e/src/script/interpreter.cpp#L189-L198
-             0x01 => Ok(SigHashType::All),
-             0x02 => Ok(SigHashType::None),
-             0x03 => Ok(SigHashType::Single),
-             0x81 => Ok(SigHashType::AllPlusAnyoneCanPay),
-             0x82 => Ok(SigHashType::NonePlusAnyoneCanPay),
-             0x83 => Ok(SigHashType::SinglePlusAnyoneCanPay),
-             _ => Err(NonStandardSigHashType)
-         }
-     }
+    /// Read a 4-byte uint32 as a standard sighash type, returning an error if the type
+    /// is non standard.
+    pub fn from_u32_standard(n: u32) -> Result<EcdsaSigHashType, NonStandardSigHashType> {
+        match n {
+            // Standard sighashes, see https://github.com/bitcoin/bitcoin/blob/b805dbb0b9c90dadef0424e5b3bf86ac308e103e/src/script/interpreter.cpp#L189-L198
+            0x01 => Ok(EcdsaSigHashType::All),
+            0x02 => Ok(EcdsaSigHashType::None),
+            0x03 => Ok(EcdsaSigHashType::Single),
+            0x81 => Ok(EcdsaSigHashType::AllPlusAnyoneCanPay),
+            0x82 => Ok(EcdsaSigHashType::NonePlusAnyoneCanPay),
+            0x83 => Ok(EcdsaSigHashType::SinglePlusAnyoneCanPay),
+            non_standard => Err(NonStandardSigHashType(non_standard))
+        }
+    }
 
-     /// Converts to a u32
-     pub fn as_u32(self) -> u32 { self as u32 }
+    /// Converts to a u32
+    pub fn as_u32(self) -> u32 { self as u32 }
 }
 
-impl From<SigHashType> for u32 {
-    fn from(t: SigHashType) -> u32 {
+impl From<EcdsaSigHashType> for u32 {
+    fn from(t: EcdsaSigHashType) -> u32 {
         t.as_u32()
     }
 }
+
+/// Error returned when parsing `SigHashType` fails.
+///
+/// This is currently returned for unrecognized sighash strings.
+#[derive(Debug, Clone)]
+pub struct SigHashTypeParseError {
+    string: String,
+}
+
+impl fmt::Display for SigHashTypeParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "can't recognize SIGHASH string '{}'", self.string)
+    }
+}
+
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+#[cfg(feature = "std")]
+impl ::std::error::Error for SigHashTypeParseError {}
 
 #[cfg(test)]
 mod tests {
@@ -770,7 +839,8 @@ mod tests {
     use hashes::hex::FromHex;
 
     use hash_types::*;
-    use SigHashType;
+    use super::EcdsaSigHashType;
+    use util::sighash::SigHashCache;
 
     #[test]
     fn test_outpoint() {
@@ -857,6 +927,8 @@ mod tests {
                    "196aa0d232576dd6809e4e2d9c1110f805abd9b5a22e6cf1d8a4fff3f9b503ea".to_string());
         assert_eq!(realtx.get_weight(), tx_bytes.len()*WITNESS_SCALE_FACTOR);
         assert_eq!(realtx.get_size(), tx_bytes.len());
+        assert_eq!(realtx.get_vsize(), tx_bytes.len());
+        assert_eq!(realtx.get_strippedsize(), tx_bytes.len());
     }
 
     #[test]
@@ -887,8 +959,24 @@ mod tests {
                    "4ca6adf8b9ae5b25f002b8b6ecf67ce9afd337132debe65c65c27236ad64c975".to_string());
         assert_eq!(format!("{:x}", realtx.wtxid()),
                    "faabcb9e6b6b7314699abb16fdc0d3935cc85796e252e20a3e67f9f41a1c2ef5".to_string());
-        assert_eq!(realtx.get_weight(), 442);
+        const EXPECTED_WEIGHT: usize = 442;
+        assert_eq!(realtx.get_weight(), EXPECTED_WEIGHT);
         assert_eq!(realtx.get_size(), tx_bytes.len());
+        assert_eq!(realtx.get_vsize(), 111);
+        // Since
+        //     size   =                        stripped_size + witness_size
+        //     weight = WITNESS_SCALE_FACTOR * stripped_size + witness_size
+        // then,
+        //     stripped_size = (weight - size) / (WITNESS_SCALE_FACTOR - 1)
+        let expected_strippedsize = (EXPECTED_WEIGHT - tx_bytes.len()) / (WITNESS_SCALE_FACTOR - 1);
+        assert_eq!(realtx.get_strippedsize(), expected_strippedsize);
+        // Construct a transaction without the witness data.
+        let mut tx_without_witness = realtx.clone();
+        tx_without_witness.input.iter_mut().for_each(|input| input.witness.clear());
+        assert_eq!(tx_without_witness.get_weight(), expected_strippedsize*WITNESS_SCALE_FACTOR);
+        assert_eq!(tx_without_witness.get_size(), expected_strippedsize);
+        assert_eq!(tx_without_witness.get_vsize(), expected_strippedsize);
+        assert_eq!(tx_without_witness.get_strippedsize(), expected_strippedsize);
     }
 
     #[test]
@@ -1004,7 +1092,15 @@ mod tests {
         raw_expected.reverse();
         let expected_result = SigHash::from_slice(&raw_expected[..]).unwrap();
 
-        let actual_result = tx.signature_hash(input_index, &script, hash_type as u32);
+        let actual_result = if raw_expected[0] % 2 == 0 {
+            // tx.signature_hash and cache.legacy_signature_hash are the same, this if helps to test
+            // both the codepaths without repeating the test code
+            tx.signature_hash(input_index, &script, hash_type as u32)
+        } else {
+            let cache = SigHashCache::new(&tx);
+            cache.legacy_signature_hash(input_index, &script, hash_type as u32).unwrap()
+        };
+
         assert_eq!(actual_result, expected_result);
     }
 
@@ -1024,15 +1120,15 @@ mod tests {
 
     #[test]
     fn test_sighashtype_fromstr_display() {
-        let sighashtypes = vec![("SIGHASH_ALL", SigHashType::All),
-            ("SIGHASH_NONE", SigHashType::None),
-            ("SIGHASH_SINGLE", SigHashType::Single),
-            ("SIGHASH_ALL|SIGHASH_ANYONECANPAY", SigHashType::AllPlusAnyoneCanPay),
-            ("SIGHASH_NONE|SIGHASH_ANYONECANPAY", SigHashType::NonePlusAnyoneCanPay),
-            ("SIGHASH_SINGLE|SIGHASH_ANYONECANPAY", SigHashType::SinglePlusAnyoneCanPay)];
+        let sighashtypes = vec![("SIGHASH_ALL", EcdsaSigHashType::All),
+            ("SIGHASH_NONE", EcdsaSigHashType::None),
+            ("SIGHASH_SINGLE", EcdsaSigHashType::Single),
+            ("SIGHASH_ALL|SIGHASH_ANYONECANPAY", EcdsaSigHashType::AllPlusAnyoneCanPay),
+            ("SIGHASH_NONE|SIGHASH_ANYONECANPAY", EcdsaSigHashType::NonePlusAnyoneCanPay),
+            ("SIGHASH_SINGLE|SIGHASH_ANYONECANPAY", EcdsaSigHashType::SinglePlusAnyoneCanPay)];
         for (s, sht) in sighashtypes {
             assert_eq!(sht.to_string(), s);
-            assert_eq!(SigHashType::from_str(s).unwrap(), sht);
+            assert_eq!(EcdsaSigHashType::from_str(s).unwrap(), sht);
         }
         let sht_mistakes = vec![
             "SIGHASH_ALL | SIGHASH_ANYONECANPAY",
@@ -1047,7 +1143,7 @@ mod tests {
             "SigHash_NONE",
         ];
         for s in sht_mistakes {
-            assert_eq!(SigHashType::from_str(s).unwrap_err(), "can't recognize SIGHASH string");
+            assert_eq!(EcdsaSigHashType::from_str(s).unwrap_err().to_string(), format!("can't recognize SIGHASH string '{}'", s));
         }
     }
 
@@ -1056,10 +1152,10 @@ mod tests {
     fn test_sighashtype_standard() {
         let nonstandard_hashtype = 0x04;
         // This type is not well defined, by consensus it becomes ALL
-        assert_eq!(SigHashType::from_u32(nonstandard_hashtype), SigHashType::All);
-        assert_eq!(SigHashType::from_u32_consensus(nonstandard_hashtype), SigHashType::All);
+        assert_eq!(EcdsaSigHashType::from_u32(nonstandard_hashtype), EcdsaSigHashType::All);
+        assert_eq!(EcdsaSigHashType::from_u32_consensus(nonstandard_hashtype), EcdsaSigHashType::All);
         // But it's policy-invalid to use it!
-        assert_eq!(SigHashType::from_u32_standard(nonstandard_hashtype), Err(NonStandardSigHashType));
+        assert_eq!(EcdsaSigHashType::from_u32_standard(nonstandard_hashtype), Err(NonStandardSigHashType(0x04)));
     }
 
     // These test vectors were stolen from libbtc, which is Copyright 2014 Jonas Schnelli MIT
@@ -1366,6 +1462,7 @@ mod tests {
         use hashes::hex::FromHex;
         use std::collections::HashMap;
         use blockdata::script;
+        use blockdata::witness::Witness;
 
         // a random recent segwit transaction from blockchain using both old and segwit inputs
         let mut spending: Transaction = deserialize(Vec::from_hex("020000000001031cfbc8f54fbfa4a33a30068841371f80dbfe166211242213188428f437445c91000000006a47304402206fbcec8d2d2e740d824d3d36cc345b37d9f65d665a99f5bd5c9e8d42270a03a8022013959632492332200c2908459547bf8dbf97c65ab1a28dec377d6f1d41d3d63e012103d7279dfb90ce17fe139ba60a7c41ddf605b25e1c07a4ddcb9dfef4e7d6710f48feffffff476222484f5e35b3f0e43f65fc76e21d8be7818dd6a989c160b1e5039b7835fc00000000171600140914414d3c94af70ac7e25407b0689e0baa10c77feffffffa83d954a62568bbc99cc644c62eb7383d7c2a2563041a0aeb891a6a4055895570000000017160014795d04cc2d4f31480d9a3710993fbd80d04301dffeffffff06fef72f000000000017a91476fd7035cd26f1a32a5ab979e056713aac25796887a5000f00000000001976a914b8332d502a529571c6af4be66399cd33379071c588ac3fda0500000000001976a914fc1d692f8de10ae33295f090bea5fe49527d975c88ac522e1b00000000001976a914808406b54d1044c429ac54c0e189b0d8061667e088ac6eb68501000000001976a914dfab6085f3a8fb3e6710206a5a959313c5618f4d88acbba20000000000001976a914eb3026552d7e3f3073457d0bee5d4757de48160d88ac0002483045022100bee24b63212939d33d513e767bc79300051f7a0d433c3fcf1e0e3bf03b9eb1d70220588dc45a9ce3a939103b4459ce47500b64e23ab118dfc03c9caa7d6bfc32b9c601210354fd80328da0f9ae6eef2b3a81f74f9a6f66761fadf96f1d1d22b1fd6845876402483045022100e29c7e3a5efc10da6269e5fc20b6a1cb8beb92130cc52c67e46ef40aaa5cac5f0220644dd1b049727d991aece98a105563416e10a5ac4221abac7d16931842d5c322012103960b87412d6e169f30e12106bdf70122aabb9eb61f455518322a18b920a4dfa887d30700")
@@ -1404,7 +1501,9 @@ mod tests {
         }).is_err());
 
         // test that we get a failure if we corrupt a signature
-        spending.input[1].witness[0][10] = 42;
+        let mut witness: Vec<_> = spending.input[1].witness.to_vec();
+        witness[0][10] = 42;
+        spending.input[1].witness = Witness::from_vec(witness);
         match spending.verify(|point: &OutPoint| {
             if let Some(tx) = spent3.remove(&point.txid) {
                 return tx.output.get(point.vout as usize).cloned();

@@ -1,11 +1,12 @@
+//! Bitcoin Client Side Block Filtering network messages.
 //!
-//! BIP157  Client Side Block Filtering network messages
+//! This module describes BIP157 Client Side Block Filtering network messages.
 //!
 
 use hash_types::{BlockHash, FilterHash, FilterHeader};
 
-#[derive(PartialEq, Eq, Clone, Debug)]
 /// getcfilters message
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct GetCFilters {
     /// Filter type for which headers are requested
     pub filter_type: u8,
@@ -16,8 +17,8 @@ pub struct GetCFilters {
 }
 impl_consensus_encoding!(GetCFilters, filter_type, start_height, stop_hash);
 
-#[derive(PartialEq, Eq, Clone, Debug)]
 /// cfilter message
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct CFilter {
     /// Byte identifying the type of filter being returned
     pub filter_type: u8,
@@ -28,8 +29,8 @@ pub struct CFilter {
 }
 impl_consensus_encoding!(CFilter, filter_type, block_hash, filter);
 
-#[derive(PartialEq, Eq, Clone, Debug)]
 /// getcfheaders message
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct GetCFHeaders {
     /// Byte identifying the type of filter being returned
     pub filter_type: u8,
@@ -40,8 +41,8 @@ pub struct GetCFHeaders {
 }
 impl_consensus_encoding!(GetCFHeaders, filter_type, start_height, stop_hash);
 
-#[derive(PartialEq, Eq, Clone, Debug)]
 /// cfheaders message
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct CFHeaders {
     /// Filter type for which headers are requested
     pub filter_type: u8,
@@ -54,8 +55,8 @@ pub struct CFHeaders {
 }
 impl_consensus_encoding!(CFHeaders, filter_type, stop_hash, previous_filter_header, filter_hashes);
 
-#[derive(PartialEq, Eq, Clone, Debug)]
 /// getcfcheckpt message
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct GetCFCheckpt {
     /// Filter type for which headers are requested
     pub filter_type: u8,
@@ -64,8 +65,8 @@ pub struct GetCFCheckpt {
 }
 impl_consensus_encoding!(GetCFCheckpt, filter_type, stop_hash);
 
-#[derive(PartialEq, Eq, Clone, Debug)]
 /// cfcheckpt message
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct CFCheckpt {
     /// Filter type for which headers are requested
     pub filter_type: u8,

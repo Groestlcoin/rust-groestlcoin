@@ -12,9 +12,10 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Consensus parameters
+//! Bitcoin consensus parameters.
 //!
-//! This module provides predefined set of parameters for different chains.
+//! This module provides a predefined set of parameters for different Bitcoin
+//! chains (such as mainnet, testnet).
 //!
 
 use network::constants::Network;
@@ -49,8 +50,8 @@ const MAX_BITS_REGTEST: Uint256 = Uint256([
     0x00ffffffffffffffu64,
 ]);
 
-#[derive(Debug, Clone)]
 /// Parameters that influence chain consensus.
+#[derive(Debug, Clone)]
 pub struct Params {
     /// Network for which parameters are valid.
     pub network: Network,

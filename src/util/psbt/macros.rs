@@ -57,17 +57,9 @@ macro_rules! impl_psbtmap_consensus_encoding {
         impl $crate::consensus::Encodable for $thing {
             fn consensus_encode<S: $crate::io::Write>(
                 &self,
-                mut s: S,
+                s: S,
             ) -> Result<usize, $crate::io::Error> {
-                let mut len = 0;
-                for pair in $crate::util::psbt::Map::get_pairs(self)? {
-                    len += $crate::consensus::Encodable::consensus_encode(
-                        &pair,
-                        &mut s,
-                    )?;
-                }
-
-                Ok(len + $crate::consensus::Encodable::consensus_encode(&0x00_u8, s)?)
+                self.consensus_encode_map(s)
             }
         }
     };
@@ -83,7 +75,7 @@ macro_rules! impl_psbtmap_consensus_decoding {
 
                 loop {
                     match $crate::consensus::Decodable::consensus_decode(&mut d) {
-                        Ok(pair) => $crate::util::psbt::Map::insert_pair(&mut rv, pair)?,
+                        Ok(pair) => rv.insert_pair(pair)?,
                         Err($crate::consensus::encode::Error::Psbt($crate::util::psbt::Error::NoMorePairs)) => return Ok(rv),
                         Err(e) => return Err(e),
                     }
@@ -133,7 +125,7 @@ macro_rules! impl_psbt_insert_pair {
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 macro_rules! impl_psbt_get_pair {
-    ($rv:ident.push($slf:ident.$unkeyed_name:ident as <$unkeyed_typeval:expr, _>|<$unkeyed_value_type:ty>)) => {
+    ($rv:ident.push($slf:ident.$unkeyed_name:ident, $unkeyed_typeval:ident)) => {
         if let Some(ref $unkeyed_name) = $slf.$unkeyed_name {
             $rv.push($crate::util::psbt::raw::Pair {
                 key: $crate::util::psbt::raw::Key {
@@ -144,7 +136,7 @@ macro_rules! impl_psbt_get_pair {
             });
         }
     };
-    ($rv:ident.push($slf:ident.$keyed_name:ident as <$keyed_typeval:expr, $keyed_key_type:ty>|<$keyed_value_type:ty>)) => {
+    ($rv:ident.push_map($slf:ident.$keyed_name:ident, $keyed_typeval:ident)) => {
         for (key, val) in &$slf.$keyed_name {
             $rv.push($crate::util::psbt::raw::Pair {
                 key: $crate::util::psbt::raw::Key {

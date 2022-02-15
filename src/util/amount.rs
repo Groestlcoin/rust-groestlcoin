@@ -8,7 +8,7 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Amounts
+//! Groestlcoin amounts.
 //!
 //! This module mainly introduces the [Amount] and [SignedAmount] types.
 //! We refer to the documentation on the types for more information.
@@ -28,6 +28,10 @@ pub enum Denomination {
     MilliBitcoin,
     /// uBTC
     MicroBitcoin,
+    /// nBTC
+    NanoBitcoin,
+    /// pBTC
+    PicoBitcoin,
     /// bits
     Bit,
     /// satoshi
@@ -43,6 +47,8 @@ impl Denomination {
             Denomination::Bitcoin => -8,
             Denomination::MilliBitcoin => -5,
             Denomination::MicroBitcoin => -2,
+            Denomination::NanoBitcoin => 1,
+            Denomination::PicoBitcoin => 4,
             Denomination::Bit => -2,
             Denomination::Satoshi => 0,
             Denomination::MilliSatoshi => 3,
@@ -56,6 +62,8 @@ impl fmt::Display for Denomination {
             Denomination::Bitcoin => "GRS",
             Denomination::MilliBitcoin => "mGRS",
             Denomination::MicroBitcoin => "uGRS",
+            Denomination::NanoBitcoin => "nGRS",
+            Denomination::PicoBitcoin => "pGRS",
             Denomination::Bit => "groestls",
             Denomination::Satoshi => "gro",
             Denomination::MilliSatoshi => "mgro",
@@ -66,17 +74,68 @@ impl fmt::Display for Denomination {
 impl FromStr for Denomination {
     type Err = ParseAmountError;
 
+    /// Convert from a str to Denomination.
+    ///
+    /// Any combination of upper and/or lower case, excluding uppercase of SI(m, u, n, p) is considered valid.
+    /// - Singular: GRS, mGRS, uGRS, nGRS, pGRS
+    /// - Plural or singular: gro, groestls, mgro
+    ///
+    /// Due to ambiguity between mega and milli, pico and peta we prohibit usage of leading capital 'M', 'P'.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "GRS" => Ok(Denomination::Bitcoin),
-            "mGRS" => Ok(Denomination::MilliBitcoin),
-            "uGRS" => Ok(Denomination::MicroBitcoin),
-            "groestls" => Ok(Denomination::Bit),
-            "gro" => Ok(Denomination::Satoshi),
-            "mgro" => Ok(Denomination::MilliSatoshi),
-            d => Err(ParseAmountError::UnknownDenomination(d.to_owned())),
+        use self::ParseAmountError::*;
+        use self::Denomination as D;
+
+        let starts_with_uppercase = || s.starts_with(char::is_uppercase);
+        match denomination_from_str(s) {
+            None => Err(UnknownDenomination(s.to_owned())),
+            Some(D::MilliBitcoin) | Some(D::PicoBitcoin) | Some(D::MilliSatoshi) if starts_with_uppercase() => {
+                Err(PossiblyConfusingDenomination(s.to_owned()))
+            }
+            Some(D::NanoBitcoin) | Some(D::MicroBitcoin) if starts_with_uppercase() => {
+                Err(UnknownDenomination(s.to_owned()))
+            }
+            Some(d) => Ok(d),
         }
     }
+}
+
+fn denomination_from_str(mut s: &str) -> Option<Denomination> {
+    if s.eq_ignore_ascii_case("GRS") {
+        return Some(Denomination::Bitcoin);
+    }
+
+    if s.eq_ignore_ascii_case("mGRS") {
+        return Some(Denomination::MilliBitcoin);
+    }
+
+    if s.eq_ignore_ascii_case("uGRS") {
+        return Some(Denomination::MicroBitcoin);
+    }
+
+    if s.eq_ignore_ascii_case("nGRS") {
+        return Some(Denomination::NanoBitcoin);
+    }
+
+    if s.eq_ignore_ascii_case("pGRS") {
+        return Some(Denomination::PicoBitcoin);
+    }
+
+    if s.ends_with('s') || s.ends_with('S') {
+        s = &s[..(s.len() - 1)];
+    }
+
+    if s.eq_ignore_ascii_case("groestls") {
+        return Some(Denomination::Bit);
+    }
+    if s.eq_ignore_ascii_case("gro") {
+        return Some(Denomination::Satoshi);
+    }
+
+    if s.eq_ignore_ascii_case("mgro") {
+        return Some(Denomination::MilliSatoshi);
+    }
+
+    None
 }
 
 /// An error during amount parsing.
@@ -96,6 +155,8 @@ pub enum ParseAmountError {
     InvalidCharacter(char),
     /// The denomination was unknown.
     UnknownDenomination(String),
+    /// The denomination has multiple possible interpretations.
+    PossiblyConfusingDenomination(String)
 }
 
 impl fmt::Display for ParseAmountError {
@@ -107,12 +168,22 @@ impl fmt::Display for ParseAmountError {
             ParseAmountError::InvalidFormat => f.write_str("invalid number format"),
             ParseAmountError::InputTooLarge => f.write_str("input string was too large"),
             ParseAmountError::InvalidCharacter(c) => write!(f, "invalid character in input: {}", c),
-            ParseAmountError::UnknownDenomination(ref d) => write!(f, "unknown denomination: {}",d),
+            ParseAmountError::UnknownDenomination(ref d) => write!(f, "unknown denomination: {}", d),
+            ParseAmountError::PossiblyConfusingDenomination(ref d) => {
+                let (letter, upper, lower) = match d.chars().next() {
+                    Some('M') => ('M', "Mega", "milli"),
+                    Some('P') => ('P',"Peta", "pico"),
+                    // This panic could be avoided by adding enum ConfusingDenomination { Mega, Peta } but is it worth it?
+                    _ => panic!("invalid error information"),
+                };
+                write!(f, "the '{}' at the beginning of {} should technically mean '{}' but that denomination is uncommon and maybe '{}' was intended", letter, d, upper, lower)
+            }
         }
     }
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl ::std::error::Error for ParseAmountError {}
 
 fn is_too_precise(s: &str, precision: usize) -> bool {
@@ -268,6 +339,8 @@ impl Amount {
     pub const ONE_SAT: Amount = Amount(1);
     /// Exactly one bitcoin.
     pub const ONE_BTC: Amount = Amount(100_000_000);
+    /// The maximum value allowed as an amount. Useful for sanity checking.
+    pub const MAX_MONEY: Amount = Amount(105_000_000 * 100_000_000);
 
     /// Create an [Amount] with satoshi precision and the given number of satoshis.
     pub fn from_sat(satoshi: u64) -> Amount {
@@ -321,7 +394,7 @@ impl Amount {
             return Err(ParseAmountError::InvalidFormat);
         }
 
-        Ok(Amount::from_str_in(amt_str, denom_str.parse()?)?)
+        Amount::from_str_in(amt_str, denom_str.parse()?)
     }
 
     /// Express this [Amount] as a floating-point value in the given denomination.
@@ -522,6 +595,13 @@ impl FromStr for Amount {
     }
 }
 
+impl ::core::iter::Sum for Amount {
+    fn sum<I: Iterator<Item=Self>>(iter: I) -> Self {
+        let sats: u64 = iter.map(|amt| amt.0).sum();
+        Amount::from_sat(sats)
+    }
+}
+
 /// SignedAmount
 ///
 /// The [SignedAmount] type can be used to express Bitcoin amounts that supports
@@ -546,6 +626,8 @@ impl SignedAmount {
     pub const ONE_SAT: SignedAmount = SignedAmount(1);
     /// Exactly one bitcoin.
     pub const ONE_BTC: SignedAmount = SignedAmount(100_000_000);
+    /// The maximum value allowed as an amount. Useful for sanity checking.
+    pub const MAX_MONEY: SignedAmount = SignedAmount(21_000_000 * 100_000_000);
 
     /// Create an [SignedAmount] with satoshi precision and the given number of satoshis.
     pub fn from_sat(satoshi: i64) -> SignedAmount {
@@ -599,7 +681,7 @@ impl SignedAmount {
             return Err(ParseAmountError::InvalidFormat);
         }
 
-        Ok(SignedAmount::from_str_in(amt_str, denom_str.parse()?)?)
+        SignedAmount::from_str_in(amt_str, denom_str.parse()?)
     }
 
     /// Express this [SignedAmount] as a floating-point value in the given denomination.
@@ -847,7 +929,54 @@ impl FromStr for SignedAmount {
     }
 }
 
+impl ::core::iter::Sum for SignedAmount {
+    fn sum<I: Iterator<Item=Self>>(iter: I) -> Self {
+        let sats: i64 = iter.map(|amt| amt.0).sum();
+        SignedAmount::from_sat(sats)
+    }
+}
+
+/// Calculate the sum over the iterator using checked arithmetic.
+pub trait CheckedSum<R>: private::SumSeal<R> {
+    /// Calculate the sum over the iterator using checked arithmetic. If an over or underflow would
+    /// happen it returns `None`.
+    fn checked_sum(self) -> Option<R>;
+}
+
+impl<T> CheckedSum<Amount> for T where T: Iterator<Item = Amount> {
+    fn checked_sum(mut self) -> Option<Amount> {
+        let first = Some(self.next().unwrap_or_default());
+
+        self.fold(
+            first,
+            |acc, item| acc.and_then(|acc| acc.checked_add(item))
+        )
+    }
+}
+
+impl<T> CheckedSum<SignedAmount> for T where T: Iterator<Item = SignedAmount> {
+    fn checked_sum(mut self) -> Option<SignedAmount> {
+        let first = Some(self.next().unwrap_or_default());
+
+        self.fold(
+            first,
+            |acc, item| acc.and_then(|acc| acc.checked_add(item))
+        )
+    }
+}
+
+mod private {
+    use ::{Amount, SignedAmount};
+
+    /// Used to seal the `CheckedSum` trait
+    pub trait SumSeal<A> {}
+
+    impl<T> SumSeal<Amount> for T where T: Iterator<Item = Amount> {}
+    impl<T> SumSeal<SignedAmount> for T where T: Iterator<Item = SignedAmount> {}
+}
+
 #[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub mod serde {
     // methods are implementation of a standardized serde-specific signature
     #![allow(missing_docs)]
@@ -954,7 +1083,7 @@ pub mod serde {
     }
 
     pub mod as_sat {
-        //! Serialize and deserialize [Amount] as real numbers denominated in satoshi.
+        //! Serialize and deserialize [`Amount`](crate::Amount) as real numbers denominated in satoshi.
         //! Use with `#[serde(with = "amount::serde::as_sat")]`.
 
         use serde::{Deserializer, Serializer};
@@ -969,7 +1098,7 @@ pub mod serde {
         }
 
         pub mod opt {
-            //! Serialize and deserialize [Optoin<Amount>] as real numbers denominated in satoshi.
+            //! Serialize and deserialize [`Option<Amount>`](crate::Amount) as real numbers denominated in satoshi.
             //! Use with `#[serde(default, with = "amount::serde::as_sat::opt")]`.
 
             use serde::{Deserializer, Serializer, de};
@@ -1017,7 +1146,7 @@ pub mod serde {
     }
 
     pub mod as_btc {
-        //! Serialize and deserialize [Amount] as JSON numbers denominated in GRS.
+        //! Serialize and deserialize [`Amount`](crate::Amount) as JSON numbers denominated in GRS.
         //! Use with `#[serde(with = "amount::serde::as_btc")]`.
 
         use serde::{Deserializer, Serializer};
@@ -1333,6 +1462,12 @@ mod tests {
         assert_eq!("-5", SignedAmount::from_sat(-5).to_string_in(D::Satoshi));
         assert_eq!("0.10000000", Amount::from_sat(100_000_00).to_string_in(D::Bitcoin));
         assert_eq!("-100.00", SignedAmount::from_sat(-10_000).to_string_in(D::Bit));
+        assert_eq!("2535830", Amount::from_sat(253583).to_string_in(D::NanoBitcoin));
+        assert_eq!("-100000", SignedAmount::from_sat(-10_000).to_string_in(D::NanoBitcoin));
+        assert_eq!("2535830000", Amount::from_sat(253583).to_string_in(D::PicoBitcoin));
+        assert_eq!("-100000000", SignedAmount::from_sat(-10_000).to_string_in(D::PicoBitcoin));
+
+
 
         assert_eq!(ua_str(&ua_sat(0).to_string_in(D::Satoshi), D::Satoshi), Ok(ua_sat(0)));
         assert_eq!(ua_str(&ua_sat(500).to_string_in(D::Bitcoin), D::Bitcoin), Ok(ua_sat(500)));
@@ -1347,6 +1482,15 @@ mod tests {
         // Test an overflow bug in `abs()`
         assert_eq!(sa_str(&sa_sat(i64::min_value()).to_string_in(D::Satoshi), D::MicroBitcoin), Err(ParseAmountError::TooBig));
 
+        assert_eq!(sa_str(&sa_sat(-1).to_string_in(D::NanoBitcoin), D::NanoBitcoin), Ok(sa_sat(-1)));
+        assert_eq!(sa_str(&sa_sat(i64::max_value()).to_string_in(D::Satoshi), D::NanoBitcoin), Err(ParseAmountError::TooPrecise));
+        assert_eq!(sa_str(&sa_sat(i64::min_value()).to_string_in(D::Satoshi), D::NanoBitcoin), Err(ParseAmountError::TooPrecise));
+
+        assert_eq!(sa_str(&sa_sat(-1).to_string_in(D::PicoBitcoin), D::PicoBitcoin), Ok(sa_sat(-1)));
+        assert_eq!(sa_str(&sa_sat(i64::max_value()).to_string_in(D::Satoshi), D::PicoBitcoin), Err(ParseAmountError::TooPrecise));
+        assert_eq!(sa_str(&sa_sat(i64::min_value()).to_string_in(D::Satoshi), D::PicoBitcoin), Err(ParseAmountError::TooPrecise));
+
+
     }
 
     #[test]
@@ -1359,7 +1503,9 @@ mod tests {
         assert_eq!(Amount::from_str(&denom(amt, D::MicroBitcoin)), Ok(amt));
         assert_eq!(Amount::from_str(&denom(amt, D::Bit)), Ok(amt));
         assert_eq!(Amount::from_str(&denom(amt, D::Satoshi)), Ok(amt));
+        assert_eq!(Amount::from_str(&denom(amt, D::NanoBitcoin)), Ok(amt));
         assert_eq!(Amount::from_str(&denom(amt, D::MilliSatoshi)), Ok(amt));
+        assert_eq!(Amount::from_str(&denom(amt, D::PicoBitcoin)), Ok(amt));
 
         assert_eq!(Amount::from_str("42 gro GRS"), Err(ParseAmountError::InvalidFormat));
         assert_eq!(SignedAmount::from_str("-42 gro GRS"), Err(ParseAmountError::InvalidFormat));
@@ -1514,5 +1660,108 @@ mod tests {
 
         let value_without: serde_json::Value = serde_json::from_str("{}").unwrap();
         assert_eq!(without, serde_json::from_value(value_without).unwrap());
+    }
+
+    #[test]
+    fn sum_amounts() {
+        assert_eq!(Amount::from_sat(0), vec![].into_iter().sum::<Amount>());
+        assert_eq!(SignedAmount::from_sat(0), vec![].into_iter().sum::<SignedAmount>());
+
+        let amounts = vec![
+            Amount::from_sat(42),
+            Amount::from_sat(1337),
+            Amount::from_sat(21)
+        ];
+        let sum = amounts.into_iter().sum::<Amount>();
+        assert_eq!(Amount::from_sat(1400), sum);
+
+        let amounts = vec![
+            SignedAmount::from_sat(-42),
+            SignedAmount::from_sat(1337),
+            SignedAmount::from_sat(21)
+        ];
+        let sum = amounts.into_iter().sum::<SignedAmount>();
+        assert_eq!(SignedAmount::from_sat(1316), sum);
+    }
+
+    #[test]
+    fn checked_sum_amounts() {
+        assert_eq!(Some(Amount::from_sat(0)), vec![].into_iter().checked_sum());
+        assert_eq!(Some(SignedAmount::from_sat(0)), vec![].into_iter().checked_sum());
+
+        let amounts = vec![
+            Amount::from_sat(42),
+            Amount::from_sat(1337),
+            Amount::from_sat(21)
+        ];
+        let sum = amounts.into_iter().checked_sum();
+        assert_eq!(Some(Amount::from_sat(1400)), sum);
+
+        let amounts = vec![
+            Amount::from_sat(u64::max_value()),
+            Amount::from_sat(1337),
+            Amount::from_sat(21)
+        ];
+        let sum = amounts.into_iter().checked_sum();
+        assert_eq!(None, sum);
+
+        let amounts = vec![
+            SignedAmount::from_sat(i64::min_value()),
+            SignedAmount::from_sat(-1),
+            SignedAmount::from_sat(21)
+        ];
+        let sum = amounts.into_iter().checked_sum();
+        assert_eq!(None, sum);
+
+        let amounts = vec![
+            SignedAmount::from_sat(i64::max_value()),
+            SignedAmount::from_sat(1),
+            SignedAmount::from_sat(21)
+        ];
+        let sum = amounts.into_iter().checked_sum();
+        assert_eq!(None, sum);
+
+        let amounts = vec![
+            SignedAmount::from_sat(42),
+            SignedAmount::from_sat(3301),
+            SignedAmount::from_sat(21)
+        ];
+        let sum = amounts.into_iter().checked_sum();
+        assert_eq!(Some(SignedAmount::from_sat(3364)), sum);
+    }
+
+    #[test]
+    fn denomination_string_acceptable_forms() {
+        // Non-exhaustive list of valid forms.
+        let valid = vec!["GRS", "grs", "mGRS", "mgrs", "uGRS", "ugrs", "GRO","Gro", "Gros", "gros", "groestl", "groestls", "nGRS", "pGRS"];
+        for denom in valid.iter() {
+            assert!(Denomination::from_str(denom).is_ok());
+        }
+    }
+
+    #[test]
+    fn disallow_confusing_forms() {
+        // Non-exhaustive list of confusing forms.
+        let confusing = vec!["Mgro", "Mgros", "MGRO", "MGROS", "MGro", "MGros", "MGRS", "Mgrs", "PGRS"];
+        for denom in confusing.iter() {
+            match  Denomination::from_str(denom) {
+                Ok(_) => panic!("from_str should error for {}", denom),
+                Err(ParseAmountError::PossiblyConfusingDenomination(_)) => {},
+                Err(e) => panic!("unexpected error: {}", e),
+            }
+        }
+    }
+
+    #[test]
+    fn disallow_unknown_denomination() {
+        // Non-exhaustive list of unknown forms.
+        let unknown = vec!["NGRS", "UGRS", "ABC", "abc"];
+        for denom in unknown.iter() {
+            match  Denomination::from_str(denom) {
+                Ok(_) => panic!("from_str should error for {}", denom),
+                Err(ParseAmountError::UnknownDenomination(_)) => {},
+                Err(e) => panic!("unexpected error: {}", e),
+            }
+        }
     }
 }

@@ -21,11 +21,11 @@ use blockdata::transaction::Transaction;
 use consensus::{encode, Encodable, Decodable};
 use consensus::encode::MAX_VEC_SIZE;
 use util::psbt::map::Map;
-use util::psbt::raw;
+use util::psbt::{raw, PartiallySignedTransaction};
 use util::psbt;
 use util::psbt::Error;
 use util::endian::u32_to_array_le;
-use util::bip32::{ExtendedPubKey, KeySource, Fingerprint, DerivationPath, ChildNumber};
+use util::bip32::{ExtendedPubKey, Fingerprint, DerivationPath, ChildNumber};
 
 /// Type: Unsigned Transaction PSBT_GLOBAL_UNSIGNED_TX = 0x00
 const PSBT_GLOBAL_UNSIGNED_TX: u8 = 0x00;
@@ -36,71 +36,7 @@ const PSBT_GLOBAL_VERSION: u8 = 0xFB;
 /// Type: Proprietary Use Type PSBT_GLOBAL_PROPRIETARY = 0xFC
 const PSBT_GLOBAL_PROPRIETARY: u8 = 0xFC;
 
-/// A key-value map for global data.
-#[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct Global {
-    /// The unsigned transaction, scriptSigs and witnesses for each input must be
-    /// empty.
-    pub unsigned_tx: Transaction,
-    /// The version number of this PSBT. If omitted, the version number is 0.
-    pub version: u32,
-    /// A global map from extended public keys to the used key fingerprint and
-    /// derivation path as defined by BIP 32
-    pub xpub: BTreeMap<ExtendedPubKey, KeySource>,
-    /// Global proprietary key-value pairs.
-    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_as_seq_byte_values"))]
-    pub proprietary: BTreeMap<raw::ProprietaryKey, Vec<u8>>,
-    /// Unknown global key-value pairs.
-    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_as_seq_byte_values"))]
-    pub unknown: BTreeMap<raw::Key, Vec<u8>>,
-}
-
-impl Global {
-    /// Create a Global from an unsigned transaction, error if not unsigned
-    pub fn from_unsigned_tx(tx: Transaction) -> Result<Self, psbt::Error> {
-        for txin in &tx.input {
-            if !txin.script_sig.is_empty() {
-                return Err(Error::UnsignedTxHasScriptSigs);
-            }
-
-            if !txin.witness.is_empty() {
-                return Err(Error::UnsignedTxHasScriptWitnesses);
-            }
-        }
-
-        Ok(Global {
-            unsigned_tx: tx,
-            xpub: Default::default(),
-            version: 0,
-            proprietary: Default::default(),
-            unknown: Default::default(),
-        })
-    }
-}
-
-impl Map for Global {
-    fn insert_pair(&mut self, pair: raw::Pair) -> Result<(), encode::Error> {
-        let raw::Pair {
-            key: raw_key,
-            value: raw_value,
-        } = pair;
-
-        match raw_key.type_value {
-            PSBT_GLOBAL_UNSIGNED_TX => return Err(Error::DuplicateKey(raw_key).into()),
-            PSBT_GLOBAL_PROPRIETARY => match self.proprietary.entry(raw::ProprietaryKey::from_key(raw_key.clone())?) {
-                btree_map::Entry::Vacant(empty_key) => {empty_key.insert(raw_value);},
-                btree_map::Entry::Occupied(_) => return Err(Error::DuplicateKey(raw_key).into()),
-            }
-            _ => match self.unknown.entry(raw_key) {
-                btree_map::Entry::Vacant(empty_key) => {empty_key.insert(raw_value);},
-                btree_map::Entry::Occupied(k) => return Err(Error::DuplicateKey(k.key().clone()).into()),
-            }
-        }
-
-        Ok(())
-    }
-
+impl Map for PartiallySignedTransaction {
     fn get_pairs(&self) -> Result<Vec<raw::Pair>, io::Error> {
         let mut rv: Vec<raw::Pair> = Default::default();
 
@@ -198,13 +134,8 @@ impl Map for Global {
 
                     let (fingerprint2, derivation2) = entry.get().clone();
 
-                    if derivation1 == derivation2 && fingerprint1 == fingerprint2
-                    {
-                        continue
-                    }
-                    else if
-                        derivation1.len() < derivation2.len() &&
-                        derivation1[..] == derivation2[derivation2.len() - derivation1.len()..]
+                    if (derivation1 == derivation2 && fingerprint1 == fingerprint2) ||
+                        (derivation1.len() < derivation2.len() && derivation1[..] == derivation2[derivation2.len() - derivation1.len()..])
                     {
                         continue
                     }
@@ -213,23 +144,28 @@ impl Map for Global {
                         entry.insert((fingerprint1, derivation1));
                         continue
                     }
-                    return Err(psbt::Error::MergeConflict(format!(
-                        "global xpub {} has inconsistent key sources", xpub
-                    )));
+                    return Err(psbt::Error::MergeInconsistentKeySources(xpub));
                 }
             }
         }
 
         self.proprietary.extend(other.proprietary);
         self.unknown.extend(other.unknown);
+
+        for (self_input, other_input) in self.inputs.iter_mut().zip(other.inputs.into_iter()) {
+            self_input.merge(other_input)?;
+        }
+
+        for (self_output, other_output) in self.outputs.iter_mut().zip(other.outputs.into_iter()) {
+            self_output.merge(other_output)?;
+        }
+
         Ok(())
     }
 }
 
-impl_psbtmap_consensus_encoding!(Global);
-
-impl Decodable for Global {
-    fn consensus_decode<D: io::Read>(d: D) -> Result<Self, encode::Error> {
+impl PartiallySignedTransaction {
+    pub(crate) fn consensus_decode_global<D: io::Read>(d: D) -> Result<Self, encode::Error> {
         let mut d = d.take(MAX_VEC_SIZE as u64);
         let mut tx: Option<Transaction> = None;
         let mut version: Option<u32> = None;
@@ -321,11 +257,15 @@ impl Decodable for Global {
                             }
                         }
                         PSBT_GLOBAL_PROPRIETARY => match proprietary.entry(raw::ProprietaryKey::from_key(pair.key.clone())?) {
-                            btree_map::Entry::Vacant(empty_key) => {empty_key.insert(pair.value);},
+                            btree_map::Entry::Vacant(empty_key) => {
+                                empty_key.insert(pair.value);
+                            },
                             btree_map::Entry::Occupied(_) => return Err(Error::DuplicateKey(pair.key).into()),
                         }
                         _ => match unknowns.entry(pair.key) {
-                            btree_map::Entry::Vacant(empty_key) => {empty_key.insert(pair.value);},
+                            btree_map::Entry::Vacant(empty_key) => {
+                                empty_key.insert(pair.value);
+                            },
                             btree_map::Entry::Occupied(k) => return Err(Error::DuplicateKey(k.key().clone()).into()),
                         }
                     }
@@ -336,12 +276,15 @@ impl Decodable for Global {
         }
 
         if let Some(tx) = tx {
-            let mut rv: Global = Global::from_unsigned_tx(tx)?;
-            rv.version = version.unwrap_or(0);
-            rv.xpub = xpub_map;
-            rv.unknown = unknowns;
-            rv.proprietary = proprietary;
-            Ok(rv)
+            Ok(PartiallySignedTransaction {
+                unsigned_tx: tx,
+                version: version.unwrap_or(0),
+                xpub: xpub_map,
+                proprietary,
+                unknown: unknowns,
+                inputs: vec![],
+                outputs: vec![]
+            })
         } else {
             Err(Error::MustHaveUnsignedTx.into())
         }

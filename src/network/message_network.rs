@@ -12,10 +12,10 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Network-related network messages
+//! Bitcoin network-related network messages.
 //!
 //! This module defines network messages which describe peers and their
-//! capabilities
+//! capabilities.
 //!
 
 use prelude::*;
@@ -69,13 +69,13 @@ impl VersionMessage {
     ) -> VersionMessage {
         VersionMessage {
             version: constants::PROTOCOL_VERSION,
-            services: services,
-            timestamp: timestamp,
-            receiver: receiver,
-            sender: sender,
-            nonce: nonce,
-            user_agent: user_agent,
-            start_height: start_height,
+            services,
+            timestamp,
+            receiver,
+            sender,
+            nonce,
+            user_agent,
+            start_height,
             relay: false,
         }
     }
