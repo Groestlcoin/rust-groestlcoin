@@ -22,21 +22,21 @@ use core::fmt::{self, Write};
 /// A set of denominations in which amounts can be expressed.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Denomination {
-    /// BTC
+    /// GRS
     Bitcoin,
-    /// mBTC
+    /// mGRS
     MilliBitcoin,
-    /// uBTC
+    /// uGRS
     MicroBitcoin,
-    /// nBTC
+    /// nGRS
     NanoBitcoin,
-    /// pBTC
+    /// pGRS
     PicoBitcoin,
-    /// bits
+    /// groestls
     Bit,
-    /// satoshi
+    /// gro
     Satoshi,
-    /// msat
+    /// mgro
     MilliSatoshi,
 }
 
@@ -78,7 +78,7 @@ impl FromStr for Denomination {
     ///
     /// Any combination of upper and/or lower case, excluding uppercase of SI(m, u, n, p) is considered valid.
     /// - Singular: GRS, mGRS, uGRS, nGRS, pGRS
-    /// - Plural or singular: gro, groestls, mgro
+    /// - Plural or singular: gro, groestl, mgro
     ///
     /// Due to ambiguity between mega and milli, pico and peta we prohibit usage of leading capital 'M', 'P'.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -124,7 +124,7 @@ fn denomination_from_str(mut s: &str) -> Option<Denomination> {
         s = &s[..(s.len() - 1)];
     }
 
-    if s.eq_ignore_ascii_case("groestls") {
+    if s.eq_ignore_ascii_case("groestl") {
         return Some(Denomination::Bit);
     }
     if s.eq_ignore_ascii_case("gro") {

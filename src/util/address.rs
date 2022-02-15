@@ -1035,11 +1035,11 @@ mod tests {
     #[test]
     fn test_address_type() {
         let addresses = [
-            ("1QJVDzdqb1VpbDK7uDeyVXy9mR27CJiyhY", Some(AddressType::P2pkh)),
-            ("33iFwdLuRpW1uK1RTRqsoi8rR4NpDzk66k", Some(AddressType::P2sh)),
-            ("bc1qvzvkjn4q3nszqxrv3nraga2r822xjty3ykvkuw", Some(AddressType::P2wpkh)),
-            ("bc1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxswvvzej", Some(AddressType::P2wsh)),
-            ("bc1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr", Some(AddressType::P2tr)),
+            ("FtUCfuND9WBN2pLEnKeSx3mURaJ4iQdado", Some(AddressType::P2pkh)),
+            ("33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32", Some(AddressType::P2sh)),
+            ("grs1qvzvkjn4q3nszqxrv3nraga2r822xjty3e8sh90", Some(AddressType::P2wpkh)),
+            ("grs1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxsphnwkk", Some(AddressType::P2wsh)),
+            ("grs1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqezj0h8", Some(AddressType::P2tr)),
             // Related to future extensions, addresses are valid but have no type
             // segwit v1 and len != 32
             ("bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kt5nd6y", None),
@@ -1269,7 +1269,7 @@ mod tests {
         let internal_key = XOnlyPublicKey::from_str("cc8a4bc64d897bddc5fbc2f670f7a8ba0b386779106cf1223c6fc5d7cd6fc115").unwrap();
         let secp = Secp256k1::verification_only();
         let address = Address::p2tr(&secp, internal_key, None, Network::Groestlcoin);
-        assert_eq!(address.to_string(), "bc1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr");
+        assert_eq!(address.to_string(), "grs1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqezj0h8");
         assert_eq!(address.address_type(), Some(AddressType::P2tr));
         roundtrips(&address);
     }
