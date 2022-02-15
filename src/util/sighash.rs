@@ -25,7 +25,7 @@ use blockdata::witness::Witness;
 use consensus::{encode, Encodable};
 use core::fmt;
 use core::ops::{Deref, DerefMut};
-use hashes::{sha256, sha256d, Hash};
+use hashes::{sha256, Hash};
 use io;
 use util::taproot::{TapLeafHash, TAPROOT_ANNEX_PREFIX, TapSighashHash};
 use SigHash;
