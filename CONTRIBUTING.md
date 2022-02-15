@@ -1,10 +1,10 @@
-# Contributing to rust-bitcoin
+# Contributing to rust-groestlcoin
 
 :+1::tada: First off, thanks for taking the time to contribute! :tada::+1:
 
-The following is a set of guidelines for contributing to Rust Bitcoin
+The following is a set of guidelines for contributing to Rust Groestlcoin
 implementation and other Rust Bitcoin-related projects, which are hosted in the
-[Rust Bitcoin Community](https://github.com/rust-bitcoin) on GitHub. These are
+[Rust Groestlcoin Community](https://github.com/Groestlcoin) on GitHub. These are
 mostly guidelines, not rules. Use your best judgment, and feel free to propose
 changes to this document in a pull request.
 
@@ -29,7 +29,7 @@ changes to this document in a pull request.
 
 ## General
 
-The Rust Bitcoin project operates an open contributor model where anyone is
+The Rust Groestlcoin project operates an open contributor model where anyone is
 welcome to contribute towards development in the form of peer review,
 documentation, testing and patches.
 
@@ -44,17 +44,12 @@ you'll learn.
 
 ## Communication channels
 
-Communication about Rust Bitcoin happens primarily in
-[#bitcoin-rust](https://web.libera.chat/?channel=#bitcoin-rust) IRC chat on
-[Libera](https://libera.chat/) with the logs available at
-<https://gnusha.org/bitcoin-rust/> (starting from Jun 2021 and now on) and
-<https://gnusha.org/rust-bitcoin/> (historical archive before Jun 2021).
+Communication about Rust Groestlcoin happens primarily in
+[#Groestlcoin](https://web.libera.chat/?channel=#groestlcoin) IRC chat on
+[Libera](https://libera.chat/).
 
 Discussion about code base improvements happens in GitHub issues and on pull
 requests.
-
-Major projects are tracked [here](https://github.com/orgs/rust-bitcoin/projects).
-Major milestones are tracked [here](https://github.com/rust-bitcoin/rust-bitcoin/milestones).
 
 
 ## Asking questions
@@ -62,7 +57,7 @@ Major milestones are tracked [here](https://github.com/rust-bitcoin/rust-bitcoin
 > **Note:** Please don't file an issue to ask a question. You'll get faster
 > results by using the resources below.
 
-We have a dedicated developer channel on IRC, #bitcoin-rust@libera.chat where
+We have a dedicated developer channel on IRC, #groestlcoin@libera.chat where
 you may get helpful advice if you have questions.
 
 
@@ -118,7 +113,7 @@ Prerequisites that a PR must satisfy for merging into the `master` branch:
   code);
 * contain all inline docs for newly introduced API and pass doc tests;
 * be based on the recent `master` tip from the original repository at
-  <https://github.com/rust-bitcoin/rust-bitcoin>.
+  <https://github.com/Groestlcoin/rust-groestlcoin>.
 
 NB: reviewers may run more complex test/CI scripts, thus, satisfying all the
 requirements above is just a preliminary, but not necessary sufficient step for
@@ -128,9 +123,9 @@ PR authors may also find it useful to run the following script locally in order
 to check that each of the commits within the PR satisfies the requirements
 above, before submitting the PR to review:
 ```shell script
-BITCOIN_MSRV=1.29.0 ./contrib/ci.sh
+BITCOIN_MSRV=1.41.0 ./contrib/ci.sh
 ```
-Please replace the value in `BITCOIN_MSRV=1.29.0` with the current MSRV from
+Please replace the value in `BITCOIN_MSRV=1.41.0` with the current MSRV from
 [README.md].
 
 NB: Please keep in mind that the script above replaces `Cargo.lock` file, which
@@ -154,20 +149,13 @@ Pull request merge requirements:
 
 Current list of the project maintainers:
 
-- [Andrew Poelstra](https://github.com/apoelstra)
-- [Steven Roose](https://github.com/stevenroose)
-- [Maxim Orlovsky](https://github.com/dr-orlovsky)
-- [Matt Corallo](https://github.com/TheBlueMatt)
-- [Elichai Turkel](https://github.com/elichai)
-- [Sanket Kanjalkar](https://github.com/sanket1729)
-- [Martin Habovštiak](https://github.com/Kixunil)
-- [Riccardo Casatta](https://github.com/RCasatta)
-- [Tobin Harding](https://github.com/tcharding)
+- [Hashengineering](https://github.com/hashengineering)
+- [Gruve-p](https://github.com/gruve-p)
 
 
 ## Coding conventions
 
-Library reflects Bitcoin Core approach whenever possible.
+Library reflects Groestlcoin Core approach whenever possible.
 
 ### Formatting
 
@@ -186,7 +174,7 @@ avoid any end-line space characters.
 
 ### MSRV
 
-The Minimal Supported Rust Version (MSRV) is 1.29; it is enforced by our CI.
+The Minimal Supported Rust Version (MSRV) is 1.41; it is enforced by our CI.
 Later we plan to increase MSRV to support Rust 2018 and you are welcome to check
 the [tracking issue](https://github.com/rust-bitcoin/rust-bitcoin/issues/510).
 
@@ -218,7 +206,7 @@ apoelstra@wpsoftware.net, encrypted with his public key from
 
 ## Testing
 
-Related to the security aspect, rust bitcoin developers take testing very
+Related to the security aspect, rust groestlcoin developers take testing very
 seriously. Due to the modular nature of the project, writing new test cases is
 easy and good test coverage of the codebase is an important goal. Refactoring
 the project to enable fine-grained unit testing is also an ongoing effort.

@@ -1,7 +1,7 @@
-extern crate bitcoin;
+extern crate groestlcoin;
 
-use bitcoin::consensus::{serialize, deserialize};
-use bitcoin::blockdata::witness::Witness;
+use groestlcoin::consensus::{serialize, deserialize};
+use groestlcoin::blockdata::witness::Witness;
 
 fn do_test(data: &[u8]) {
     let w: Result<Witness, _> = deserialize(data);

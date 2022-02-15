@@ -1,4 +1,4 @@
-//! Bitcoin serde utilities.
+//! Groestlcoin serde utilities.
 //!
 //! This module is for special serde serializations.
 //!

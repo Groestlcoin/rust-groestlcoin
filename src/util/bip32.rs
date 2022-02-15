@@ -1144,7 +1144,7 @@ mod tests {
         }
 
         let xpriv = ExtendedPrivKey {
-            network: Network::Bitcoin,
+            network: Network::Groestlcoin,
             depth: 0,
             parent_fingerprint: Default::default(),
             child_number: ChildNumber::Normal { index: 0 },
@@ -1169,4 +1169,3 @@ mod tests {
         ExtendedPrivKey::from_str(xpriv_str).unwrap();
     }
 }
-

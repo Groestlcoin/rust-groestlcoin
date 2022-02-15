@@ -65,9 +65,9 @@ struct CommonCache {
 /// Values cached for segwit inputs, it's equal to [`CommonCache`] plus another round of `sha256`
 #[derive(Debug)]
 struct SegwitCache {
-    prevouts: sha256d::Hash,
-    sequences: sha256d::Hash,
-    outputs: sha256d::Hash,
+    prevouts: sha256::Hash,
+    sequences: sha256::Hash,
+    outputs: sha256::Hash,
 }
 
 /// Values cached for taproot inputs
@@ -509,7 +509,7 @@ impl<R: Deref<Target = Transaction>> SigHashCache<R> {
         value: u64,
         sighash_type: EcdsaSigHashType,
     ) -> Result<(), Error> {
-        let zero_hash = sha256d::Hash::default();
+        let zero_hash = sha256::Hash::default();
 
         let (sighash, anyone_can_pay) = sighash_type.split_anyonecanpay_flag();
 
@@ -654,13 +654,13 @@ impl<R: Deref<Target = Transaction>> SigHashCache<R> {
         self.segwit_cache.get_or_insert_with(|| {
             let common_cache = Self::common_cache_minimal_borrow(common_cache, tx);
             SegwitCache {
-                prevouts: sha256d::Hash::from_inner(
+                prevouts: sha256::Hash::from_inner(
                     sha256::Hash::hash(&common_cache.prevouts).into_inner(),
                 ),
-                sequences: sha256d::Hash::from_inner(
+                sequences: sha256::Hash::from_inner(
                     sha256::Hash::hash(&common_cache.sequences).into_inner(),
                 ),
-                outputs: sha256d::Hash::from_inner(
+                outputs: sha256::Hash::from_inner(
                     sha256::Hash::hash(&common_cache.outputs).into_inner(),
                 ),
             }
@@ -692,9 +692,9 @@ impl<R: DerefMut<Target = Transaction>> SigHashCache<R> {
     ///
     /// This allows in-line signing such as
     /// ```
-    /// use bitcoin::blockdata::transaction::{Transaction, EcdsaSigHashType};
-    /// use bitcoin::util::sighash::SigHashCache;
-    /// use bitcoin::Script;
+    /// use groestlcoin::blockdata::transaction::{Transaction, EcdsaSigHashType};
+    /// use groestlcoin::util::sighash::SigHashCache;
+    /// use groestlcoin::Script;
     ///
     /// let mut tx_to_sign = Transaction { version: 2, lock_time: 0, input: Vec::new(), output: Vec::new() };
     /// let input_count = tx_to_sign.input.len();

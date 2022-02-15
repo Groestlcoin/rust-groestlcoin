@@ -14,7 +14,7 @@
 
 //! Utility functions.
 //!
-//! Functions needed by all parts of the Bitcoin library.
+//! Functions needed by all parts of the Groestlcoin library.
 //!
 
 pub mod key;

@@ -12,7 +12,7 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Bitcoin network-related network messages.
+//! Groestlcoin network-related network messages.
 //!
 //! This module defines network messages which describe peers and their
 //! capabilities.

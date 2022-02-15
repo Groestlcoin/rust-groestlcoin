@@ -12,7 +12,7 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Bitcoin block data.
+//! Groestlcoin block data.
 //!
 //! This module defines structures and functions for storing the blocks and
 //! transactions which make up the Groestlcoin system.
@@ -24,4 +24,3 @@ pub mod script;
 pub mod transaction;
 pub mod block;
 pub mod witness;
-

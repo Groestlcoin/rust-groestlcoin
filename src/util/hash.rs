@@ -11,7 +11,7 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Bitcoin hash functions.
+//! Groestlcoin hash functions.
 //!
 //! This module provides utility functions related to hashing data, including
 //! merkleization.

@@ -12,7 +12,7 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Bitcoin blockdata network messages.
+//! Groestlcoin blockdata network messages.
 //!
 //! This module describes network messages which are used for passing
 //! Groestlcoin data (blocks and transactions) around.

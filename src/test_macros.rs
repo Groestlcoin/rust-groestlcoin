@@ -12,7 +12,7 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Bitcoin serde macros.
+//! Groestlcoin serde macros.
 //!
 //! This module provides internal macros used for unit tests.
 //!
@@ -27,4 +27,3 @@ macro_rules! serde_round_trip (
         assert_eq!($var, decoded);
     })
 );
-
