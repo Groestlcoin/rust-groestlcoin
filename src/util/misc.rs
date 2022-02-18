@@ -29,7 +29,7 @@ use consensus::{encode, Encodable};
 #[cfg_attr(docsrs, doc(cfg(feature = "secp-recovery")))]
 pub use self::message_signing::{MessageSignature, MessageSignatureError};
 
-/// The prefix for signed messages using Bitcoin's message signing protocol.
+/// The prefix for signed messages using Groestlcoin's message signing protocol.
 pub const BITCOIN_SIGNED_MSG_PREFIX: &[u8] = b"\x1CGroestlCoin Signed Message:\n";
 
 #[cfg(feature = "secp-recovery")]

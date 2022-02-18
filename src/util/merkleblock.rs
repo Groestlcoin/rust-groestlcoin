@@ -31,7 +31,7 @@
 //!
 //! // Get the proof from a groestlcoind by running in the terminal:
 //! // $ TXID="d0c54928d8ace117254e2786c308632976f0f612d62dd0f0a280b9e1db6e3dd7"
-//! // $ bitcoin-cli gettxoutproof [\"$TXID\"]
+//! // $ groestlcoin-cli gettxoutproof [\"$TXID\"]
 //! let mb_bytes = Vec::from_hex("0000002063280a27a86a2bf9c5e3ba174690c316bdbc12945a73a863650d00000\
 //! 0000000d4aefe8dcb716400868f87660cc7e59d2d5372121240801f5428a43ae735f66247af00625c331b1a3a8aee65\
 //! 0400000003b0e1f8e96bbde499c4564a1442643b203794e432c2c4ecfaaaf066b7772e3768d73d6edbe1b980a2f0d02\

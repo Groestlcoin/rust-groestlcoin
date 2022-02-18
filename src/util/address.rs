@@ -485,11 +485,11 @@ impl Payload {
 pub struct AddressEncoding<'a> {
     /// The address payload to encode.
     pub payload: &'a Payload,
-    /// base58 version byte for p2pkh payloads (e.g. 0x00 for "1..." addresses).
+    /// base58 version byte for p2pkh payloads (e.g. 0x24 for "F..." addresses).
     pub p2pkh_prefix: u8,
     /// base58 version byte for p2sh payloads (e.g. 0x05 for "3..." addresses).
     pub p2sh_prefix: u8,
-    /// hrp used in bech32 addresss (e.g. "bc" for "bc1..." addresses).
+    /// hrp used in bech32 addresss (e.g. "grs" for "grs1..." addresses).
     pub bech32_hrp: &'a str,
 }
 
@@ -703,14 +703,14 @@ impl Address {
     /// ```rust
     /// use groestlcoin::{Address, Network};
     ///
-    /// let address: Address = "2N83imGV3gPwBzKJQvWJ7cRUY2SpUyU6A5e".parse().unwrap();
+    /// let address: Address = "2N83imGV3gPwBzKJQvWJ7cRUY2SpUyKFNVU".parse().unwrap();
     /// assert!(address.is_valid_for_network(Network::Testnet));
     /// assert!(address.is_valid_for_network(Network::Regtest));
     /// assert!(address.is_valid_for_network(Network::Signet));
     ///
     /// assert_eq!(address.is_valid_for_network(Network::Groestlcoin), false);
     ///
-    /// let address: Address = "32iVBEu4dxkUQk9dJbZUiBiQdmypcEyJRf".parse().unwrap();
+    /// let address: Address = "32iVBEu4dxkUQk9dJbZUiBiQdmypaPrkNU".parse().unwrap();
     /// assert!(address.is_valid_for_network(Network::Groestlcoin));
     /// assert_eq!(address.is_valid_for_network(Network::Testnet), false);
     /// ```
@@ -1042,9 +1042,9 @@ mod tests {
             ("grs1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqezj0h8", Some(AddressType::P2tr)),
             // Related to future extensions, addresses are valid but have no type
             // segwit v1 and len != 32
-            ("bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kt5nd6y", None),
+            // ("grs1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kt5nd6y", None),
             // segwit v2
-            ("bc1zw508d6qejxtdg4y5r3zarvaryvaxxpcs", None),
+            // ("grs1zw508d6qejxtdg4y5r3zarvaryvaxxpcs", None),
         ];
         for (address, expected_type) in &addresses {
             let addr = Address::from_str(&address).unwrap();
@@ -1057,13 +1057,13 @@ mod tests {
         // Test vectors valid under both BIP-173 and BIP-350
         let valid_vectors = [
             ("GRS1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7K3K4SJ5", "0014751e76e8199196d454941c45d1b3a323f1433bd6"),
-            // ("tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7", "00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262"),
-            // ("bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kt5nd6y", "5128751e76e8199196d454941c45d1b3a323f1433bd6751e76e8199196d454941c45d1b3a323f1433bd6"),
-            // ("BC1SW50QGDZ25J", "6002751e"),
-            // ("bc1zw508d6qejxtdg4y5r3zarvaryvaxxpcs", "5210751e76e8199196d454941c45d1b3a323"),
-            // ("tb1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesrxh6hy", "0020000000c4a5cad46221b2a187905e5266362b99d5e91c6ce24d165dab93e86433"),
-            // ("tb1pqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesf3hn0c", "5120000000c4a5cad46221b2a187905e5266362b99d5e91c6ce24d165dab93e86433"),
-            // ("bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0", "512079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798")
+            // ("tgrs1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3quvjfuq", "00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262"),
+            // ("grs1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kt5nd6y", "5128751e76e8199196d454941c45d1b3a323f1433bd6751e76e8199196d454941c45d1b3a323f1433bd6"),
+            // ("GRS1SW50QGDZ25J", "6002751e"),
+            // ("grs1zw508d6qejxtdg4y5r3zarvaryvaxxpcs", "5210751e76e8199196d454941c45d1b3a323"),
+            // ("tgrs1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsess668a6", "0020000000c4a5cad46221b2a187905e5266362b99d5e91c6ce24d165dab93e86433"),
+            // ("tgrs1pqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvses6d6w9x", "5120000000c4a5cad46221b2a187905e5266362b99d5e91c6ce24d165dab93e86433"),
+            // ("grs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqddt7at", "512079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798")
         ];
         for vector in &valid_vectors {
             let addr: Address = vector.0.parse().unwrap();
@@ -1074,57 +1074,57 @@ mod tests {
         let invalid_vectors = [
             // 1. BIP-350 test vectors
             // Invalid human-readable part
-            "tc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq5zuyut",
+            "frs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq5zuyut",
             // Invalid checksums (Bech32 instead of Bech32m):
-            "bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqh2y7hd",
-            "tb1z0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqglt7rf",
-            "BC1S0XLXVLHEMJA6C4DQV22UAPCTQUPFHLXM9H8Z3K2E72Q4K9HCZ7VQ54WELL",
-            "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kemeawh",
-            "tb1q0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq24jc47",
+            "grs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqh2y7hd",
+            "tgrs1z0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqglt7rf",
+            "GRS1S0XLXVLHEMJA6C4DQV22UAPCTQUPFHLXM9H8Z3K2E72Q4K9HCZ7VQ54WELL",
+            "grs1qw508d6qejxtdg4y5r3zarvary0c5xw7kemeawh",
+            "tgrs1q0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq24jc47",
             // Invalid character in checksum
-            "bc1p38j9r5y49hruaue7wxjce0updqjuyyx0kh56v8s25huc6995vvpql3jow4",
+            "grs1p38j9r5y49hruaue7wxjce0updqjuyyx0kh56v8s25huc6995vvpql3jow4",
             // Invalid witness version
-            "BC130XLXVLHEMJA6C4DQV22UAPCTQUPFHLXM9H8Z3K2E72Q4K9HCZ7VQ7ZWS8R",
+            "GRS130XLXVLHEMJA6C4DQV22UAPCTQUPFHLXM9H8Z3K2E72Q4K9HCZ7VQ7ZWS8R",
             // Invalid program length (1 byte)
-            "bc1pw5dgrnzv",
+            "grs1pw5dgrnzv",
             // Invalid program length (41 bytes)
-            "bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7v8n0nx0muaewav253zgeav",
+            "grs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7v8n0nx0muaewav253zgeav",
             // Invalid program length for witness version 0 (per BIP141)
-            "BC1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P",
+            "GRS1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P",
             // Mixed case
-            "tb1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq47Zagq",
+            "tgrs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq47Zagq",
             // zero padding of more than 4 bits
-            "bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7v07qwwzcrf",
+            "grs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7v07qwwzcrf",
             // Non-zero padding in 8-to-5 conversion
-            "tb1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vpggkg4j",
+            "tgrs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vpggkg4j",
             // Empty data section
-            "bc1gmk9yu",
+            "grs1gmk9yu",
 
             // 2. BIP-173 test vectors
             // Invalid human-readable part
-            "tc1qw508d6qejxtdg4y5r3zarvary0c5xw7kg3g4ty",
+            "frs1qw508d6qejxtdg4y5r3zarvary0c5xw7kg3g4ty",
             // Invalid checksum
-            "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5",
+            "grs1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5",
             // Invalid witness version
-            "BC13W508D6QEJXTDG4Y5R3ZARVARY0C5XW7KN40WF2",
+            "GRS13W508D6QEJXTDG4Y5R3ZARVARY0C5XW7KN40WF2",
             // Invalid program length
-            "bc1rw5uspcuh",
+            "grs1rw5uspcuh",
             // Invalid program length
-            "bc10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw5rljs90",
+            "grs10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw5rljs90",
             // Invalid program length for witness version 0 (per BIP141)
-            "BC1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P",
+            "GRS1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P",
             // Mixed case
-            "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7",
+            "tgrs1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7",
             // zero padding of more than 4 bits
-            "bc1zw508d6qejxtdg4y5r3zarvaryvqyzf3du",
+            "grs1zw508d6qejxtdg4y5r3zarvaryvqyzf3du",
             // Non-zero padding in 8-to-5 conversion
-            "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv",
+            "tgrs1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv",
             // Final test for empty data section is the same as above in BIP-350
 
             // 3. BIP-173 valid test vectors obsolete by BIP-350
-            "bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx",
-            "BC1SW50QA3JX3S",
-            "bc1zw508d6qejxtdg4y5r3zarvaryvg6kdaj",
+            "grs1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx",
+            "GRS1SW50QA3JX3S",
+            "grs1zw508d6qejxtdg4y5r3zarvaryvg6kdaj",
         ];
         for vector in &invalid_vectors {
             assert!(vector.parse::<Address>().is_err());

@@ -64,7 +64,7 @@ pub const MAX_SCRIPT_ELEMENT_SIZE: usize = 520;
 /// How may blocks between halvings.
 pub const SUBSIDY_HALVING_INTERVAL: u32 = 210_000;
 
-/// In Bitcoind this is insanely described as ~((u256)0 >> 32)
+/// In Groestlcoind this is insanely described as ~((u256)0 >> 32)
 pub fn max_target(_: Network) -> Uint256 {
     Uint256::from_u64(0xFFFF).unwrap() << 208
 }
@@ -150,12 +150,12 @@ pub fn genesis_block(network: Network) -> Block {
         Network::Signet => {
             Block {
                 header: BlockHeader {
-                    version: 1,
+                    version: 3,
                     prev_blockhash: Default::default(),
                     merkle_root,
-                    time: 1598918400,
-                    bits: 0x1e0377ae,
-                    nonce: 52613770
+                    time: 1606082400,
+                    bits: 0x1e00ffff,
+                    nonce: 14675970
                 },
                 txdata,
             }
@@ -240,14 +240,14 @@ mod test {
     #[test]
     fn signet_genesis_full_block() {
         let gen = genesis_block(Network::Signet);
-        assert_eq!(gen.header.version, 1);
+        assert_eq!(gen.header.version, 3);
         assert_eq!(gen.header.prev_blockhash, Default::default());
         assert_eq!(format!("{:x}", gen.header.merkle_root),
                   "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb".to_string());
-        assert_eq!(gen.header.time, 1598918400);
-        assert_eq!(gen.header.bits, 0x1e0377ae);
-        assert_eq!(gen.header.nonce, 52613770);
+        assert_eq!(gen.header.time, 1606082400);
+        assert_eq!(gen.header.bits, 0x1e00ffff);
+        assert_eq!(gen.header.nonce, 14675970);
         assert_eq!(format!("{:x}", gen.header.block_hash()),
-                   "7d6c4b596d26710b86b645995d15468c8e1282bdef550f196ed573ca6fcbbed3".to_string());
+                   "0000007fcaa2a27993c6cde9e7818c254357af517b876ceba2f23592bb14ab31".to_string());
     }
 }
