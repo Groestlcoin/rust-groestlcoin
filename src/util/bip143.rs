@@ -11,7 +11,7 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! BIP143 Implementation
+//! BIP143 implementation.
 //!
 //! Implementation of BIP143 Segwit-style signatures. Should be sufficient
 //! to create signatures for Segwit transactions (which should be pushed into
@@ -19,21 +19,21 @@
 //! signatures, which are placed in the scriptSig.
 //!
 
-use hashes::{Hash, sha256d};
+use hashes::Hash;
 use hash_types::SigHash;
 use blockdata::script::Script;
-use blockdata::transaction::{Transaction, TxIn, SigHashType};
+use blockdata::witness::Witness;
+use blockdata::transaction::{Transaction, TxIn, EcdsaSigHashType};
 use consensus::{encode, Encodable};
-
-use prelude::*;
 
 use io;
 use core::ops::{Deref, DerefMut};
+use util::sighash;
 
 /// Parts of a sighash which are common across inputs or signatures, and which are
 /// sufficient (in conjunction with a private key) to sign the transaction
 #[derive(Clone, PartialEq, Eq, Debug)]
-#[deprecated(since="0.24.0", note="please use `SigHashCache` instead")]
+#[deprecated(since="0.24.0", note="please use [sighash::SigHashCache] instead")]
 pub struct SighashComponents {
     tx_version: i32,
     tx_locktime: u32,
@@ -55,7 +55,7 @@ impl SighashComponents {
         let hash_prevouts = {
             let mut enc = SigHash::engine();
             for txin in &tx.input {
-                txin.previous_output.consensus_encode(&mut enc).unwrap();
+                txin.previous_output.consensus_encode(&mut enc).expect("engines don't error");
             }
             SigHash::from_engine(enc)
         };
@@ -63,7 +63,7 @@ impl SighashComponents {
         let hash_sequence = {
             let mut enc = SigHash::engine();
             for txin in &tx.input {
-                txin.sequence.consensus_encode(&mut enc).unwrap();
+                txin.sequence.consensus_encode(&mut enc).expect("engines don't error");
             }
             SigHash::from_engine(enc)
         };
@@ -71,7 +71,7 @@ impl SighashComponents {
         let hash_outputs = {
             let mut enc = SigHash::engine();
             for txout in &tx.output {
-                txout.consensus_encode(&mut enc).unwrap();
+                txout.consensus_encode(&mut enc).expect("engines don't error");
             }
             SigHash::from_engine(enc)
         };
@@ -79,9 +79,9 @@ impl SighashComponents {
         SighashComponents {
             tx_version: tx.version,
             tx_locktime: tx.lock_time,
-            hash_prevouts: hash_prevouts,
-            hash_sequence: hash_sequence,
-            hash_outputs: hash_outputs,
+            hash_prevouts,
+            hash_sequence,
+            hash_outputs,
         }
     }
 
@@ -89,139 +89,52 @@ impl SighashComponents {
     /// input.
     pub fn sighash_all(&self, txin: &TxIn, script_code: &Script, value: u64) -> SigHash {
         let mut enc = SigHash::engine();
-        self.tx_version.consensus_encode(&mut enc).unwrap();
-        self.hash_prevouts.consensus_encode(&mut enc).unwrap();
-        self.hash_sequence.consensus_encode(&mut enc).unwrap();
+        self.tx_version.consensus_encode(&mut enc).expect("engines don't error");
+        self.hash_prevouts.consensus_encode(&mut enc).expect("engines don't error");
+        self.hash_sequence.consensus_encode(&mut enc).expect("engines don't error");
         txin
             .previous_output
             .consensus_encode(&mut enc)
-            .unwrap();
-        script_code.consensus_encode(&mut enc).unwrap();
-        value.consensus_encode(&mut enc).unwrap();
-        txin.sequence.consensus_encode(&mut enc).unwrap();
-        self.hash_outputs.consensus_encode(&mut enc).unwrap();
-        self.tx_locktime.consensus_encode(&mut enc).unwrap();
-        1u32.consensus_encode(&mut enc).unwrap(); // hashtype
+            .expect("engines don't error");
+        script_code.consensus_encode(&mut enc).expect("engines don't error");
+        value.consensus_encode(&mut enc).expect("engines don't error");
+        txin.sequence.consensus_encode(&mut enc).expect("engines don't error");
+        self.hash_outputs.consensus_encode(&mut enc).expect("engines don't error");
+        self.tx_locktime.consensus_encode(&mut enc).expect("engines don't error");
+        1u32.consensus_encode(&mut enc).expect("engines don't error"); // hashtype
         SigHash::from_engine(enc)
     }
 }
 
 /// A replacement for SigHashComponents which supports all sighash modes
+#[deprecated(since="0.27.0", note="please use [sighash::SigHashCache] instead")]
 pub struct SigHashCache<R: Deref<Target=Transaction>> {
-    /// Access to transaction required for various introspection
-    tx: R,
-    /// Hash of all the previous outputs, computed as required
-    hash_prevouts: Option<sha256d::Hash>,
-    /// Hash of all the input sequence nos, computed as required
-    hash_sequence: Option<sha256d::Hash>,
-    /// Hash of all the outputs in this transaction, computed as required
-    hash_outputs: Option<sha256d::Hash>,
+    cache: sighash::SigHashCache<R>,
 }
 
+#[allow(deprecated)]
 impl<R: Deref<Target=Transaction>> SigHashCache<R> {
     /// Compute the sighash components from an unsigned transaction and auxiliary
     /// in a lazy manner when required.
     /// For the generated sighashes to be valid, no fields in the transaction may change except for
     /// script_sig and witnesses.
     pub fn new(tx: R) -> Self {
-        SigHashCache {
-            tx: tx,
-            hash_prevouts: None,
-            hash_sequence: None,
-            hash_outputs: None,
-        }
-    }
-
-    /// Calculate hash for prevouts
-    pub fn hash_prevouts(&mut self) -> sha256d::Hash {
-        let hash_prevout = &mut self.hash_prevouts;
-        let input = &self.tx.input;
-        *hash_prevout.get_or_insert_with(|| {
-            let mut enc = sha256d::Hash::engine();
-            for txin in input {
-                txin.previous_output.consensus_encode(&mut enc).unwrap();
-            }
-            sha256d::Hash::from_engine(enc)
-        })
-    }
-
-    /// Calculate hash for input sequence values
-    pub fn hash_sequence(&mut self) -> sha256d::Hash {
-        let hash_sequence = &mut self.hash_sequence;
-        let input = &self.tx.input;
-        *hash_sequence.get_or_insert_with(|| {
-            let mut enc = sha256d::Hash::engine();
-            for txin in input {
-                txin.sequence.consensus_encode(&mut enc).unwrap();
-            }
-            sha256d::Hash::from_engine(enc)
-        })
-    }
-
-    /// Calculate hash for outputs
-    pub fn hash_outputs(&mut self) -> sha256d::Hash {
-        let hash_output = &mut self.hash_outputs;
-        let output = &self.tx.output;
-        *hash_output.get_or_insert_with(|| {
-            let mut enc = sha256d::Hash::engine();
-            for txout in output {
-                txout.consensus_encode(&mut enc).unwrap();
-            }
-            sha256d::Hash::from_engine(enc)
-        })
+        Self { cache: sighash::SigHashCache::new(tx) }
     }
 
     /// Encode the BIP143 signing data for any flag type into a given object implementing a
     /// std::io::Write trait.
     pub fn encode_signing_data_to<Write: io::Write>(
         &mut self,
-        mut writer: Write,
+        writer: Write,
         input_index: usize,
         script_code: &Script,
         value: u64,
-        sighash_type: SigHashType,
+        sighash_type: EcdsaSigHashType,
     ) -> Result<(), encode::Error> {
-        let zero_hash = sha256d::Hash::default();
-
-        let (sighash, anyone_can_pay) = sighash_type.split_anyonecanpay_flag();
-
-        self.tx.version.consensus_encode(&mut writer)?;
-
-        if !anyone_can_pay {
-            self.hash_prevouts().consensus_encode(&mut writer)?;
-        } else {
-            zero_hash.consensus_encode(&mut writer)?;
-        }
-
-        if !anyone_can_pay && sighash != SigHashType::Single && sighash != SigHashType::None {
-            self.hash_sequence().consensus_encode(&mut writer)?;
-        } else {
-            zero_hash.consensus_encode(&mut writer)?;
-        }
-
-        {
-            let txin = &self.tx.input[input_index];
-
-            txin
-                .previous_output
-                .consensus_encode(&mut writer)?;
-            script_code.consensus_encode(&mut writer)?;
-            value.consensus_encode(&mut writer)?;
-            txin.sequence.consensus_encode(&mut writer)?;
-        }
-
-        if sighash != SigHashType::Single && sighash != SigHashType::None {
-            self.hash_outputs().consensus_encode(&mut writer)?;
-        } else if sighash == SigHashType::Single && input_index < self.tx.output.len() {
-            let mut single_enc = SigHash::engine();
-            self.tx.output[input_index].consensus_encode(&mut single_enc)?;
-            SigHash::from_engine(single_enc).consensus_encode(&mut writer)?;
-        } else {
-            zero_hash.consensus_encode(&mut writer)?;
-        }
-
-        self.tx.lock_time.consensus_encode(&mut writer)?;
-        sighash_type.as_u32().consensus_encode(&mut writer)?;
+        self.cache
+            .segwit_encode_signing_data_to(writer, input_index, script_code, value, sighash_type)
+            .expect("input_index greater than tx input len");
         Ok(())
     }
 
@@ -232,7 +145,7 @@ impl<R: Deref<Target=Transaction>> SigHashCache<R> {
         input_index: usize,
         script_code: &Script,
         value: u64,
-        sighash_type: SigHashType
+        sighash_type: EcdsaSigHashType
     ) -> SigHash {
         let mut enc = SigHash::engine();
         self.encode_signing_data_to(&mut enc, input_index, script_code, value, sighash_type)
@@ -241,13 +154,17 @@ impl<R: Deref<Target=Transaction>> SigHashCache<R> {
     }
 }
 
+#[allow(deprecated)]
 impl<R: DerefMut<Target=Transaction>> SigHashCache<R> {
     /// When the SigHashCache is initialized with a mutable reference to a transaction instead of a
     /// regular reference, this method is available to allow modification to the witnesses.
     ///
     /// This allows in-line signing such as
+    ///
+    /// panics if `input_index` is out of bounds with respect of the number of inputs
+    ///
     /// ```
-    /// use groestlcoin::blockdata::transaction::{Transaction, SigHashType};
+    /// use groestlcoin::blockdata::transaction::{Transaction, EcdsaSigHashType};
     /// use groestlcoin::util::bip143::SigHashCache;
     /// use groestlcoin::Script;
     ///
@@ -257,33 +174,33 @@ impl<R: DerefMut<Target=Transaction>> SigHashCache<R> {
     /// let mut sig_hasher = SigHashCache::new(&mut tx_to_sign);
     /// for inp in 0..input_count {
     ///     let prevout_script = Script::new();
-    ///     let _sighash = sig_hasher.signature_hash(inp, &prevout_script, 42, SigHashType::All);
+    ///     let _sighash = sig_hasher.signature_hash(inp, &prevout_script, 42, EcdsaSigHashType::All);
     ///     // ... sign the sighash
-    ///     sig_hasher.access_witness(inp).push(Vec::new());
+    ///     sig_hasher.access_witness(inp).push(&[]);
     /// }
     /// ```
-    pub fn access_witness(&mut self, input_index: usize) -> &mut Vec<Vec<u8>> {
-        &mut self.tx.input[input_index].witness
+    pub fn access_witness(&mut self, input_index: usize) -> &mut Witness {
+        self.cache.witness_mut(input_index).unwrap()
     }
 }
 
 #[cfg(test)]
 #[allow(deprecated)]
 mod tests {
+    use std::str::FromStr;
     use hash_types::SigHash;
     use blockdata::script::Script;
     use blockdata::transaction::Transaction;
     use consensus::encode::deserialize;
     use network::constants::Network;
     use util::address::Address;
-    use util::ecdsa::PublicKey;
+    use util::key::PublicKey;
     use hashes::hex::FromHex;
 
     use super::*;
 
     fn p2pkh_hex(pk: &str) -> Script {
-        let pk = Vec::from_hex(pk).unwrap();
-        let pk = PublicKey::from_slice(pk.as_slice()).unwrap();
+        let pk: PublicKey = PublicKey::from_str(pk).unwrap();
         let witness_script = Address::p2pkh(&pk, Network::Groestlcoin).script_pubkey();
         witness_script
     }
@@ -294,7 +211,7 @@ mod tests {
         let raw_expected = SigHash::from_hex(expected_result).unwrap();
         let expected_result = SigHash::from_slice(&raw_expected[..]).unwrap();
         let mut cache = SigHashCache::new(&tx);
-        let sighash_type = SigHashType::from_u32_consensus(hash_type);
+        let sighash_type = EcdsaSigHashType::from_u32_consensus(hash_type);
         let actual_result = cache.signature_hash(input_index, &script, value, sighash_type);
         assert_eq!(actual_result, expected_result);
     }

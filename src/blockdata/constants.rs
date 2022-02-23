@@ -12,11 +12,11 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Blockdata constants
+//! Blockdata constants.
 //!
 //! This module provides various constants relating to the blockchain and
 //! consensus code. In particular, it defines the genesis block and its
-//! single transaction
+//! single transaction.
 //!
 
 use prelude::*;
@@ -29,12 +29,13 @@ use blockdata::opcodes;
 use blockdata::script;
 use blockdata::transaction::{OutPoint, Transaction, TxOut, TxIn};
 use blockdata::block::{Block, BlockHeader};
+use blockdata::witness::Witness;
 use network::constants::Network;
 use util::uint::Uint256;
 
 /// The maximum allowable sequence number
 pub const MAX_SEQUENCE: u32 = 0xFFFFFFFF;
-/// How many satoshis are in "one bitcoin"
+/// How many gros are in "one groestlcoin"
 pub const COIN_VALUE: u64 = 100_000_000;
 /// How many seconds between blocks we expect on average
 pub const TARGET_BLOCK_SPACING: u32 = 60;
@@ -50,8 +51,20 @@ pub const MIN_TRANSACTION_WEIGHT: u32 = 4 * 60;
 pub const WITNESS_SCALE_FACTOR: usize = 4;
 /// The maximum allowed number of signature check operations in a block
 pub const MAX_BLOCK_SIGOPS_COST: i64 = 80_000;
+/// Mainnet (groestlcoin) pubkey address prefix.
+pub const PUBKEY_ADDRESS_PREFIX_MAIN: u8 = 36; // 0x24
+/// Mainnet (groestlcoin) script address prefix.
+pub const SCRIPT_ADDRESS_PREFIX_MAIN: u8 = 5; // 0x05
+/// Test (tesnet, signet, regtest) pubkey address prefix.
+pub const PUBKEY_ADDRESS_PREFIX_TEST: u8 = 111; // 0x6f
+/// Test (tesnet, signet, regtest) script address prefix.
+pub const SCRIPT_ADDRESS_PREFIX_TEST: u8 = 196; // 0xc4
+/// The maximum allowed script size.
+pub const MAX_SCRIPT_ELEMENT_SIZE: usize = 520;
+/// How may blocks between halvings.
+pub const SUBSIDY_HALVING_INTERVAL: u32 = 210_000;
 
-/// In Bitcoind this is insanely described as ~((u256)0 >> 32)
+/// In Groestlcoind this is insanely described as ~((u256)0 >> 32)
 pub fn max_target(_: Network) -> Uint256 {
     Uint256::from_u64(0xFFFF).unwrap() << 208
 }
@@ -82,7 +95,7 @@ fn bitcoin_genesis_tx() -> Transaction {
         previous_output: OutPoint::null(),
         script_sig: in_script,
         sequence: MAX_SEQUENCE,
-        witness: vec![],
+        witness: Witness::default(),
     });
 
     // Outputs
@@ -118,7 +131,7 @@ pub fn genesis_block(network: Network) -> Block {
                     bits: 0x1e0fffff,
                     nonce: 220035
                 },
-                txdata: txdata
+                txdata,
             }
         }
         Network::Testnet => {
@@ -131,20 +144,20 @@ pub fn genesis_block(network: Network) -> Block {
                     bits: 0x1e00ffff,
                     nonce: 6556309
                 },
-                txdata: txdata
+                txdata,
             }
         }
         Network::Signet => {
             Block {
                 header: BlockHeader {
-                    version: 1,
+                    version: 3,
                     prev_blockhash: Default::default(),
                     merkle_root,
-                    time: 1598918400,
-                    bits: 0x1e0377ae,
-                    nonce: 52613770
+                    time: 1606082400,
+                    bits: 0x1e00ffff,
+                    nonce: 14675970
                 },
-                txdata: txdata
+                txdata,
             }
         }
         Network::Regtest => {
@@ -157,7 +170,7 @@ pub fn genesis_block(network: Network) -> Block {
                     bits: 0x1e00ffff,
                     nonce: 6556309
                 },
-                txdata: txdata
+                txdata,
             }
         }
     }
@@ -227,14 +240,14 @@ mod test {
     #[test]
     fn signet_genesis_full_block() {
         let gen = genesis_block(Network::Signet);
-        assert_eq!(gen.header.version, 1);
+        assert_eq!(gen.header.version, 3);
         assert_eq!(gen.header.prev_blockhash, Default::default());
         assert_eq!(format!("{:x}", gen.header.merkle_root),
                   "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb".to_string());
-        assert_eq!(gen.header.time, 1598918400);
-        assert_eq!(gen.header.bits, 0x1e0377ae);
-        assert_eq!(gen.header.nonce, 52613770);
+        assert_eq!(gen.header.time, 1606082400);
+        assert_eq!(gen.header.bits, 0x1e00ffff);
+        assert_eq!(gen.header.nonce, 14675970);
         assert_eq!(format!("{:x}", gen.header.block_hash()),
-                   "7d6c4b596d26710b86b645995d15468c8e1282bdef550f196ed573ca6fcbbed3".to_string());
+                   "0000007fcaa2a27993c6cde9e7818c254357af517b876ceba2f23592bb14ab31".to_string());
     }
 }

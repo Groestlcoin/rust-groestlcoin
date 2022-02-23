@@ -12,12 +12,13 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Utility functions
+//! Utility functions.
 //!
-//! Functions needed by all parts of the Bitcoin library
+//! Functions needed by all parts of the Groestlcoin library.
+//!
 
-pub mod ecdsa;
 pub mod key;
+pub mod ecdsa;
 pub mod schnorr;
 pub mod address;
 pub mod amount;
@@ -32,6 +33,7 @@ pub mod psbt;
 pub mod taproot;
 pub mod uint;
 pub mod bip158;
+pub mod sighash;
 
 pub(crate) mod endian;
 
@@ -123,7 +125,7 @@ pub(crate) fn read_to_end<D: io::Read>(mut d: D) -> Result<Vec<u8>, io::Error> {
             Ok(0) => break,
             Ok(n) => result.extend_from_slice(&buf[0..n]),
             Err(ref e) if e.kind() == io::ErrorKind::Interrupted => {},
-            Err(e) => return Err(e.into()),
+            Err(e) => return Err(e),
         };
     }
     Ok(result)

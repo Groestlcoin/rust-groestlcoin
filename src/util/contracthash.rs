@@ -12,11 +12,12 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Pay-to-contract-hash support
+//! Pay-to-contract-hash support.
 //!
-//! See Appendix A of the Blockstream sidechains whitepaper
-//! at <http://blockstream.com/sidechains.pdf> for details of
-//! what this does.
+//! See Appendix A of the Blockstream sidechains whitepaper at
+//! <http://blockstream.com/sidechains.pdf> for details of what this does.
+//!
+//! This module is deprecated.
 
 #![cfg_attr(not(test), deprecated)]
 
@@ -75,6 +76,7 @@ impl fmt::Display for Error {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl ::std::error::Error for Error {
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
@@ -132,7 +134,7 @@ impl Template {
     pub fn first_push_as_number(&self) -> Option<usize> {
         if !self.0.is_empty() {
             if let TemplateElement::Op(op) = self.0[0] {
-                if let opcodes::Class::PushNum(n) = op.classify() {
+                if let opcodes::Class::PushNum(n) = op.classify(opcodes::ClassifyContext::Legacy) {
                     if n >= 0 {
                         return Some(n as usize);
                     }
@@ -158,7 +160,7 @@ impl<'a> From<&'a [u8]> for Template {
 /// Tweak a single key using some arbitrary data
 pub fn tweak_key<C: secp256k1::Verification>(secp: &Secp256k1<C>, mut key: PublicKey, contract: &[u8]) -> PublicKey {
     let hmac_result = compute_tweak(&key, contract);
-    key.key.add_exp_assign(secp, &hmac_result[..]).expect("HMAC cannot produce invalid tweak");
+    key.inner.add_exp_assign(secp, &hmac_result[..]).expect("HMAC cannot produce invalid tweak");
     key
 }
 
@@ -170,9 +172,9 @@ pub fn tweak_keys<C: secp256k1::Verification>(secp: &Secp256k1<C>, keys: &[Publi
 /// Compute a tweak from some given data for the given public key
 pub fn compute_tweak(pk: &PublicKey, contract: &[u8]) -> Hmac<sha256::Hash> {
     let mut hmac_engine: HmacEngine<sha256::Hash> = if pk.compressed {
-        HmacEngine::new(&pk.key.serialize())
+        HmacEngine::new(&pk.inner.serialize())
     } else {
-        HmacEngine::new(&pk.key.serialize_uncompressed())
+        HmacEngine::new(&pk.inner.serialize_uncompressed())
     };
     hmac_engine.input(contract);
     Hmac::from_engine(hmac_engine)
@@ -181,12 +183,12 @@ pub fn compute_tweak(pk: &PublicKey, contract: &[u8]) -> Hmac<sha256::Hash> {
 /// Tweak a secret key using some arbitrary data (calls `compute_tweak` internally)
 pub fn tweak_secret_key<C: secp256k1::Signing>(secp: &Secp256k1<C>, key: &PrivateKey, contract: &[u8]) -> Result<PrivateKey, Error> {
     // Compute public key
-    let pk = PublicKey::from_private_key(secp, &key);
+    let pk = PublicKey::from_private_key(secp, key);
     // Compute tweak
     let hmac_sk = compute_tweak(&pk, contract);
     // Execute the tweak
     let mut key = *key;
-    key.key.add_assign(&hmac_sk[..]).map_err(Error::Secp)?;
+    key.inner.add_assign(&hmac_sk[..]).map_err(Error::Secp)?;
     // Return
     Ok(key)
 }
@@ -201,7 +203,7 @@ pub fn create_address<C: secp256k1::Verification>(secp: &Secp256k1<C>,
     let keys = tweak_keys(secp, keys, contract);
     let script = template.to_script(&keys)?;
     Ok(address::Address {
-        network: network,
+        network,
         payload: address::Payload::ScriptHash(
             ScriptHash::hash(&script[..])
         )
@@ -248,7 +250,7 @@ pub fn untemplate(script: &script::Script) -> Result<(Template, Vec<PublicKey>),
                 }
             }
             script::Instruction::Op(op) => {
-                match op.classify() {
+                match op.classify(opcodes::ClassifyContext::Legacy) {
                     // CHECKSIG should only come after a list of keys
                     opcodes::Class::Ordinary(opcodes::Ordinary::OP_CHECKSIG) |
                     opcodes::Class::Ordinary(opcodes::Ordinary::OP_CHECKSIGVERIFY) => {

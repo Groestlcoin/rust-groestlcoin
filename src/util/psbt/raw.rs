@@ -12,10 +12,11 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! # Raw PSBT Key-Value Pairs
+//! Raw PSBT key-value pairs.
 //!
 //! Raw PSBT key-value pairs as defined at
 //! <https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki>.
+//!
 
 use prelude::*;
 use core::fmt;
@@ -99,8 +100,8 @@ impl Decodable for Key {
         }
 
         Ok(Key {
-            type_value: type_value,
-            key: key,
+            type_value,
+            key,
         })
     }
 }
@@ -146,7 +147,8 @@ impl<Subtype> Encodable for ProprietaryKey<Subtype> where Subtype: Copy + From<u
     fn consensus_encode<W: io::Write>(&self, mut e: W) -> Result<usize, io::Error> {
         let mut len = self.prefix.consensus_encode(&mut e)? + 1;
         e.emit_u8(self.subtype.into())?;
-        len += e.write(&self.key)?;
+        e.write_all(&self.key)?;
+        len += self.key.len();
         Ok(len)
     }
 }

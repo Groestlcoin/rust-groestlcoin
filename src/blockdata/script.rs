@@ -12,14 +12,13 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Script
+//! Groestlcoin scripts.
 //!
 //! Scripts define Groestlcoin's digital signature scheme: a signature is formed
 //! from a script (the second half of which is defined by a coin to be spent,
-//! and the first half provided by the spending transaction), and is valid
-//! iff the script leaves `TRUE` on the stack after being evaluated.
-//! Groestlcoin's script is a stack-based assembly language similar in spirit to
-//! Forth.
+//! and the first half provided by the spending transaction), and is valid iff
+//! the script leaves `TRUE` on the stack after being evaluated. Groestlcoin's
+//! script is a stack-based assembly language similar in spirit to Forth.
 //!
 //! This module provides the structures and functions needed to support scripts.
 //!
@@ -40,10 +39,14 @@ use policy::DUST_RELAY_TX_FEE;
 #[cfg(feature="groestlcoinconsensus")] use core::convert::From;
 #[cfg(feature="groestlcoinconsensus")] use OutPoint;
 
-use util::ecdsa::PublicKey;
+use util::key::PublicKey;
+use util::address::WitnessVersion;
+use util::taproot::{LeafVersion, TapBranchHash, TapLeafHash};
+use secp256k1::{Secp256k1, Verification};
+use schnorr::{TapTweak, TweakedPublicKey, UntweakedPublicKey};
 
+/// A Groestlcoin script.
 #[derive(Clone, Default, PartialOrd, Ord, PartialEq, Eq, Hash)]
-/// A Groestlcoin script
 pub struct Script(Box<[u8]>);
 
 impl AsRef<[u8]> for Script {
@@ -101,8 +104,8 @@ impl ::core::str::FromStr for Script {
     }
 }
 
+/// An object which can be used to construct a script piece by piece.
 #[derive(PartialEq, Eq, Debug, Clone)]
-/// An object which can be used to construct a script piece by piece
 pub struct Builder(Vec<u8>, Option<opcodes::All>);
 display_from_debug!(Builder);
 
@@ -118,14 +121,17 @@ pub enum Error {
     EarlyEndOfScript,
     /// Tried to read an array off the stack as a number when it was more than 4 bytes
     NumericOverflow,
-    #[cfg(feature="groestlcoinconsensus")]
     /// Error validating the script with groestlcoinconsensus library
+    #[cfg(feature = "groestlcoinconsensus")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
     BitcoinConsensus(groestlcoinconsensus::Error),
-    #[cfg(feature="groestlcoinconsensus")]
     /// Can not find the spent output
+    #[cfg(feature = "groestlcoinconsensus")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
     UnknownSpentOutput(OutPoint),
-    #[cfg(feature="groestlcoinconsensus")]
     /// Can not serialize the spending transaction
+    #[cfg(feature = "groestlcoinconsensus")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
     SerializationError
 }
 
@@ -147,7 +153,24 @@ impl fmt::Display for Error {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl ::std::error::Error for Error {}
+
+// Our internal error proves that we only return these two cases from `read_uint_iter`.
+// Since it's private we don't bother with trait impls besides From.
+enum UintError {
+    EarlyEndOfScript,
+    NumericOverflow,
+}
+
+impl From<UintError> for Error {
+    fn from(error: UintError) -> Self {
+        match error {
+            UintError::EarlyEndOfScript => Error::EarlyEndOfScript,
+            UintError::NumericOverflow => Error::NumericOverflow,
+        }
+    }
+}
 
 #[cfg(feature="groestlcoinconsensus")]
 #[doc(hidden)]
@@ -216,19 +239,45 @@ pub fn read_scriptint(v: &[u8]) -> Result<i64, Error> {
 /// else as true", except that the overflow rules don't apply.
 #[inline]
 pub fn read_scriptbool(v: &[u8]) -> bool {
-    !(v.is_empty() ||
-        ((v[v.len() - 1] == 0 || v[v.len() - 1] == 0x80) &&
-         v.iter().rev().skip(1).all(|&w| w == 0)))
+    match v.split_last() {
+        Some((last, rest)) => !((last & !0x80 == 0x00) && rest.iter().all(|&b| b == 0)),
+        None => false,
+    }
 }
 
 /// Read a script-encoded unsigned integer
+///
+/// ## Errors
+///
+/// This function returns an error in these cases:
+///
+/// * `data` is shorter than `size` => `EarlyEndOfScript`
+/// * `size` is greater than `u16::max_value / 8` (8191) => `NumericOverflow`
+/// * The number being read overflows `usize` => `NumericOverflow`
+///
+/// Note that this does **not** return an error for `size` between `core::size_of::<usize>()`
+/// and `u16::max_value / 8` if there's no overflow.
 pub fn read_uint(data: &[u8], size: usize) -> Result<usize, Error> {
+    read_uint_iter(&mut data.iter(), size).map_err(Into::into)
+}
+
+// We internally use implementation based on iterator so that it automatically advances as needed
+// Errors are same as above, just different type.
+fn read_uint_iter(data: &mut ::core::slice::Iter<'_, u8>, size: usize) -> Result<usize, UintError> {
     if data.len() < size {
-        Err(Error::EarlyEndOfScript)
+        Err(UintError::EarlyEndOfScript)
+    } else if size > usize::from(u16::max_value() / 8) {
+        // Casting to u32 would overflow
+        Err(UintError::NumericOverflow)
     } else {
         let mut ret = 0;
-        for (i, item) in data.iter().take(size).enumerate() {
-            ret += (*item as usize) << (i * 8);
+        for (i, item) in data.take(size).enumerate() {
+            ret = usize::from(*item)
+                // Casting is safe because we checked above to not repeat the same check in a loop
+                .checked_shl((i * 8) as u32)
+                .ok_or(UintError::NumericOverflow)?
+                .checked_add(ret)
+                .ok_or(UintError::NumericOverflow)?;
         }
         Ok(ret)
     }
@@ -267,25 +316,44 @@ impl Script {
     }
 
     /// Generates P2WPKH-type of scriptPubkey
+    #[deprecated(since = "0.28.0", note = "use Script::new_v0_p2wpkh method instead")]
     pub fn new_v0_wpkh(pubkey_hash: &WPubkeyHash) -> Script {
-        Script::new_witness_program(::bech32::u5::try_from_u8(0).unwrap(), &pubkey_hash.to_vec())
+        Script::new_v0_p2wpkh(pubkey_hash)
+    }
+
+    /// Generates P2WPKH-type of scriptPubkey
+    pub fn new_v0_p2wpkh(pubkey_hash: &WPubkeyHash) -> Script {
+        Script::new_witness_program(WitnessVersion::V0, &pubkey_hash[..])
     }
 
     /// Generates P2WSH-type of scriptPubkey with a given hash of the redeem script
+    #[deprecated(since = "0.28.0", note = "use Script::new_v0_p2wsh method instead")]
     pub fn new_v0_wsh(script_hash: &WScriptHash) -> Script {
-        Script::new_witness_program(::bech32::u5::try_from_u8(0).unwrap(), &script_hash.to_vec())
+        Script::new_v0_p2wsh(script_hash)
     }
 
     /// Generates P2WSH-type of scriptPubkey with a given hash of the redeem script
-    pub fn new_witness_program(ver: ::bech32::u5, program: &[u8]) -> Script {
-        let mut verop = ver.to_u8();
-        assert!(verop <= 16, "incorrect witness version provided: {}", verop);
-        if verop > 0 {
-            verop = 0x50 + verop;
-        }
+    pub fn new_v0_p2wsh(script_hash: &WScriptHash) -> Script {
+        Script::new_witness_program(WitnessVersion::V0, &script_hash[..])
+    }
+
+    /// Generates P2TR for script spending path using an internal public key and some optional
+    /// script tree merkle root.
+    pub fn new_v1_p2tr<C: Verification>(secp: &Secp256k1<C>, internal_key: UntweakedPublicKey, merkle_root: Option<TapBranchHash>) -> Script {
+        let (output_key, _) = internal_key.tap_tweak(secp, merkle_root);
+        Script::new_witness_program(WitnessVersion::V1, &output_key.serialize())
+    }
+
+    /// Generates P2TR for key spending path for a known [`TweakedPublicKey`].
+    pub fn new_v1_p2tr_tweaked(output_key: TweakedPublicKey) -> Script {
+        Script::new_witness_program(WitnessVersion::V1, &output_key.serialize())
+    }
+
+    /// Generates P2WSH-type of scriptPubkey with a given hash of the redeem script
+    pub fn new_witness_program(version: WitnessVersion, program: &[u8]) -> Script {
         Builder::new()
-            .push_opcode(verop.into())
-            .push_slice(&program)
+            .push_opcode(version.into())
+            .push_slice(program)
             .into_script()
     }
 
@@ -299,12 +367,12 @@ impl Script {
 
     /// Returns 160-bit hash of the script
     pub fn script_hash(&self) -> ScriptHash {
-        ScriptHash::hash(&self.as_bytes())
+        ScriptHash::hash(self.as_bytes())
     }
 
     /// Returns 256-bit hash of the script for P2WSH outputs
     pub fn wscript_hash(&self) -> WScriptHash {
-        WScriptHash::hash(&self.as_bytes())
+        WScriptHash::hash(self.as_bytes())
     }
 
     /// The length in bytes of the script
@@ -330,38 +398,57 @@ impl Script {
     /// Compute the P2WSH output corresponding to this witnessScript (aka the "witness redeem
     /// script")
     pub fn to_v0_p2wsh(&self) -> Script {
-        Script::new_v0_wsh(&self.wscript_hash())
+        Script::new_v0_p2wsh(&self.wscript_hash())
+    }
+
+    /// Compute P2TR output with a given internal key and a single script spending path equal to the
+    /// current script, assuming that the script is a Tapscript
+    #[inline]
+    pub fn to_v1_p2tr<C: Verification>(&self, secp: &Secp256k1<C>, internal_key: UntweakedPublicKey) -> Script {
+        let leaf_hash = TapLeafHash::from_script(&self, LeafVersion::TapScript);
+        let merkle_root = TapBranchHash::from_inner(leaf_hash.into_inner());
+        Script::new_v1_p2tr(&secp, internal_key, Some(merkle_root))
+    }
+
+    #[inline]
+    fn witness_version(&self) -> Option<WitnessVersion> {
+        self.0.get(0).and_then(|opcode| WitnessVersion::from_opcode(opcodes::All::from(*opcode)).ok())
     }
 
     /// Checks whether a script pubkey is a p2sh output
     #[inline]
     pub fn is_p2sh(&self) -> bool {
-        self.0.len() == 23 &&
-        self.0[0] == opcodes::all::OP_HASH160.into_u8() &&
-        self.0[1] == opcodes::all::OP_PUSHBYTES_20.into_u8() &&
-        self.0[22] == opcodes::all::OP_EQUAL.into_u8()
+        self.0.len() == 23
+            && self.0[0] == opcodes::all::OP_HASH160.into_u8()
+            && self.0[1] == opcodes::all::OP_PUSHBYTES_20.into_u8()
+            && self.0[22] == opcodes::all::OP_EQUAL.into_u8()
     }
 
     /// Checks whether a script pubkey is a p2pkh output
     #[inline]
     pub fn is_p2pkh(&self) -> bool {
-        self.0.len() == 25 &&
-        self.0[0] == opcodes::all::OP_DUP.into_u8() &&
-        self.0[1] == opcodes::all::OP_HASH160.into_u8() &&
-        self.0[2] == opcodes::all::OP_PUSHBYTES_20.into_u8() &&
-        self.0[23] == opcodes::all::OP_EQUALVERIFY.into_u8() &&
-        self.0[24] == opcodes::all::OP_CHECKSIG.into_u8()
+        self.0.len() == 25
+            && self.0[0] == opcodes::all::OP_DUP.into_u8()
+            && self.0[1] == opcodes::all::OP_HASH160.into_u8()
+            && self.0[2] == opcodes::all::OP_PUSHBYTES_20.into_u8()
+            && self.0[23] == opcodes::all::OP_EQUALVERIFY.into_u8()
+            && self.0[24] == opcodes::all::OP_CHECKSIG.into_u8()
     }
 
     /// Checks whether a script pubkey is a p2pk output
     #[inline]
     pub fn is_p2pk(&self) -> bool {
-        (self.0.len() == 67 &&
-            self.0[0] == opcodes::all::OP_PUSHBYTES_65.into_u8() &&
-            self.0[66] == opcodes::all::OP_CHECKSIG.into_u8())
-     || (self.0.len() == 35 &&
-            self.0[0] == opcodes::all::OP_PUSHBYTES_33.into_u8() &&
-            self.0[34] == opcodes::all::OP_CHECKSIG.into_u8())
+        match self.len() {
+            67 => {
+                self.0[0] == opcodes::all::OP_PUSHBYTES_65.into_u8()
+                    && self.0[66] == opcodes::all::OP_CHECKSIG.into_u8()
+            }
+            35 => {
+                self.0[0] == opcodes::all::OP_PUSHBYTES_33.into_u8()
+                    && self.0[34] == opcodes::all::OP_CHECKSIG.into_u8()
+            }
+            _ => false
+        }
     }
 
     /// Checks whether a script pubkey is a Segregated Witness (segwit) program.
@@ -371,44 +458,64 @@ impl Script {
         // push opcode (for 0 to 16) followed by a data push between 2 and 40 bytes gets a new
         // special meaning. The value of the first push is called the "version byte". The following
         // byte vector pushed is called the "witness program".
-        let min_vernum: u8 = opcodes::all::OP_PUSHNUM_1.into_u8();
-        let max_vernum: u8 = opcodes::all::OP_PUSHNUM_16.into_u8();
-        self.0.len() >= 4
-            && self.0.len() <= 42
-            // Version 0 or PUSHNUM_1-PUSHNUM_16
-            && (self.0[0] == 0 || self.0[0] >= min_vernum && self.0[0] <= max_vernum)
-            // Second byte push opcode 2-40 bytes
-            && self.0[1] >= opcodes::all::OP_PUSHBYTES_2.into_u8()
-            && self.0[1] <= opcodes::all::OP_PUSHBYTES_40.into_u8()
+        let script_len = self.0.len();
+        if script_len < 4 || script_len > 42 {
+            return false
+        }
+        let ver_opcode = opcodes::All::from(self.0[0]); // Version 0 or PUSHNUM_1-PUSHNUM_16
+        let push_opbyte = self.0[1]; // Second byte push opcode 2-40 bytes
+        WitnessVersion::from_opcode(ver_opcode).is_ok()
+            && push_opbyte >= opcodes::all::OP_PUSHBYTES_2.into_u8()
+            && push_opbyte <= opcodes::all::OP_PUSHBYTES_40.into_u8()
             // Check that the rest of the script has the correct size
-            && self.0.len() - 2 == self.0[1] as usize
+            && script_len - 2 == push_opbyte as usize
     }
 
     /// Checks whether a script pubkey is a p2wsh output
     #[inline]
     pub fn is_v0_p2wsh(&self) -> bool {
-        self.0.len() == 34 &&
-        self.0[0] == opcodes::all::OP_PUSHBYTES_0.into_u8() &&
-        self.0[1] == opcodes::all::OP_PUSHBYTES_32.into_u8()
+        self.0.len() == 34
+            && self.witness_version() == Some(WitnessVersion::V0)
+            && self.0[1] == opcodes::all::OP_PUSHBYTES_32.into_u8()
     }
 
     /// Checks whether a script pubkey is a p2wpkh output
     #[inline]
     pub fn is_v0_p2wpkh(&self) -> bool {
-        self.0.len() == 22 &&
-            self.0[0] == opcodes::all::OP_PUSHBYTES_0.into_u8() &&
-            self.0[1] == opcodes::all::OP_PUSHBYTES_20.into_u8()
+        self.0.len() == 22
+            && self.witness_version() == Some(WitnessVersion::V0)
+            && self.0[1] == opcodes::all::OP_PUSHBYTES_20.into_u8()
+    }
+
+    /// Checks whether a script pubkey is a P2TR output
+    #[inline]
+    pub fn is_v1_p2tr(&self) -> bool {
+        self.0.len() == 34
+            && self.witness_version() == Some(WitnessVersion::V1)
+            && self.0[1] == opcodes::all::OP_PUSHBYTES_32.into_u8()
     }
 
     /// Check if this is an OP_RETURN output
     pub fn is_op_return (&self) -> bool {
-        !self.0.is_empty() && (opcodes::All::from(self.0[0]) == opcodes::all::OP_RETURN)
+        match self.0.first() {
+            Some(b) => *b == opcodes::all::OP_RETURN.into_u8(),
+            None => false
+        }
     }
 
     /// Whether a script can be proven to have no satisfying input
     pub fn is_provably_unspendable(&self) -> bool {
-        !self.0.is_empty() && (opcodes::All::from(self.0[0]).classify() == opcodes::Class::ReturnOp ||
-                               opcodes::All::from(self.0[0]).classify() == opcodes::Class::IllegalOp)
+        use blockdata::opcodes::Class::{ReturnOp, IllegalOp};
+
+        match self.0.first() {
+            Some(b) => {
+                let first = opcodes::All::from(*b);
+                let class = first.classify(opcodes::ClassifyContext::Legacy);
+
+                class == ReturnOp || class == IllegalOp
+            },
+            None => false,
+        }
     }
 
     /// Gets the minimum value an output with this script should have in order to be
@@ -423,11 +530,11 @@ impl Script {
         } else if self.is_witness_program() {
             32 + 4 + 1 + (107 / 4) + 4 + // The spend cost copied from Core
             8 + // The serialized size of the TxOut's amount field
-            self.consensus_encode(&mut sink()).unwrap() as u64 // The serialized size of this script_pubkey
+            self.consensus_encode(&mut sink()).expect("sinks don't error") as u64 // The serialized size of this script_pubkey
         } else {
             32 + 4 + 1 + 107 + 4 + // The spend cost copied from Core
             8 + // The serialized size of the TxOut's amount field
-            self.consensus_encode(&mut sink()).unwrap() as u64 // The serialized size of this script_pubkey
+            self.consensus_encode(&mut sink()).expect("sinks don't error") as u64 // The serialized size of this script_pubkey
         };
 
         ::Amount::from_sat(sats)
@@ -455,69 +562,83 @@ impl Script {
         }
     }
 
-    #[cfg(feature="groestlcoinconsensus")]
     /// Shorthand for [Self::verify_with_flags] with flag [groestlcoinconsensus::VERIFY_ALL]
-    pub fn verify (&self, index: usize, amount: u64, spending: &[u8]) -> Result<(), Error> {
-        self.verify_with_flags(index, ::Amount::from_sat(amount), spending, ::groestlcoinconsensus::VERIFY_ALL)
+    #[cfg(feature="groestlcoinconsensus")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
+    pub fn verify (&self, index: usize, amount: ::Amount, spending: &[u8]) -> Result<(), Error> {
+        self.verify_with_flags(index, amount, spending, ::groestlcoinconsensus::VERIFY_ALL)
     }
 
-    #[cfg(feature="groestlcoinconsensus")]
     /// Verify spend of an input script
     /// # Parameters
     ///  * `index` - the input index in spending which is spending this transaction
     ///  * `amount` - the amount this script guards
     ///  * `spending` - the transaction that attempts to spend the output holding this script
     ///  * `flags` - verification flags, see [groestlcoinconsensus::VERIFY_ALL] and similar
+    #[cfg(feature="groestlcoinconsensus")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
     pub fn verify_with_flags<F: Into<u32>>(&self, index: usize, amount: ::Amount, spending: &[u8], flags: F) -> Result<(), Error> {
         Ok(groestlcoinconsensus::verify_with_flags (&self.0[..], amount.as_sat(), spending, index, flags.into())?)
     }
 
     /// Write the assembly decoding of the script bytes to the formatter.
     pub fn bytes_to_asm_fmt(script: &[u8], f: &mut dyn fmt::Write) -> fmt::Result {
-        let mut index = 0;
-        while index < script.len() {
-            let opcode = opcodes::All::from(script[index]);
-            index += 1;
+        // This has to be a macro because it needs to break the loop
+        macro_rules! read_push_data_len {
+            ($iter:expr, $len:expr, $formatter:expr) => {
+                match read_uint_iter($iter, $len) {
+                    Ok(n) => {
+                        n
+                    },
+                    Err(UintError::EarlyEndOfScript) => {
+                        $formatter.write_str("<unexpected end>")?;
+                        break;
+                    }
+                    // We got the data in a slice which implies it being shorter than `usize::max_value()`
+                    // So if we got overflow, we can confidently say the number is higher than length of
+                    // the slice even though we don't know the exact number. This implies attempt to push
+                    // past end.
+                    Err(UintError::NumericOverflow) => {
+                        $formatter.write_str("<push past end>")?;
+                        break;
+                    }
+                }
+            }
+        }
 
-            let data_len = if let opcodes::Class::PushBytes(n) = opcode.classify() {
+        let mut iter = script.iter();
+        // Was at least one opcode emitted?
+        let mut at_least_one = false;
+        // `iter` needs to be borrowed in `read_push_data_len`, so we have to use `while let` instead
+        // of `for`.
+        while let Some(byte) = iter.next() {
+            let opcode = opcodes::All::from(*byte);
+
+            let data_len = if let opcodes::Class::PushBytes(n) = opcode.classify(opcodes::ClassifyContext::Legacy) {
                 n as usize
             } else {
                 match opcode {
                     opcodes::all::OP_PUSHDATA1 => {
-                        if script.len() < index + 1 {
-                            f.write_str("<unexpected end>")?;
-                            break;
-                        }
-                        match read_uint(&script[index..], 1) {
-                            Ok(n) => { index += 1; n as usize }
-                            Err(_) => { f.write_str("<bad length>")?; break; }
-                        }
+                        // side effects: may write and break from the loop
+                        read_push_data_len!(&mut iter, 1, f)
                     }
                     opcodes::all::OP_PUSHDATA2 => {
-                        if script.len() < index + 2 {
-                            f.write_str("<unexpected end>")?;
-                            break;
-                        }
-                        match read_uint(&script[index..], 2) {
-                            Ok(n) => { index += 2; n as usize }
-                            Err(_) => { f.write_str("<bad length>")?; break; }
-                        }
+                        // side effects: may write and break from the loop
+                        read_push_data_len!(&mut iter, 2, f)
                     }
                     opcodes::all::OP_PUSHDATA4 => {
-                        if script.len() < index + 4 {
-                            f.write_str("<unexpected end>")?;
-                            break;
-                        }
-                        match read_uint(&script[index..], 4) {
-                            Ok(n) => { index += 4; n as usize }
-                            Err(_) => { f.write_str("<bad length>")?; break; }
-                        }
+                        // side effects: may write and break from the loop
+                        read_push_data_len!(&mut iter, 4, f)
                     }
                     _ => 0
                 }
             };
 
-            if index > 1 { f.write_str(" ")?; }
+            if at_least_one {
+                f.write_str(" ")?;
+            } else {
+                at_least_one = true;
+            }
             // Write the opcode
             if opcode == opcodes::all::OP_PUSHBYTES_0 {
                 f.write_str("OP_0")?;
@@ -527,17 +648,13 @@ impl Script {
             // Write any pushdata
             if data_len > 0 {
                 f.write_str(" ")?;
-                match index.checked_add(data_len) {
-                    Some(end) if end <= script.len() => {
-                        for ch in &script[index..end] {
-                            write!(f, "{:02x}", ch)?;
-                        }
-                        index = end;
-                    },
-                    _ => {
-                        f.write_str("<push past end>")?;
-                        break;
-                    },
+                if data_len <= iter.len() {
+                    for ch in iter.by_ref().take(data_len) {
+                        write!(f, "{:02x}", ch)?;
+                    }
+                } else {
+                    f.write_str("<push past end>")?;
+                    break;
                 }
             }
         }
@@ -592,7 +709,9 @@ impl<'a> Iterator for Instructions<'a> {
             return None;
         }
 
-        match opcodes::All::from(self.data[0]).classify() {
+        // classify parameter does not really matter here since we are only using
+        // it for pushes and nums
+        match opcodes::All::from(self.data[0]).classify(opcodes::ClassifyContext::Legacy) {
             opcodes::Class::PushBytes(n) => {
                 let n = n as usize;
                 if self.data.len() < n + 1 {
@@ -691,6 +810,8 @@ impl<'a> Iterator for Instructions<'a> {
     }
 }
 
+impl<'a> ::core::iter::FusedIterator for Instructions<'a> {}
+
 impl Builder {
     /// Creates a new empty script
     pub fn new() -> Self {
@@ -760,9 +881,9 @@ impl Builder {
     /// Pushes a public key
     pub fn push_key(self, key: &PublicKey) -> Builder {
         if key.compressed {
-            self.push_slice(&key.key.serialize()[..])
+            self.push_slice(&key.inner.serialize()[..])
         } else {
-            self.push_slice(&key.key.serialize_uncompressed()[..])
+            self.push_slice(&key.inner.serialize_uncompressed()[..])
         }
     }
 
@@ -824,57 +945,78 @@ impl From<Vec<u8>> for Builder {
 impl_index_newtype!(Builder, u8);
 
 #[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 impl<'de> serde::Deserialize<'de> for Script {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
+    where D: serde::Deserializer<'de>,
     {
         use core::fmt::Formatter;
         use hashes::hex::FromHex;
 
-        struct Visitor;
-        impl<'de> serde::de::Visitor<'de> for Visitor {
-            type Value = Script;
+        if deserializer.is_human_readable() {
 
-            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
-                formatter.write_str("a script")
-            }
+            struct Visitor;
+            impl<'de> serde::de::Visitor<'de> for Visitor {
+                type Value = Script;
 
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                let v = Vec::from_hex(v).map_err(E::custom)?;
-                Ok(Script::from(v))
-            }
+                fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                    formatter.write_str("a script hex")
+                }
 
-            fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                self.visit_str(v)
-            }
+                fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+                    where E: serde::de::Error,
+                {
+                    let v = Vec::from_hex(v).map_err(E::custom)?;
+                    Ok(Script::from(v))
+                }
 
-            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                self.visit_str(&v)
+                fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
+                    where E: serde::de::Error,
+                {
+                    self.visit_str(v)
+                }
+
+                fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+                    where E: serde::de::Error,
+                {
+                    self.visit_str(&v)
+                }
             }
+            deserializer.deserialize_str(Visitor)
+        } else {
+            struct BytesVisitor;
+
+            impl<'de> serde::de::Visitor<'de> for BytesVisitor {
+                type Value = Script;
+
+                fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                    formatter.write_str("a script Vec<u8>")
+                }
+
+                fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+                    where E: serde::de::Error,
+                {
+                    Ok(Script::from(v.to_vec()))
+                }
+            }
+            deserializer.deserialize_bytes(BytesVisitor)
         }
-
-        deserializer.deserialize_str(Visitor)
     }
 }
 
 #[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 impl serde::Serialize for Script {
     /// User-facing serialization for `Script`.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&format!("{:x}", self))
+        if serializer.is_human_readable() {
+            serializer.serialize_str(&format!("{:x}", self))
+        } else {
+            serializer.serialize_bytes(&self.as_bytes())
+        }
     }
 }
 
@@ -906,7 +1048,7 @@ mod test {
     use hashes::hex::{FromHex, ToHex};
     use consensus::encode::{deserialize, serialize};
     use blockdata::opcodes;
-    use util::ecdsa::PublicKey;
+    use util::key::PublicKey;
     use util::psbt::serialize::Serialize;
 
     #[test]
@@ -962,11 +1104,11 @@ mod test {
         let pubkey = PublicKey::from_str("0234e6a79c5359c613762d537e0e19d86c77c1666d8c9ab050f23acd198e97f93e").unwrap();
         assert!(Script::new_p2pk(&pubkey).is_p2pk());
 
-        let pubkey_hash = PubkeyHash::hash(&pubkey.serialize());
+        let pubkey_hash = PubkeyHash::hash(&pubkey.inner.serialize());
         assert!(Script::new_p2pkh(&pubkey_hash).is_p2pkh());
 
-        let wpubkey_hash = WPubkeyHash::hash(&pubkey.serialize());
-        assert!(Script::new_v0_wpkh(&wpubkey_hash).is_v0_p2wpkh());
+        let wpubkey_hash = WPubkeyHash::hash(&pubkey.inner.serialize());
+        assert!(Script::new_v0_p2wpkh(&wpubkey_hash).is_v0_p2wpkh());
 
         let script = Builder::new().push_opcode(opcodes::all::OP_NUMEQUAL)
                                    .push_verify()
@@ -977,7 +1119,7 @@ mod test {
         assert_eq!(script.to_p2sh(), p2sh);
 
         let wscript_hash = WScriptHash::hash(&script.serialize());
-        let p2wsh = Script::new_v0_wsh(&wscript_hash);
+        let p2wsh = Script::new_v0_p2wsh(&wscript_hash);
         assert!(p2wsh.is_v0_p2wsh());
         assert_eq!(script.to_v0_p2wsh(), p2wsh);
 
@@ -1141,13 +1283,13 @@ mod test {
         assert_eq!(hex_script!("4c").asm(),
                    "<unexpected end>");
         assert_eq!(hex_script!("4c0201").asm(),
-                   " OP_PUSHDATA1 <push past end>");
+                   "OP_PUSHDATA1 <push past end>");
         assert_eq!(hex_script!("4d").asm(),
                    "<unexpected end>");
         assert_eq!(hex_script!("4dffff01").asm(),
-                   " OP_PUSHDATA2 <push past end>");
+                   "OP_PUSHDATA2 <push past end>");
         assert_eq!(hex_script!("4effffffff01").asm(),
-                   " OP_PUSHDATA4 <push past end>");
+                   "OP_PUSHDATA4 <push past end>");
     }
 
     #[test]
@@ -1276,7 +1418,7 @@ mod test {
 		// a random segwit transaction from the blockchain using native segwit
 		let spent = Builder::from(Vec::from_hex("0014f2075f97aaef79587e621275f0ba25e47e750e1a").unwrap()).into_script();
 		let spending = Vec::from_hex("020000000001019e0e6d901a29f49fc217edb0e18c036727115834fb6ada9c764e9740a16a83b90000000000ffffffff0198e6180207000000160014bb380c38f25920fc9946f6a84b6442eebbb77248024730440220786b3e70502d1c0ec300d3144d74b4cbc87fb1168e5821b78404962aaab05e9902203e27204e4ad621802c4191fee6eed8d1b97c7b2ba7e083fb7e4d09380cb7d0a401210223b5e6c2231dc61a800fde397f64d271dc8e65d8fd01a7932d3e4270dd32774e00000000").unwrap();
-		spent.verify(0, 30099980000, spending.as_slice()).unwrap();
+		spent.verify(0, ::Amount::from_sat(30099980000), spending.as_slice()).unwrap();
 	}
 
     #[test]
@@ -1296,5 +1438,49 @@ mod test {
             .into_script();
         assert!(script_p2pkh.is_p2pkh());
         assert_eq!(script_p2pkh.dust_value(), ::Amount::from_sat(546));
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_script_serde_human_and_not() {
+        let script = Script::from(vec![0u8, 1u8, 2u8]);
+
+        // Serialize
+        let json = ::serde_json::to_string(&script).unwrap();
+        assert_eq!(json, "\"000102\"");
+        let bincode = ::bincode::serialize(&script).unwrap();
+        assert_eq!(bincode, [3, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2]); // bincode adds u64 for length, serde_cbor use varint
+
+        // Deserialize
+        assert_eq!(script, ::serde_json::from_str(&json).unwrap());
+        assert_eq!(script, ::bincode::deserialize(&bincode).unwrap());
+    }
+
+    #[test]
+    fn test_instructions_are_fused() {
+        let script = Script::new();
+        let mut instructions = script.instructions();
+        assert!(instructions.next().is_none());
+        assert!(instructions.next().is_none());
+        assert!(instructions.next().is_none());
+        assert!(instructions.next().is_none());
+    }
+
+    #[test]
+    fn read_scriptbool_zero_is_false() {
+        let v: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00];
+        assert!(!read_scriptbool(&v));
+
+        let v: Vec<u8> = vec![0x00, 0x00, 0x00, 0x80]; // With sign bit set.
+        assert!(!read_scriptbool(&v));
+    }
+
+    #[test]
+    fn read_scriptbool_non_zero_is_true() {
+        let v: Vec<u8> = vec![0x01, 0x00, 0x00, 0x00];
+        assert!(read_scriptbool(&v));
+
+        let v: Vec<u8> = vec![0x01, 0x00, 0x00, 0x80]; // With sign bit set.
+        assert!(read_scriptbool(&v));
     }
 }

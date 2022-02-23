@@ -12,11 +12,12 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! # Partially Signed Transactions
+//! Partially Signed Bitcoin Transactions.
 //!
 //! Implementation of BIP174 Partially Signed Bitcoin Transaction Format as
 //! defined at <https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki>
 //! except we define PSBTs containing non-standard SigHash types as invalid.
+//!
 
 use blockdata::script::Script;
 use blockdata::transaction::Transaction;
@@ -38,14 +39,30 @@ mod macros;
 pub mod serialize;
 
 mod map;
-pub use self::map::{Map, Global, Input, Output};
+pub use self::map::{Input, Output, TapTree, PsbtSigHashType};
+use self::map::Map;
+
+use util::bip32::{ExtendedPubKey, KeySource};
 
 /// A Partially Signed Transaction.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PartiallySignedTransaction {
-    /// The key-value pairs for all global data.
-    pub global: Global,
+    /// The unsigned transaction, scriptSigs and witnesses for each input must be
+    /// empty.
+    pub unsigned_tx: Transaction,
+    /// The version number of this PSBT. If omitted, the version number is 0.
+    pub version: u32,
+    /// A global map from extended public keys to the used key fingerprint and
+    /// derivation path as defined by BIP 32
+    pub xpub: BTreeMap<ExtendedPubKey, KeySource>,
+    /// Global proprietary key-value pairs.
+    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_as_seq_byte_values"))]
+    pub proprietary: BTreeMap<raw::ProprietaryKey, Vec<u8>>,
+    /// Unknown global key-value pairs.
+    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_as_seq_byte_values"))]
+    pub unknown: BTreeMap<raw::Key, Vec<u8>>,
+
     /// The corresponding key-value map for each input in the unsigned
     /// transaction.
     pub inputs: Vec<Input>,
@@ -55,42 +72,50 @@ pub struct PartiallySignedTransaction {
 }
 
 impl PartiallySignedTransaction {
+    /// Checks that unsigned transaction does not have scriptSig's or witness
+    /// data
+    fn unsigned_tx_checks(&self) -> Result<(), Error> {
+        for txin in &self.unsigned_tx.input {
+            if !txin.script_sig.is_empty() {
+                return Err(Error::UnsignedTxHasScriptSigs);
+            }
+
+            if !txin.witness.is_empty() {
+                return Err(Error::UnsignedTxHasScriptWitnesses);
+            }
+        }
+
+        Ok(())
+    }
+
     /// Create a PartiallySignedTransaction from an unsigned transaction, error
     /// if not unsigned
-    pub fn from_unsigned_tx(tx: Transaction) -> Result<Self, self::Error> {
-        Ok(PartiallySignedTransaction {
+    pub fn from_unsigned_tx(tx: Transaction) -> Result<Self, Error> {
+        let psbt = PartiallySignedTransaction {
             inputs: vec![Default::default(); tx.input.len()],
             outputs: vec![Default::default(); tx.output.len()],
-            global: Global::from_unsigned_tx(tx)?,
-        })
+
+            unsigned_tx: tx,
+            xpub: Default::default(),
+            version: 0,
+            proprietary: Default::default(),
+            unknown: Default::default(),
+        };
+        psbt.unsigned_tx_checks()?;
+        Ok(psbt)
     }
 
     /// Extract the Transaction from a PartiallySignedTransaction by filling in
     /// the available signature information in place.
     pub fn extract_tx(self) -> Transaction {
-        let mut tx: Transaction = self.global.unsigned_tx;
+        let mut tx: Transaction = self.unsigned_tx;
 
         for (vin, psbtin) in tx.input.iter_mut().zip(self.inputs.into_iter()) {
             vin.script_sig = psbtin.final_script_sig.unwrap_or_else(Script::new);
-            vin.witness = psbtin.final_script_witness.unwrap_or_else(Vec::new);
+            vin.witness = psbtin.final_script_witness.unwrap_or_default();
         }
 
         tx
-    }
-
-    /// Attempt to merge with another `PartiallySignedTransaction`.
-    pub fn merge(&mut self, other: Self) -> Result<(), self::Error> {
-        self.global.merge(other.global)?;
-
-        for (self_input, other_input) in self.inputs.iter_mut().zip(other.inputs.into_iter()) {
-            self_input.merge(other_input)?;
-        }
-
-        for (self_output, other_output) in self.outputs.iter_mut().zip(other.outputs.into_iter()) {
-            self_output.merge(other_output)?;
-        }
-
-        Ok(())
     }
 }
 
@@ -104,6 +129,7 @@ mod display_from_str {
 
     /// Error happening during PSBT decoding from Base64 string
     #[derive(Debug)]
+    #[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
     pub enum PsbtParseError {
         /// Error in internal PSBT data structure
         PsbtEncoding(Error),
@@ -121,14 +147,17 @@ mod display_from_str {
     }
 
     #[cfg(feature = "std")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     impl ::std::error::Error for PsbtParseError { }
 
+    #[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
     impl Display for PartiallySignedTransaction {
         fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
             write!(f, "{}", Base64Display::with_config(&encode::serialize(self), ::base64::STANDARD))
         }
     }
 
+    #[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
     impl FromStr for PartiallySignedTransaction {
         type Err = PsbtParseError;
 
@@ -139,6 +168,7 @@ mod display_from_str {
     }
 }
 #[cfg(feature = "base64")]
+#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
 pub use self::display_from_str::PsbtParseError;
 
 impl Encodable for PartiallySignedTransaction {
@@ -151,7 +181,7 @@ impl Encodable for PartiallySignedTransaction {
 
         len += 0xff_u8.consensus_encode(&mut s)?;
 
-        len += self.global.consensus_encode(&mut s)?;
+        len += self.consensus_encode_map(&mut s)?;
 
         for i in &self.inputs {
             len += i.consensus_encode(&mut s)?;
@@ -178,7 +208,8 @@ impl Decodable for PartiallySignedTransaction {
             return Err(Error::InvalidSeparator.into());
         }
 
-        let global: Global = Decodable::consensus_decode(&mut d)?;
+        let mut global = PartiallySignedTransaction::consensus_decode_global(&mut d)?;
+        global.unsigned_tx_checks()?;
 
         let inputs: Vec<Input> = {
             let inputs_len: usize = (&global.unsigned_tx.input).len();
@@ -204,51 +235,47 @@ impl Decodable for PartiallySignedTransaction {
             outputs
         };
 
-        Ok(PartiallySignedTransaction {
-            global: global,
-            inputs: inputs,
-            outputs: outputs,
-        })
+        global.inputs = inputs;
+        global.outputs = outputs;
+        Ok(global)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::PartiallySignedTransaction;
+
     use hashes::hex::FromHex;
     use hashes::{sha256, hash160, Hash, ripemd160};
     use hash_types::Txid;
 
-
-    use secp256k1::Secp256k1;
+    use secp256k1::{Secp256k1, self};
 
     use blockdata::script::Script;
     use blockdata::transaction::{Transaction, TxIn, TxOut, OutPoint};
     use network::constants::Network::Groestlcoin;
     use consensus::encode::{deserialize, serialize, serialize_hex};
     use util::bip32::{ChildNumber, ExtendedPrivKey, ExtendedPubKey, Fingerprint, KeySource};
-    use util::ecdsa::PublicKey;
-    use util::psbt::map::{Global, Output, Input};
+    use util::psbt::map::{Output, Input};
     use util::psbt::raw;
 
-    use super::PartiallySignedTransaction;
-    use util::psbt::raw::ProprietaryKey;
     use std::collections::BTreeMap;
+    use blockdata::witness::Witness;
 
     #[test]
     fn trivial_psbt() {
         let psbt = PartiallySignedTransaction {
-            global: Global {
-                unsigned_tx: Transaction {
-                    version: 2,
-                    lock_time: 0,
-                    input: vec![],
-                    output: vec![],
-                },
-                xpub: Default::default(),
-                version: 0,
-                proprietary: BTreeMap::new(),
-                unknown: BTreeMap::new(),
+            unsigned_tx: Transaction {
+                version: 2,
+                lock_time: 0,
+                input: vec![],
+                output: vec![],
             },
+            xpub: Default::default(),
+            version: 0,
+            proprietary: BTreeMap::new(),
+            unknown: BTreeMap::new(),
+
             inputs: vec![],
             outputs: vec![],
         };
@@ -259,11 +286,21 @@ mod tests {
     }
 
     #[test]
+   fn psbt_uncompressed_key() {
+
+       let psbt: PartiallySignedTransaction = hex_psbt!("70736274ff01003302000000010000000000000000000000000000000000000000000000000000000000000000ffffffff00ffffffff000000000000420204bb0d5d0cca36e7b9c80f63bc04c1240babb83bcd2803ef7ac8b6e2af594291daec281e856c98d210c5ab14dfd5828761f8ee7d5f45ca21ad3e4c4b41b747a3a047304402204f67e2afb76142d44fae58a2495d33a3419daa26cd0db8d04f3452b63289ac0f022010762a9fb67e94cc5cad9026f6dc99ff7f070f4278d30fbc7d0c869dd38c7fe70100").unwrap();
+
+       assert!(psbt.inputs[0].partial_sigs.len() == 1);
+       let pk = psbt.inputs[0].partial_sigs.iter().next().unwrap().0;
+       assert!(!pk.compressed);
+   }
+
+    #[test]
     fn serialize_then_deserialize_output() {
         let secp = &Secp256k1::new();
         let seed = Vec::from_hex("000102030405060708090a0b0c0d0e0f").unwrap();
 
-        let mut hd_keypaths: BTreeMap<PublicKey, KeySource> = Default::default();
+        let mut hd_keypaths: BTreeMap<secp256k1::PublicKey, KeySource> = Default::default();
 
         let mut sk: ExtendedPrivKey = ExtendedPrivKey::new_master(Groestlcoin, &seed).unwrap();
 
@@ -282,7 +319,7 @@ mod tests {
 
         sk = sk.derive_priv(secp, &dpath).unwrap();
 
-        let pk: ExtendedPubKey = ExtendedPubKey::from_private(&secp, &sk);
+        let pk: ExtendedPubKey = ExtendedPubKey::from_priv(&secp, &sk);
 
         hd_keypaths.insert(pk.public_key, (fprint, dpath.into()));
 
@@ -304,7 +341,7 @@ mod tests {
 
     #[test]
     fn serialize_then_deserialize_global() {
-        let expected = Global {
+        let expected = PartiallySignedTransaction {
             unsigned_tx: Transaction {
                 version: 2,
                 lock_time: 1257139,
@@ -317,7 +354,7 @@ mod tests {
                     },
                     script_sig: Script::new(),
                     sequence: 4294967294,
-                    witness: vec![],
+                    witness: Witness::default(),
                 }],
                 output: vec![
                     TxOut {
@@ -338,9 +375,16 @@ mod tests {
             version: 0,
             proprietary: Default::default(),
             unknown: Default::default(),
+            inputs: vec![
+                Input::default(),
+            ],
+            outputs: vec![
+                Output::default(),
+                Output::default()
+            ]
         };
 
-        let actual: Global = deserialize(&serialize(&expected)).unwrap();
+        let actual: PartiallySignedTransaction = deserialize(&serialize(&expected)).unwrap();
 
         assert_eq!(expected, actual);
     }
@@ -374,6 +418,7 @@ mod tests {
         //! Create a full PSBT value with various fields filled and make sure it can be JSONized.
         use hashes::sha256d;
         use util::psbt::map::Input;
+        use EcdsaSigHashType;
 
         // create some values to use in the PSBT
         let tx = Transaction {
@@ -386,7 +431,7 @@ mod tests {
                 },
                 script_sig: hex_script!("160014be18d152a9b012039daf3da7de4f53349eecb985"),
                 sequence: 4294967295,
-                witness: vec![Vec::from_hex("03d2e15674941bad4a996372cb87e1856d3652606d98562fe39c5e9e7e413f2105").unwrap()],
+                witness: Witness::from_vec(vec![Vec::from_hex("03d2e15674941bad4a996372cb87e1856d3652606d98562fe39c5e9e7e413f2105").unwrap()]),
             }],
             output: vec![
                 TxOut {
@@ -400,7 +445,7 @@ mod tests {
             vec![3, 4 ,5],
         )].into_iter().collect();
         let key_source = ("deadbeef".parse().unwrap(), "m/0'/1".parse().unwrap());
-        let keypaths: BTreeMap<PublicKey, KeySource> = vec![(
+        let keypaths: BTreeMap<secp256k1::PublicKey, KeySource> = vec![(
             "0339880dc92394b7355e3d0439fa283c31de7590812ea011c4245c0674a685e883".parse().unwrap(),
             key_source.clone(),
         )].into_iter().collect();
@@ -415,38 +460,37 @@ mod tests {
         )].into_iter().collect();
 
         let psbt = PartiallySignedTransaction {
-            global: Global {
-                version: 0,
-                xpub: {
-                    let xpub: ExtendedPubKey =
-                        "xpub661MyMwAqRbcGoRVtwfvzZsq2VBJR1LAHfQstHUoxqDorV89vRoMxUZ27kLrraAj6MPi\
-                        QfrDb27gigC1VS1dBXi5jGpxmMeBXEkKkcXUTg4".parse().unwrap();
-                    vec![(xpub, key_source.clone())].into_iter().collect()
-                },
-                unsigned_tx: {
-                    let mut unsigned = tx.clone();
-                    unsigned.input[0].script_sig = Script::new();
-                    unsigned.input[0].witness = Vec::new();
-                    unsigned
-                },
-                proprietary: proprietary.clone(),
-                unknown: unknown.clone(),
+            version: 0,
+            xpub: {
+                let xpub: ExtendedPubKey =
+                    "xpub661MyMwAqRbcGoRVtwfvzZsq2VBJR1LAHfQstHUoxqDorV89vRoMxUZ27kLrraAj6MPi\
+                    QfrDb27gigC1VS1dBXi5jGpxmMeBXEkKkcXUTg4".parse().unwrap();
+                vec![(xpub, key_source.clone())].into_iter().collect()
             },
+            unsigned_tx: {
+                let mut unsigned = tx.clone();
+                unsigned.input[0].script_sig = Script::new();
+                unsigned.input[0].witness = Witness::default();
+                unsigned
+            },
+            proprietary: proprietary.clone(),
+            unknown: unknown.clone(),
+
             inputs: vec![Input {
                 non_witness_utxo: Some(tx),
                 witness_utxo: Some(TxOut {
                     value: 190303501938,
                     script_pubkey: hex_script!("a914339725ba21efd62ac753a9bcd067d6c7a6a39d0587"),
                 }),
-                sighash_type: Some("SIGHASH_SINGLE|SIGHASH_ANYONECANPAY".parse().unwrap()),
+                sighash_type: Some("SIGHASH_SINGLE|SIGHASH_ANYONECANPAY".parse::<EcdsaSigHashType>().unwrap().into()),
                 redeem_script: Some(vec![0x51].into()),
                 witness_script: None,
                 partial_sigs: vec![(
                     "0339880dc92394b7355e3d0439fa283c31de7590812ea011c4245c0674a685e883".parse().unwrap(),
-                    vec![8, 5, 4],
+                    "304402204f67e2afb76142d44fae58a2495d33a3419daa26cd0db8d04f3452b63289ac0f022010762a9fb67e94cc5cad9026f6dc99ff7f070f4278d30fbc7d0c869dd38c7fe701".parse().unwrap(),
                 )].into_iter().collect(),
                 bip32_derivation: keypaths.clone(),
-                final_script_witness: Some(vec![vec![1, 3], vec![5]]),
+                final_script_witness: Some(Witness::from_vec(vec![vec![1, 3], vec![5]])),
                 ripemd160_preimages: vec![(ripemd160::Hash::hash(&[]), vec![1, 2])].into_iter().collect(),
                 sha256_preimages: vec![(sha256::Hash::hash(&[]), vec![1, 2])].into_iter().collect(),
                 hash160_preimages: vec![(hash160::Hash::hash(&[]), vec![1, 2])].into_iter().collect(),
@@ -456,7 +500,7 @@ mod tests {
                 ..Default::default()
             }],
             outputs: vec![Output {
-                bip32_derivation: keypaths.clone(),
+                bip32_derivation: keypaths,
                 proprietary: proprietary.clone(),
                 unknown: unknown.clone(),
                 ..Default::default()
@@ -475,17 +519,18 @@ mod tests {
         use hash_types::Txid;
 
         use blockdata::script::Script;
-        use blockdata::transaction::{SigHashType, Transaction, TxIn, TxOut, OutPoint};
+        use blockdata::transaction::{EcdsaSigHashType, Transaction, TxIn, TxOut, OutPoint};
         use consensus::encode::serialize_hex;
-        use util::psbt::map::{Map, Global, Input, Output};
+        use util::psbt::map::{Map, Input, Output};
         use util::psbt::raw;
         use util::psbt::{PartiallySignedTransaction, Error};
         use std::collections::BTreeMap;
+        use blockdata::witness::Witness;
 
         #[test]
         #[should_panic(expected = "InvalidMagic")]
         fn invalid_vector_1() {
-            hex_psbt!("0200000001268171371edff285e937adeea4b37b78000c0566cbb3ad64641713ca42171bf6000000006a473044022070b2245123e6bf474d60c5b50c043d4c691a5d2435f09a34a7662a9dc251790a022001329ca9dacf280bdf30740ec0390422422c81cb45839457aeb76fc12edd95b3012102657d118d3357b8e0f4c2cd46db7b39f6d9c38d9a70abcb9b2de5dc8dbfe4ce31feffffff02d3dff505000000001976a914d0c59903c5bac2868760e90fd521a4665aa7652088ac00e1f5050000000017a9143545e6e33b832c47050f24d3eeb93c9c03948bc787b32e1300").unwrap();
+            hex_psbt!("020000000157dffd748834b663c5c5566b6c8310cd7467e5115f6b87a5e81fe25409e08ac1000000006a473044022070b2245123e6bf474d60c5b50c043d4c691a5d2435f09a34a7662a9dc251790a022001329ca9dacf280bdf30740ec0390422422c81cb45839457aeb76fc12edd95b3012102657d118d3357b8e0f4c2cd46db7b39f6d9c38d9a70abcb9b2de5dc8dbfe4ce31feffffff02d3dff505000000001976a914d0c59903c5bac2868760e90fd521a4665aa7652088ac00e1f5050000000017a9143545e6e33b832c47050f24d3eeb93c9c03948bc787b32e1300").unwrap();
         }
 
         #[cfg(feature = "base64")]
@@ -498,7 +543,7 @@ mod tests {
         #[test]
         #[should_panic(expected = "ConsensusEncoding")]
         fn invalid_vector_2() {
-            hex_psbt!("70736274ff0100750200000001268171371edff285e937adeea4b37b78000c0566cbb3ad64641713ca42171bf60000000000feffffff02d3dff505000000001976a914d0c59903c5bac2868760e90fd521a4665aa7652088ac00e1f5050000000017a9143545e6e33b832c47050f24d3eeb93c9c03948bc787b32e1300000100fda5010100000000010289a3c71eab4d20e0371bbba4cc698fa295c9463afa2e397f8533ccb62f9567e50100000017160014be18d152a9b012039daf3da7de4f53349eecb985ffffffff86f8aa43a71dff1448893a530a7237ef6b4608bbb2dd2d0171e63aec6a4890b40100000017160014fe3e9ef1a745e974d902c4355943abcb34bd5353ffffffff0200c2eb0b000000001976a91485cff1097fd9e008bb34af709c62197b38978a4888ac72fef84e2c00000017a914339725ba21efd62ac753a9bcd067d6c7a6a39d05870247304402202712be22e0270f394f568311dc7ca9a68970b8025fdd3b240229f07f8a5f3a240220018b38d7dcd314e734c9276bd6fb40f673325bc4baa144c800d2f2f02db2765c012103d2e15674941bad4a996372cb87e1856d3652606d98562fe39c5e9e7e413f210502483045022100d12b852d85dcd961d2f5f4ab660654df6eedcc794c0c33ce5cc309ffb5fce58d022067338a8e0e1725c197fb1a88af59f51e44e4255b20167c8684031c05d1f2592a01210223b72beef0965d10be0778efecd61fcac6f79a4ea169393380734464f84f2ab30000000000")
+            hex_psbt!("70736274ff010075020000000157dffd748834b663c5c5566b6c8310cd7467e5115f6b87a5e81fe25409e08ac10000000000feffffff02d3dff505000000001976a914d0c59903c5bac2868760e90fd521a4665aa7652088ac00e1f5050000000017a9143545e6e33b832c47050f24d3eeb93c9c03948bc787b32e1300000100fda5010100000000010289a3c71eab4d20e0371bbba4cc698fa295c9463afa2e397f8533ccb62f9567e50100000017160014be18d152a9b012039daf3da7de4f53349eecb985ffffffff86f8aa43a71dff1448893a530a7237ef6b4608bbb2dd2d0171e63aec6a4890b40100000017160014fe3e9ef1a745e974d902c4355943abcb34bd5353ffffffff0200c2eb0b000000001976a91485cff1097fd9e008bb34af709c62197b38978a4888ac72fef84e2c00000017a914339725ba21efd62ac753a9bcd067d6c7a6a39d05870247304402202712be22e0270f394f568311dc7ca9a68970b8025fdd3b240229f07f8a5f3a240220018b38d7dcd314e734c9276bd6fb40f673325bc4baa144c800d2f2f02db2765c012103d2e15674941bad4a996372cb87e1856d3652606d98562fe39c5e9e7e413f210502483045022100d12b852d85dcd961d2f5f4ab660654df6eedcc794c0c33ce5cc309ffb5fce58d022067338a8e0e1725c197fb1a88af59f51e44e4255b20167c8684031c05d1f2592a01210223b72beef0965d10be0778efecd61fcac6f79a4ea169393380734464f84f2ab30000000000")
                 // This weird thing is necessary since rustc 0.29 prints out I/O error in a different format than later versions
                 .map_err(Error::from)
                 .unwrap();
@@ -548,7 +593,7 @@ mod tests {
         #[test]
         #[should_panic(expected = "DuplicateKey(Key { type_value: 0, key: [] })")]
         fn invalid_vector_5() {
-            hex_psbt!("70736274ff0100750200000001268171371edff285e937adeea4b37b78000c0566cbb3ad64641713ca42171bf60000000000feffffff02d3dff505000000001976a914d0c59903c5bac2868760e90fd521a4665aa7652088ac00e1f5050000000017a9143545e6e33b832c47050f24d3eeb93c9c03948bc787b32e1300000100fda5010100000000010289a3c71eab4d20e0371bbba4cc698fa295c9463afa2e397f8533ccb62f9567e50100000017160014be18d152a9b012039daf3da7de4f53349eecb985ffffffff86f8aa43a71dff1448893a530a7237ef6b4608bbb2dd2d0171e63aec6a4890b40100000017160014fe3e9ef1a745e974d902c4355943abcb34bd5353ffffffff0200c2eb0b000000001976a91485cff1097fd9e008bb34af709c62197b38978a4888ac72fef84e2c00000017a914339725ba21efd62ac753a9bcd067d6c7a6a39d05870247304402202712be22e0270f394f568311dc7ca9a68970b8025fdd3b240229f07f8a5f3a240220018b38d7dcd314e734c9276bd6fb40f673325bc4baa144c800d2f2f02db2765c012103d2e15674941bad4a996372cb87e1856d3652606d98562fe39c5e9e7e413f210502483045022100d12b852d85dcd961d2f5f4ab660654df6eedcc794c0c33ce5cc309ffb5fce58d022067338a8e0e1725c197fb1a88af59f51e44e4255b20167c8684031c05d1f2592a01210223b72beef0965d10be0778efecd61fcac6f79a4ea169393380734464f84f2ab30000000001003f0200000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000ffffffff010000000000000000036a010000000000000000").unwrap();
+            hex_psbt!("70736274ff010075020000000157dffd748834b663c5c5566b6c8310cd7467e5115f6b87a5e81fe25409e08ac10000000000feffffff02d3dff505000000001976a914d0c59903c5bac2868760e90fd521a4665aa7652088ac00e1f5050000000017a9143545e6e33b832c47050f24d3eeb93c9c03948bc787b32e1300000100fda5010100000000010289a3c71eab4d20e0371bbba4cc698fa295c9463afa2e397f8533ccb62f9567e50100000017160014be18d152a9b012039daf3da7de4f53349eecb985ffffffff86f8aa43a71dff1448893a530a7237ef6b4608bbb2dd2d0171e63aec6a4890b40100000017160014fe3e9ef1a745e974d902c4355943abcb34bd5353ffffffff0200c2eb0b000000001976a91485cff1097fd9e008bb34af709c62197b38978a4888ac72fef84e2c00000017a914339725ba21efd62ac753a9bcd067d6c7a6a39d05870247304402202712be22e0270f394f568311dc7ca9a68970b8025fdd3b240229f07f8a5f3a240220018b38d7dcd314e734c9276bd6fb40f673325bc4baa144c800d2f2f02db2765c012103d2e15674941bad4a996372cb87e1856d3652606d98562fe39c5e9e7e413f210502483045022100d12b852d85dcd961d2f5f4ab660654df6eedcc794c0c33ce5cc309ffb5fce58d022067338a8e0e1725c197fb1a88af59f51e44e4255b20167c8684031c05d1f2592a01210223b72beef0965d10be0778efecd61fcac6f79a4ea169393380734464f84f2ab30000000001003f0200000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000ffffffff010000000000000000036a010000000000000000").unwrap();
         }
 
         #[cfg(feature = "base64")]
@@ -561,37 +606,36 @@ mod tests {
         #[test]
         fn valid_vector_1() {
             let unserialized = PartiallySignedTransaction {
-                global: Global {
-                    unsigned_tx: Transaction {
-                        version: 2,
-                        lock_time: 1257139,
-                        input: vec![TxIn {
-                            previous_output: OutPoint {
-                                txid: Txid::from_hex(
-                                    "f61b1742ca13176464adb3cb66050c00787bb3a4eead37e985f2df1e37718126",
-                                ).unwrap(),
-                                vout: 0,
-                            },
-                            script_sig: Script::new(),
-                            sequence: 4294967294,
-                            witness: vec![],
-                        }],
-                        output: vec![
-                            TxOut {
-                                value: 99999699,
-                                script_pubkey: hex_script!("76a914d0c59903c5bac2868760e90fd521a4665aa7652088ac"),
-                            },
-                            TxOut {
-                                value: 100000000,
-                                script_pubkey: hex_script!("a9143545e6e33b832c47050f24d3eeb93c9c03948bc787"),
-                            },
-                        ],
-                    },
-                    xpub: Default::default(),
-                    version: 0,
-                    proprietary: BTreeMap::new(),
-                    unknown: BTreeMap::new(),
+                unsigned_tx: Transaction {
+                    version: 2,
+                    lock_time: 1257139,
+                    input: vec![TxIn {
+                        previous_output: OutPoint {
+                            txid: Txid::from_hex(
+                                "f61b1742ca13176464adb3cb66050c00787bb3a4eead37e985f2df1e37718126",
+                            ).unwrap(),
+                            vout: 0,
+                        },
+                        script_sig: Script::new(),
+                        sequence: 4294967294,
+                        witness: Witness::default(),
+                    }],
+                    output: vec![
+                        TxOut {
+                            value: 99999699,
+                            script_pubkey: hex_script!("76a914d0c59903c5bac2868760e90fd521a4665aa7652088ac"),
+                        },
+                        TxOut {
+                            value: 100000000,
+                            script_pubkey: hex_script!("a9143545e6e33b832c47050f24d3eeb93c9c03948bc787"),
+                        },
+                    ],
                 },
+                xpub: Default::default(),
+                version: 0,
+                proprietary: BTreeMap::new(),
+                unknown: BTreeMap::new(),
+
                 inputs: vec![Input {
                     non_witness_utxo: Some(Transaction {
                         version: 1,
@@ -605,10 +649,10 @@ mod tests {
                             },
                             script_sig: hex_script!("160014be18d152a9b012039daf3da7de4f53349eecb985"),
                             sequence: 4294967295,
-                            witness: vec![
+                            witness: Witness::from_vec(vec![
                                 Vec::from_hex("304402202712be22e0270f394f568311dc7ca9a68970b8025fdd3b240229f07f8a5f3a240220018b38d7dcd314e734c9276bd6fb40f673325bc4baa144c800d2f2f02db2765c01").unwrap(),
                                 Vec::from_hex("03d2e15674941bad4a996372cb87e1856d3652606d98562fe39c5e9e7e413f2105").unwrap(),
-                            ],
+                            ]),
                         },
                         TxIn {
                             previous_output: OutPoint {
@@ -619,10 +663,10 @@ mod tests {
                             },
                             script_sig: hex_script!("160014fe3e9ef1a745e974d902c4355943abcb34bd5353"),
                             sequence: 4294967295,
-                            witness: vec![
+                            witness: Witness::from_vec(vec![
                                 Vec::from_hex("3045022100d12b852d85dcd961d2f5f4ab660654df6eedcc794c0c33ce5cc309ffb5fce58d022067338a8e0e1725c197fb1a88af59f51e44e4255b20167c8684031c05d1f2592a01").unwrap(),
                                 Vec::from_hex("0223b72beef0965d10be0778efecd61fcac6f79a4ea169393380734464f84f2ab3").unwrap(),
-                            ],
+                            ]),
                         }],
                         output: vec![
                             TxOut {
@@ -691,7 +735,7 @@ mod tests {
             assert_eq!(psbt.inputs.len(), 1);
             assert_eq!(psbt.outputs.len(), 2);
 
-            let tx_input = &psbt.global.unsigned_tx.input[0];
+            let tx_input = &psbt.unsigned_tx.input[0];
             let psbt_non_witness_utxo = (&psbt.inputs[0].non_witness_utxo).as_ref().unwrap();
 
             assert_eq!(tx_input.previous_output.txid, psbt_non_witness_utxo.txid());
@@ -701,14 +745,14 @@ mod tests {
                     .is_p2pkh()
             );
             assert_eq!(
-                (&psbt.inputs[0].sighash_type).as_ref().unwrap(),
-                &SigHashType::All
+                (&psbt.inputs[0].sighash_type).as_ref().unwrap().ecdsa_hash_ty().unwrap(),
+                EcdsaSigHashType::All
             );
         }
 
         #[test]
         fn valid_vector_4() {
-            let psbt: PartiallySignedTransaction = hex_psbt!("70736274ff0100a00200000002ab0949a08c5af7c49b8212f417e2f15ab3f5c33dcf153821a8139f877a5b7be40000000000feffffffab0949a08c5af7c49b8212f417e2f15ab3f5c33dcf153821a8139f877a5b7be40100000000feffffff02603bea0b000000001976a914768a40bbd740cbe81d988e71de2a4d5c71396b1d88ac8e240000000000001976a9146f4620b553fa095e721b9ee0efe9fa039cca459788ac00000000000100df0200000001268171371edff285e937adeea4b37b78000c0566cbb3ad64641713ca42171bf6000000006a473044022070b2245123e6bf474d60c5b50c043d4c691a5d2435f09a34a7662a9dc251790a022001329ca9dacf280bdf30740ec0390422422c81cb45839457aeb76fc12edd95b3012102657d118d3357b8e0f4c2cd46db7b39f6d9c38d9a70abcb9b2de5dc8dbfe4ce31feffffff02d3dff505000000001976a914d0c59903c5bac2868760e90fd521a4665aa7652088ac00e1f5050000000017a9143545e6e33b832c47050f24d3eeb93c9c03948bc787b32e13000001012000e1f5050000000017a9143545e6e33b832c47050f24d3eeb93c9c03948bc787010416001485d13537f2e265405a34dbafa9e3dda01fb8230800220202ead596687ca806043edc3de116cdf29d5e9257c196cd055cf698c8d02bf24e9910b4a6ba670000008000000080020000800022020394f62be9df19952c5587768aeb7698061ad2c4a25c894f47d8c162b4d7213d0510b4a6ba6700000080010000800200008000").unwrap();
+            let psbt: PartiallySignedTransaction = hex_psbt!("70736274ff0100a00200000002ab0949a08c5af7c49b8212f417e2f15ab3f5c33dcf153821a8139f877a5b7be40000000000feffffffab0949a08c5af7c49b8212f417e2f15ab3f5c33dcf153821a8139f877a5b7be40100000000feffffff02603bea0b000000001976a914768a40bbd740cbe81d988e71de2a4d5c71396b1d88ac8e240000000000001976a9146f4620b553fa095e721b9ee0efe9fa039cca459788ac00000000000100df020000000157dffd748834b663c5c5566b6c8310cd7467e5115f6b87a5e81fe25409e08ac1000000006a473044022070b2245123e6bf474d60c5b50c043d4c691a5d2435f09a34a7662a9dc251790a022001329ca9dacf280bdf30740ec0390422422c81cb45839457aeb76fc12edd95b3012102657d118d3357b8e0f4c2cd46db7b39f6d9c38d9a70abcb9b2de5dc8dbfe4ce31feffffff02d3dff505000000001976a914d0c59903c5bac2868760e90fd521a4665aa7652088ac00e1f5050000000017a9143545e6e33b832c47050f24d3eeb93c9c03948bc787b32e13000001012000e1f5050000000017a9143545e6e33b832c47050f24d3eeb93c9c03948bc787010416001485d13537f2e265405a34dbafa9e3dda01fb8230800220202ead596687ca806043edc3de116cdf29d5e9257c196cd055cf698c8d02bf24e9910b4a6ba670000008000000080020000800022020394f62be9df19952c5587768aeb7698061ad2c4a25c894f47d8c162b4d7213d0510b4a6ba6700000080010000800200008000").unwrap();
 
             assert_eq!(psbt.inputs.len(), 2);
             assert_eq!(psbt.outputs.len(), 2);
@@ -759,7 +803,7 @@ mod tests {
             assert_eq!(psbt.inputs.len(), 1);
             assert_eq!(psbt.outputs.len(), 1);
 
-            let tx = &psbt.global.unsigned_tx;
+            let tx = &psbt.unsigned_tx;
             assert_eq!(
                 tx.txid(),
                 Txid::from_hex(
@@ -780,6 +824,87 @@ mod tests {
         }
     }
 
+    mod bip_371_vectors {
+        use super::*;
+        use super::serialize;
+
+
+        #[test]
+        fn invalid_vectors() {
+            let err = hex_psbt!("70736274ff010071020000000127744ababf3027fe0d6cf23a96eee2efb188ef52301954585883e69b6624b2420000000000ffffffff02787c01000000000016001483a7e34bd99ff03a4962ef8a1a101bb295461ece606b042a010000001600147ac369df1b20e033d6116623957b0ac49f3c52e8000000000001012b00f2052a010000002251205a2c2cf5b52cf31f83ad2e8da63ff03183ecd8f609c7510ae8a48e03910a075701172102fe349064c98d6e2a853fa3c9b12bd8b304a19c195c60efa7ee2393046d3fa232000000").unwrap_err();
+            assert_eq!(err.to_string(), "parse failed: Invalid xonly public key");
+            let err = hex_psbt!("70736274ff010071020000000127744ababf3027fe0d6cf23a96eee2efb188ef52301954585883e69b6624b2420000000000ffffffff02787c01000000000016001483a7e34bd99ff03a4962ef8a1a101bb295461ece606b042a010000001600147ac369df1b20e033d6116623957b0ac49f3c52e8000000000001012b00f2052a010000002251205a2c2cf5b52cf31f83ad2e8da63ff03183ecd8f609c7510ae8a48e03910a0757011342173bb3d36c074afb716fec6307a069a2e450b995f3c82785945ab8df0e24260dcd703b0cbf34de399184a9481ac2b3586db6601f026a77f7e4938481bc34751701aa000000").unwrap_err();
+            assert_eq!(err.to_string(), "parse failed: Invalid Schnorr signature length");
+            let err = hex_psbt!("70736274ff010071020000000127744ababf3027fe0d6cf23a96eee2efb188ef52301954585883e69b6624b2420000000000ffffffff02787c01000000000016001483a7e34bd99ff03a4962ef8a1a101bb295461ece606b042a010000001600147ac369df1b20e033d6116623957b0ac49f3c52e8000000000001012b00f2052a010000002251205a2c2cf5b52cf31f83ad2e8da63ff03183ecd8f609c7510ae8a48e03910a0757221602fe349064c98d6e2a853fa3c9b12bd8b304a19c195c60efa7ee2393046d3fa2321900772b2da75600008001000080000000800100000000000000000000").unwrap_err();
+            assert_eq!(err.to_string(), "parse failed: Invalid xonly public key");
+            let err = hex_psbt!("70736274ff01007d020000000127744ababf3027fe0d6cf23a96eee2efb188ef52301954585883e69b6624b2420000000000ffffffff02887b0100000000001600142382871c7e8421a00093f754d91281e675874b9f606b042a010000002251205a2c2cf5b52cf31f83ad2e8da63ff03183ecd8f609c7510ae8a48e03910a0757000000000001012b00f2052a010000002251205a2c2cf5b52cf31f83ad2e8da63ff03183ecd8f609c7510ae8a48e03910a0757000001052102fe349064c98d6e2a853fa3c9b12bd8b304a19c195c60efa7ee2393046d3fa23200").unwrap_err();
+            assert_eq!(err.to_string(), "parse failed: Invalid xonly public key");
+            let err = hex_psbt!("70736274ff01007d020000000127744ababf3027fe0d6cf23a96eee2efb188ef52301954585883e69b6624b2420000000000ffffffff02887b0100000000001600142382871c7e8421a00093f754d91281e675874b9f606b042a010000002251205a2c2cf5b52cf31f83ad2e8da63ff03183ecd8f609c7510ae8a48e03910a0757000000000001012b00f2052a010000002251205a2c2cf5b52cf31f83ad2e8da63ff03183ecd8f609c7510ae8a48e03910a07570000220702fe349064c98d6e2a853fa3c9b12bd8b304a19c195c60efa7ee2393046d3fa2321900772b2da7560000800100008000000080010000000000000000").unwrap_err();
+            assert_eq!(err.to_string(), "parse failed: Invalid xonly public key");
+            let err = hex_psbt!("70736274ff01005e02000000019bd48765230bf9a72e662001f972556e54f0c6f97feb56bcb5600d817f6995260100000000ffffffff0148e6052a01000000225120030da4fce4f7db28c2cb2951631e003713856597fe963882cb500e68112cca63000000000001012b00f2052a01000000225120c2247efbfd92ac47f6f40b8d42d169175a19fa9fa10e4a25d7f35eb4dd85b6924214022cb13ac68248de806aa6a3659cf3c03eb6821d09c8114a4e868febde865bb6d2cd970e15f53fc0c82f950fd560ffa919b76172be017368a89913af074f400b094089756aa3739ccc689ec0fcf3a360be32cc0b59b16e93a1e8bb4605726b2ca7a3ff706c4176649632b2cc68e1f912b8a578e3719ce7710885c7a966f49bcd43cb0000").unwrap_err();
+            assert_eq!(err.to_string(), "PSBT error: Hash Parse Error: bad slice length 33 (expected 32)");
+            let err = hex_psbt!("70736274ff01005e02000000019bd48765230bf9a72e662001f972556e54f0c6f97feb56bcb5600d817f6995260100000000ffffffff0148e6052a01000000225120030da4fce4f7db28c2cb2951631e003713856597fe963882cb500e68112cca63000000000001012b00f2052a01000000225120c2247efbfd92ac47f6f40b8d42d169175a19fa9fa10e4a25d7f35eb4dd85b69241142cb13ac68248de806aa6a3659cf3c03eb6821d09c8114a4e868febde865bb6d2cd970e15f53fc0c82f950fd560ffa919b76172be017368a89913af074f400b094289756aa3739ccc689ec0fcf3a360be32cc0b59b16e93a1e8bb4605726b2ca7a3ff706c4176649632b2cc68e1f912b8a578e3719ce7710885c7a966f49bcd43cb01010000").unwrap_err();
+            assert_eq!(err.to_string(), "parse failed: Invalid Schnorr signature length");
+            let err = hex_psbt!("70736274ff01005e02000000019bd48765230bf9a72e662001f972556e54f0c6f97feb56bcb5600d817f6995260100000000ffffffff0148e6052a01000000225120030da4fce4f7db28c2cb2951631e003713856597fe963882cb500e68112cca63000000000001012b00f2052a01000000225120c2247efbfd92ac47f6f40b8d42d169175a19fa9fa10e4a25d7f35eb4dd85b69241142cb13ac68248de806aa6a3659cf3c03eb6821d09c8114a4e868febde865bb6d2cd970e15f53fc0c82f950fd560ffa919b76172be017368a89913af074f400b093989756aa3739ccc689ec0fcf3a360be32cc0b59b16e93a1e8bb4605726b2ca7a3ff706c4176649632b2cc68e1f912b8a578e3719ce7710885c7a966f49bcd43cb0000").unwrap_err();
+            assert_eq!(err.to_string(), "parse failed: Invalid Schnorr signature length");
+            let err = hex_psbt!("70736274ff01005e02000000019bd48765230bf9a72e662001f972556e54f0c6f97feb56bcb5600d817f6995260100000000ffffffff0148e6052a01000000225120030da4fce4f7db28c2cb2951631e003713856597fe963882cb500e68112cca63000000000001012b00f2052a01000000225120c2247efbfd92ac47f6f40b8d42d169175a19fa9fa10e4a25d7f35eb4dd85b6926315c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac06f7d62059e9497a1a4a267569d9876da60101aff38e3529b9b939ce7f91ae970115f2e490af7cc45c4f78511f36057ce5c5a5c56325a29fb44dfc203f356e1f80023202cb13ac68248de806aa6a3659cf3c03eb6821d09c8114a4e868febde865bb6d2acc00000").unwrap_err();
+            assert_eq!(err.to_string(), "parse failed: Invalid control block");
+            let err = hex_psbt!("70736274ff01005e02000000019bd48765230bf9a72e662001f972556e54f0c6f97feb56bcb5600d817f6995260100000000ffffffff0148e6052a01000000225120030da4fce4f7db28c2cb2951631e003713856597fe963882cb500e68112cca63000000000001012b00f2052a01000000225120c2247efbfd92ac47f6f40b8d42d169175a19fa9fa10e4a25d7f35eb4dd85b6926115c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac06f7d62059e9497a1a4a267569d9876da60101aff38e3529b9b939ce7f91ae970115f2e490af7cc45c4f78511f36057ce5c5a5c56325a29fb44dfc203f356e123202cb13ac68248de806aa6a3659cf3c03eb6821d09c8114a4e868febde865bb6d2acc00000").unwrap_err();
+            assert_eq!(err.to_string(), "parse failed: Invalid control block");
+        }
+
+        fn rtt_psbt(psbt: PartiallySignedTransaction) {
+            let enc = serialize(&psbt);
+            let psbt2 = deserialize::<PartiallySignedTransaction>(&enc).unwrap();
+            assert_eq!(psbt, psbt2);
+        }
+
+        #[test]
+        fn valid_psbt_vectors() {
+            let psbt = hex_psbt!("70736274ff010052020000000127744ababf3027fe0d6cf23a96eee2efb188ef52301954585883e69b6624b2420000000000ffffffff0148e6052a01000000160014768e1eeb4cf420866033f80aceff0f9720744969000000000001012b00f2052a010000002251205a2c2cf5b52cf31f83ad2e8da63ff03183ecd8f609c7510ae8a48e03910a07572116fe349064c98d6e2a853fa3c9b12bd8b304a19c195c60efa7ee2393046d3fa2321900772b2da75600008001000080000000800100000000000000011720fe349064c98d6e2a853fa3c9b12bd8b304a19c195c60efa7ee2393046d3fa232002202036b772a6db74d8753c98a827958de6c78ab3312109f37d3e0304484242ece73d818772b2da7540000800100008000000080000000000000000000").unwrap();
+            let internal_key = psbt.inputs[0].tap_internal_key.unwrap();
+            assert!(psbt.inputs[0].tap_key_origins.contains_key(&internal_key));
+            rtt_psbt(psbt);
+
+            // vector 2
+            let psbt = hex_psbt!("70736274ff010052020000000127744ababf3027fe0d6cf23a96eee2efb188ef52301954585883e69b6624b2420000000000ffffffff0148e6052a01000000160014768e1eeb4cf420866033f80aceff0f9720744969000000000001012b00f2052a010000002251205a2c2cf5b52cf31f83ad2e8da63ff03183ecd8f609c7510ae8a48e03910a0757011340bb53ec917bad9d906af1ba87181c48b86ace5aae2b53605a725ca74625631476fc6f5baedaf4f2ee0f477f36f58f3970d5b8273b7e497b97af2e3f125c97af342116fe349064c98d6e2a853fa3c9b12bd8b304a19c195c60efa7ee2393046d3fa2321900772b2da75600008001000080000000800100000000000000011720fe349064c98d6e2a853fa3c9b12bd8b304a19c195c60efa7ee2393046d3fa232002202036b772a6db74d8753c98a827958de6c78ab3312109f37d3e0304484242ece73d818772b2da7540000800100008000000080000000000000000000").unwrap();
+            let internal_key = psbt.inputs[0].tap_internal_key.unwrap();
+            assert!(psbt.inputs[0].tap_key_origins.contains_key(&internal_key));
+            assert!(psbt.inputs[0].tap_key_sig.is_some());
+            rtt_psbt(psbt);
+
+            // vector 3
+            let psbt = hex_psbt!("70736274ff01005e020000000127744ababf3027fe0d6cf23a96eee2efb188ef52301954585883e69b6624b2420000000000ffffffff0148e6052a0100000022512083698e458c6664e1595d75da2597de1e22ee97d798e706c4c0a4b5a9823cd743000000000001012b00f2052a010000002251205a2c2cf5b52cf31f83ad2e8da63ff03183ecd8f609c7510ae8a48e03910a07572116fe349064c98d6e2a853fa3c9b12bd8b304a19c195c60efa7ee2393046d3fa2321900772b2da75600008001000080000000800100000000000000011720fe349064c98d6e2a853fa3c9b12bd8b304a19c195c60efa7ee2393046d3fa232000105201124da7aec92ccd06c954562647f437b138b95721a84be2bf2276bbddab3e67121071124da7aec92ccd06c954562647f437b138b95721a84be2bf2276bbddab3e6711900772b2da7560000800100008000000080000000000500000000").unwrap();
+            let internal_key = psbt.outputs[0].tap_internal_key.unwrap();
+            assert!(psbt.outputs[0].tap_key_origins.contains_key(&internal_key));
+            rtt_psbt(psbt);
+
+            // vector 4
+            let psbt = hex_psbt!("70736274ff01005e02000000019bd48765230bf9a72e662001f972556e54f0c6f97feb56bcb5600d817f6995260100000000ffffffff0148e6052a0100000022512083698e458c6664e1595d75da2597de1e22ee97d798e706c4c0a4b5a9823cd743000000000001012b00f2052a01000000225120c2247efbfd92ac47f6f40b8d42d169175a19fa9fa10e4a25d7f35eb4dd85b6926215c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac06f7d62059e9497a1a4a267569d9876da60101aff38e3529b9b939ce7f91ae970115f2e490af7cc45c4f78511f36057ce5c5a5c56325a29fb44dfc203f356e1f823202cb13ac68248de806aa6a3659cf3c03eb6821d09c8114a4e868febde865bb6d2acc04215c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac097c6e6fea5ff714ff5724499990810e406e98aa10f5bf7e5f6784bc1d0a9a6ce23204320b0bf16f011b53ea7be615924aa7f27e5d29ad20ea1155d848676c3bad1b2acc06215c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0cd970e15f53fc0c82f950fd560ffa919b76172be017368a89913af074f400b09115f2e490af7cc45c4f78511f36057ce5c5a5c56325a29fb44dfc203f356e1f82320fa0f7a3cef3b1d0c0a6ce7d26e17ada0b2e5c92d19efad48b41859cb8a451ca9acc021162cb13ac68248de806aa6a3659cf3c03eb6821d09c8114a4e868febde865bb6d23901cd970e15f53fc0c82f950fd560ffa919b76172be017368a89913af074f400b09772b2da7560000800100008002000080000000000000000021164320b0bf16f011b53ea7be615924aa7f27e5d29ad20ea1155d848676c3bad1b23901115f2e490af7cc45c4f78511f36057ce5c5a5c56325a29fb44dfc203f356e1f8772b2da75600008001000080010000800000000000000000211650929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac005007c461e5d2116fa0f7a3cef3b1d0c0a6ce7d26e17ada0b2e5c92d19efad48b41859cb8a451ca939016f7d62059e9497a1a4a267569d9876da60101aff38e3529b9b939ce7f91ae970772b2da7560000800100008003000080000000000000000001172050929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0011820f0362e2f75a6f420a5bde3eb221d96ae6720cf25f81890c95b1d775acb515e65000105201124da7aec92ccd06c954562647f437b138b95721a84be2bf2276bbddab3e67121071124da7aec92ccd06c954562647f437b138b95721a84be2bf2276bbddab3e6711900772b2da7560000800100008000000080000000000500000000").unwrap();
+            assert!(psbt.inputs[0].tap_internal_key.is_some());
+            assert!(psbt.inputs[0].tap_merkle_root.is_some());
+            assert!(!psbt.inputs[0].tap_key_origins.is_empty());
+            assert!(!psbt.inputs[0].tap_scripts.is_empty());
+            rtt_psbt(psbt);
+
+            // vector 5
+            let psbt = hex_psbt!("70736274ff01005e020000000127744ababf3027fe0d6cf23a96eee2efb188ef52301954585883e69b6624b2420000000000ffffffff0148e6052a010000002251200a8cbdc86de1ce1c0f9caeb22d6df7ced3683fe423e05d1e402a879341d6f6f5000000000001012b00f2052a010000002251205a2c2cf5b52cf31f83ad2e8da63ff03183ecd8f609c7510ae8a48e03910a07572116fe349064c98d6e2a853fa3c9b12bd8b304a19c195c60efa7ee2393046d3fa2321900772b2da75600008001000080000000800100000000000000011720fe349064c98d6e2a853fa3c9b12bd8b304a19c195c60efa7ee2393046d3fa2320001052050929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac001066f02c02220736e572900fe1252589a2143c8f3c79f71a0412d2353af755e9701c782694a02ac02c02220631c5f3b5832b8fbdebfb19704ceeb323c21f40f7a24f43d68ef0cc26b125969ac01c0222044faa49a0338de488c8dfffecdfb6f329f380bd566ef20c8df6d813eab1c4273ac210744faa49a0338de488c8dfffecdfb6f329f380bd566ef20c8df6d813eab1c42733901f06b798b92a10ed9a9d0bbfd3af173a53b1617da3a4159ca008216cd856b2e0e772b2da75600008001000080010000800000000003000000210750929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac005007c461e5d2107631c5f3b5832b8fbdebfb19704ceeb323c21f40f7a24f43d68ef0cc26b125969390118ace409889785e0ea70ceebb8e1ca892a7a78eaede0f2e296cf435961a8f4ca772b2da756000080010000800200008000000000030000002107736e572900fe1252589a2143c8f3c79f71a0412d2353af755e9701c782694a02390129a5b4915090162d759afd3fe0f93fa3326056d0b4088cb933cae7826cb8d82c772b2da7560000800100008003000080000000000300000000").unwrap();
+            assert!(psbt.outputs[0].tap_internal_key.is_some());
+            assert!(!psbt.outputs[0].tap_key_origins.is_empty());
+            assert!(psbt.outputs[0].tap_tree.is_some());
+            rtt_psbt(psbt);
+
+            // vector 6
+            let psbt = hex_psbt!("70736274ff01005e02000000019bd48765230bf9a72e662001f972556e54f0c6f97feb56bcb5600d817f6995260100000000ffffffff0148e6052a0100000022512083698e458c6664e1595d75da2597de1e22ee97d798e706c4c0a4b5a9823cd743000000000001012b00f2052a01000000225120c2247efbfd92ac47f6f40b8d42d169175a19fa9fa10e4a25d7f35eb4dd85b69241142cb13ac68248de806aa6a3659cf3c03eb6821d09c8114a4e868febde865bb6d2cd970e15f53fc0c82f950fd560ffa919b76172be017368a89913af074f400b0940bf818d9757d6ffeb538ba057fb4c1fc4e0f5ef186e765beb564791e02af5fd3d5e2551d4e34e33d86f276b82c99c79aed3f0395a081efcd2cc2c65dd7e693d7941144320b0bf16f011b53ea7be615924aa7f27e5d29ad20ea1155d848676c3bad1b2115f2e490af7cc45c4f78511f36057ce5c5a5c56325a29fb44dfc203f356e1f840e1f1ab6fabfa26b236f21833719dc1d428ab768d80f91f9988d8abef47bfb863bb1f2a529f768c15f00ce34ec283cdc07e88f8428be28f6ef64043c32911811a4114fa0f7a3cef3b1d0c0a6ce7d26e17ada0b2e5c92d19efad48b41859cb8a451ca96f7d62059e9497a1a4a267569d9876da60101aff38e3529b9b939ce7f91ae97040ec1f0379206461c83342285423326708ab031f0da4a253ee45aafa5b8c92034d8b605490f8cd13e00f989989b97e215faa36f12dee3693d2daccf3781c1757f66215c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac06f7d62059e9497a1a4a267569d9876da60101aff38e3529b9b939ce7f91ae970115f2e490af7cc45c4f78511f36057ce5c5a5c56325a29fb44dfc203f356e1f823202cb13ac68248de806aa6a3659cf3c03eb6821d09c8114a4e868febde865bb6d2acc04215c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac097c6e6fea5ff714ff5724499990810e406e98aa10f5bf7e5f6784bc1d0a9a6ce23204320b0bf16f011b53ea7be615924aa7f27e5d29ad20ea1155d848676c3bad1b2acc06215c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0cd970e15f53fc0c82f950fd560ffa919b76172be017368a89913af074f400b09115f2e490af7cc45c4f78511f36057ce5c5a5c56325a29fb44dfc203f356e1f82320fa0f7a3cef3b1d0c0a6ce7d26e17ada0b2e5c92d19efad48b41859cb8a451ca9acc021162cb13ac68248de806aa6a3659cf3c03eb6821d09c8114a4e868febde865bb6d23901cd970e15f53fc0c82f950fd560ffa919b76172be017368a89913af074f400b09772b2da7560000800100008002000080000000000000000021164320b0bf16f011b53ea7be615924aa7f27e5d29ad20ea1155d848676c3bad1b23901115f2e490af7cc45c4f78511f36057ce5c5a5c56325a29fb44dfc203f356e1f8772b2da75600008001000080010000800000000000000000211650929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac005007c461e5d2116fa0f7a3cef3b1d0c0a6ce7d26e17ada0b2e5c92d19efad48b41859cb8a451ca939016f7d62059e9497a1a4a267569d9876da60101aff38e3529b9b939ce7f91ae970772b2da7560000800100008003000080000000000000000001172050929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0011820f0362e2f75a6f420a5bde3eb221d96ae6720cf25f81890c95b1d775acb515e65000105201124da7aec92ccd06c954562647f437b138b95721a84be2bf2276bbddab3e67121071124da7aec92ccd06c954562647f437b138b95721a84be2bf2276bbddab3e6711900772b2da7560000800100008000000080000000000500000000").unwrap();
+            assert!(psbt.inputs[0].tap_internal_key.is_some());
+            assert!(psbt.inputs[0].tap_merkle_root.is_some());
+            assert!(!psbt.inputs[0].tap_scripts.is_empty());
+            assert!(!psbt.inputs[0].tap_script_sigs.is_empty());
+            assert!(!psbt.inputs[0].tap_key_origins.is_empty());
+            rtt_psbt(psbt);
+        }
+    }
+
     #[test]
     fn serialize_and_deserialize_preimage_psbt(){
         // create a sha preimage map
@@ -794,37 +919,36 @@ mod tests {
 
         // same vector as valid_vector_1 from BIPs with added
         let mut unserialized = PartiallySignedTransaction {
-            global: Global {
-                unsigned_tx: Transaction {
-                    version: 2,
-                    lock_time: 1257139,
-                    input: vec![TxIn {
-                        previous_output: OutPoint {
-                            txid: Txid::from_hex(
-                                "c18ae00954e21fe8a5876b5f11e56774cd10836c6b56c5c563b6348874fddf57",
-                            ).unwrap(),
-                            vout: 0,
-                        },
-                        script_sig: Script::new(),
-                        sequence: 4294967294,
-                        witness: vec![],
-                    }],
-                    output: vec![
-                        TxOut {
-                            value: 99999699,
-                            script_pubkey: hex_script!("76a914d0c59903c5bac2868760e90fd521a4665aa7652088ac"),
-                        },
-                        TxOut {
-                            value: 100000000,
-                            script_pubkey: hex_script!("a9143545e6e33b832c47050f24d3eeb93c9c03948bc787"),
-                        },
-                    ],
-                },
-                version: 0,
-                xpub: Default::default(),
-                proprietary: Default::default(),
-                unknown: BTreeMap::new(),
+            unsigned_tx: Transaction {
+                version: 2,
+                lock_time: 1257139,
+                input: vec![TxIn {
+                    previous_output: OutPoint {
+                        txid: Txid::from_hex(
+                            "c18ae00954e21fe8a5876b5f11e56774cd10836c6b56c5c563b6348874fddf57",
+                        ).unwrap(),
+                        vout: 0,
+                    },
+                    script_sig: Script::new(),
+                    sequence: 4294967294,
+                    witness: Witness::default(),
+                }],
+                output: vec![
+                    TxOut {
+                        value: 99999699,
+                        script_pubkey: hex_script!("76a914d0c59903c5bac2868760e90fd521a4665aa7652088ac"),
+                    },
+                    TxOut {
+                        value: 100000000,
+                        script_pubkey: hex_script!("a9143545e6e33b832c47050f24d3eeb93c9c03948bc787"),
+                    },
+                ],
             },
+            version: 0,
+            xpub: Default::default(),
+            proprietary: Default::default(),
+            unknown: BTreeMap::new(),
+
             inputs: vec![Input {
                 non_witness_utxo: Some(Transaction {
                     version: 1,
@@ -838,10 +962,10 @@ mod tests {
                         },
                         script_sig: hex_script!("160014be18d152a9b012039daf3da7de4f53349eecb985"),
                         sequence: 4294967295,
-                        witness: vec![
+                        witness: Witness::from_vec(vec![
                             Vec::from_hex("304402202712be22e0270f394f568311dc7ca9a68970b8025fdd3b240229f07f8a5f3a240220018b38d7dcd314e734c9276bd6fb40f673325bc4baa144c800d2f2f02db2765c01").unwrap(),
                             Vec::from_hex("03d2e15674941bad4a996372cb87e1856d3652606d98562fe39c5e9e7e413f2105").unwrap(),
-                        ],
+                        ]),
                     },
                     TxIn {
                         previous_output: OutPoint {
@@ -852,10 +976,10 @@ mod tests {
                         },
                         script_sig: hex_script!("160014fe3e9ef1a745e974d902c4355943abcb34bd5353"),
                         sequence: 4294967295,
-                        witness: vec![
+                        witness: Witness::from_vec(vec![
                             Vec::from_hex("3045022100d12b852d85dcd961d2f5f4ab660654df6eedcc794c0c33ce5cc309ffb5fce58d022067338a8e0e1725c197fb1a88af59f51e44e4255b20167c8684031c05d1f2592a01").unwrap(),
                             Vec::from_hex("0223b72beef0965d10be0778efecd61fcac6f79a4ea169393380734464f84f2ab3").unwrap(),
-                        ],
+                        ]),
                     }],
                     output: vec![
                         TxOut {
@@ -898,14 +1022,14 @@ mod tests {
     #[test]
     fn serialize_and_deserialize_proprietary() {
         let mut psbt: PartiallySignedTransaction = hex_psbt!("70736274ff0100a00200000002ab0949a08c5af7c49b8212f417e2f15ab3f5c33dcf153821a8139f877a5b7be40000000000feffffffab0949a08c5af7c49b8212f417e2f15ab3f5c33dcf153821a8139f877a5b7be40100000000feffffff02603bea0b000000001976a914768a40bbd740cbe81d988e71de2a4d5c71396b1d88ac8e240000000000001976a9146f4620b553fa095e721b9ee0efe9fa039cca459788ac000000000001076a47304402204759661797c01b036b25928948686218347d89864b719e1f7fcf57d1e511658702205309eabf56aa4d8891ffd111fdf1336f3a29da866d7f8486d75546ceedaf93190121035cdc61fc7ba971c0b501a646a2a83b102cb43881217ca682dc86e2d73fa882920001012000e1f5050000000017a9143545e6e33b832c47050f24d3eeb93c9c03948bc787010416001485d13537f2e265405a34dbafa9e3dda01fb82308000000").unwrap();
-        psbt.global.proprietary.insert(ProprietaryKey {
+        psbt.proprietary.insert(raw::ProprietaryKey {
             prefix: b"test".to_vec(),
             subtype: 0u8,
             key: b"test".to_vec(),
         }, b"test".to_vec());
-        assert!(!psbt.global.proprietary.is_empty());
+        assert!(!psbt.proprietary.is_empty());
         let rtt : PartiallySignedTransaction = hex_psbt!(&serialize_hex(&psbt)).unwrap();
-        assert!(!rtt.global.proprietary.is_empty());
+        assert!(!rtt.proprietary.is_empty());
     }
 
 }

@@ -12,9 +12,9 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Big unsigned integer types
+//! Big unsigned integer types.
 //!
-//! Implementation of a various large-but-fixed sized unsigned integer types.
+//! Implementation of various large-but-fixed sized unsigned integer types.
 //! The functions here are designed to be fast.
 //!
 
@@ -138,7 +138,7 @@ macro_rules! construct_uint {
                 let your_bits = other.bits();
 
                 // Check for division by 0
-                assert!(your_bits != 0);
+                assert!(your_bits != 0, "attempted to divide {} by zero", self);
 
                 // Early return in case we are dividing by a larger number than us
                 if my_bits < your_bits {
@@ -161,6 +161,16 @@ macro_rules! construct_uint {
                 }
 
                 ($name(ret), sub_copy)
+            }
+
+            /// Increment by 1
+            #[inline]
+            pub fn increment(&mut self) {
+                let &mut $name(ref mut arr) = self;
+                for i in 0..$n_words {
+                    arr[i] = arr[i].wrapping_add(1);
+                    if arr[i] != 0 { break; }
+                }
             }
         }
 
@@ -430,6 +440,7 @@ macro_rules! construct_uint {
         }
 
         #[cfg(feature = "serde")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl $crate::serde::Serialize for $name {
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
@@ -446,6 +457,7 @@ macro_rules! construct_uint {
         }
 
         #[cfg(feature = "serde")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl<'de> $crate::serde::Deserialize<'de> for $name {
             fn deserialize<D: $crate::serde::Deserializer<'de>>(
                 deserializer: D,
@@ -493,9 +505,8 @@ macro_rules! construct_uint {
 construct_uint!(Uint256, 4);
 construct_uint!(Uint128, 2);
 
-/// Invalid slice length
+/// Invalid slice length.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
-/// Invalid slice length
 pub struct ParseLengthError {
     /// The length of the slice de-facto
     pub actual: usize,
@@ -510,25 +521,10 @@ impl ::core::fmt::Display for ParseLengthError {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl ::std::error::Error for ParseLengthError {}
 
 impl Uint256 {
-    /// Increment by 1
-    #[inline]
-    pub fn increment(&mut self) {
-        let &mut Uint256(ref mut arr) = self;
-        arr[0] += 1;
-        if arr[0] == 0 {
-            arr[1] += 1;
-            if arr[1] == 0 {
-                arr[2] += 1;
-                if arr[2] == 0 {
-                    arr[3] += 1;
-                }
-            }
-        }
-    }
-
     /// Decay to a uint128
     #[inline]
     pub fn low_128(&self) -> Uint128 {
@@ -688,6 +684,53 @@ mod tests {
 
         assert_eq!(u256_res, Uint256([0xF4E166AAD40D0A41u64, 0xF5CF7F3618C2C886u64,
                                       0x4AFCFF6F0375C608u64, 0x928D92B4D7F5DF33u64]));
+    }
+
+    #[test]
+    pub fn increment_test() {
+        let mut val = Uint256([
+            0xFFFFFFFFFFFFFFFEu64,
+            0xFFFFFFFFFFFFFFFFu64,
+            0xFFFFFFFFFFFFFFFFu64,
+            0xEFFFFFFFFFFFFFFFu64,
+        ]);
+        val.increment();
+        assert_eq!(
+            val,
+            Uint256([
+                0xFFFFFFFFFFFFFFFFu64,
+                0xFFFFFFFFFFFFFFFFu64,
+                0xFFFFFFFFFFFFFFFFu64,
+                0xEFFFFFFFFFFFFFFFu64,
+            ])
+        );
+        val.increment();
+        assert_eq!(
+            val,
+            Uint256([
+                0x0000000000000000u64,
+                0x0000000000000000u64,
+                0x0000000000000000u64,
+                0xF000000000000000u64,
+            ])
+        );
+
+        let mut val = Uint256([
+            0xFFFFFFFFFFFFFFFFu64,
+            0xFFFFFFFFFFFFFFFFu64,
+            0xFFFFFFFFFFFFFFFFu64,
+            0xFFFFFFFFFFFFFFFFu64,
+        ]);
+        val.increment();
+        assert_eq!(
+            val,
+            Uint256([
+                0x0000000000000000u64,
+                0x0000000000000000u64,
+                0x0000000000000000u64,
+                0x0000000000000000u64,
+            ])
+        );
     }
 
     #[test]

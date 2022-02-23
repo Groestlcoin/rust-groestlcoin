@@ -10,7 +10,7 @@ fn do_test(data: &[u8]) {
             let len = ser.len();
             let calculated_weight = tx.get_weight();
             for input in &mut tx.input {
-                input.witness = vec![];
+                input.witness = groestlcoin::blockdata::witness::Witness::default();
             }
             let no_witness_len = groestlcoin::consensus::encode::serialize(&tx).len();
             // For 0-input transactions, `no_witness_len` will be incorrect because

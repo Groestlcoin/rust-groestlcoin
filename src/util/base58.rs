@@ -12,7 +12,11 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Base58 encoder and decoder
+//! Base58 encoder and decoder.
+//!
+//! This module provides functions for encoding and decoding base58 slices and
+//! strings respectively.
+//!
 
 use prelude::*;
 
@@ -59,6 +63,7 @@ impl fmt::Display for Error {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl ::std::error::Error for Error {}
 
 /// Vector-like object that holds the first 100 elements on the stack. If more space is needed it
@@ -226,7 +231,7 @@ pub fn encode_slice(data: &[u8]) -> String {
 /// Obtain a string with the base58check encoding of a slice
 /// (Tack the first 4 256-digits of the object's Groestlcoin hash onto the end.)
 pub fn check_encode_slice(data: &[u8]) -> String {
-    let checksum = groestld::Hash::hash(&data);
+    let checksum = groestld::Hash::hash(data);
     encode_iter(
         data.iter()
             .cloned()
@@ -237,7 +242,7 @@ pub fn check_encode_slice(data: &[u8]) -> String {
 /// Obtain a string with the base58check encoding of a slice
 /// (Tack the first 4 256-digits of the object's Groestlcoin hash onto the end.)
 pub fn check_encode_slice_to_fmt(fmt: &mut fmt::Formatter, data: &[u8]) -> fmt::Result {
-    let checksum = groestld::Hash::hash(&data);
+    let checksum = groestld::Hash::hash(data);
     let iter = data.iter()
         .cloned()
         .chain(checksum[0..4].iter().cloned());

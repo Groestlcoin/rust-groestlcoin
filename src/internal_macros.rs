@@ -12,9 +12,10 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Internal Macros
+//! Internal macros.
 //!
-//! Macros meant to be used inside the Rust Groestlcoin library
+//! Macros meant to be used inside the Rust Groestlcoin library.
+//!
 
 macro_rules! impl_consensus_encoding {
     ($thing:ident, $($field:ident),+) => (
@@ -48,38 +49,38 @@ macro_rules! impl_consensus_encoding {
 macro_rules! impl_array_newtype {
     ($thing:ident, $ty:ty, $len:expr) => {
         impl $thing {
-            #[inline]
             /// Converts the object to a raw pointer
+            #[inline]
             pub fn as_ptr(&self) -> *const $ty {
                 let &$thing(ref dat) = self;
                 dat.as_ptr()
             }
 
-            #[inline]
             /// Converts the object to a mutable raw pointer
+            #[inline]
             pub fn as_mut_ptr(&mut self) -> *mut $ty {
                 let &mut $thing(ref mut dat) = self;
                 dat.as_mut_ptr()
             }
 
-            #[inline]
             /// Returns the length of the object as an array
+            #[inline]
             pub fn len(&self) -> usize { $len }
 
-            #[inline]
             /// Returns whether the object, as an array, is empty. Always false.
+            #[inline]
             pub fn is_empty(&self) -> bool { false }
 
-            #[inline]
             /// Returns the underlying bytes.
+            #[inline]
             pub fn as_bytes(&self) -> &[$ty; $len] { &self.0 }
 
-            #[inline]
             /// Returns the underlying bytes.
+            #[inline]
             pub fn to_bytes(&self) -> [$ty; $len] { self.0.clone() }
 
-            #[inline]
             /// Returns the underlying bytes.
+            #[inline]
             pub fn into_bytes(self) -> [$ty; $len] { self.0 }
         }
 
@@ -164,9 +165,13 @@ macro_rules! hex_script (($s:expr) => (<$crate::Script as ::core::str::FromStr>:
 #[cfg(test)]
 macro_rules! hex_hash (($h:ident, $s:expr) => ($h::from_slice(&<$crate::prelude::Vec<u8> as $crate::hashes::hex::FromHex>::from_hex($s).unwrap()).unwrap()));
 
+#[cfg(test)]
+macro_rules! hex_decode (($h:ident, $s:expr) => (deserialize::<$h>(&<$crate::prelude::Vec<u8> as $crate::hashes::hex::FromHex>::from_hex($s).unwrap()).unwrap()));
+
 macro_rules! serde_string_impl {
     ($name:ident, $expecting:expr) => {
         #[cfg(feature = "serde")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl<'de> $crate::serde::Deserialize<'de> for $name {
             fn deserialize<D>(deserializer: D) -> Result<$name, D::Error>
             where
@@ -210,6 +215,7 @@ macro_rules! serde_string_impl {
         }
 
         #[cfg(feature = "serde")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl<'de> $crate::serde::Serialize for $name {
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
@@ -226,6 +232,7 @@ macro_rules! serde_string_impl {
 macro_rules! serde_struct_human_string_impl {
     ($name:ident, $expecting:expr, $($fe:ident),*) => (
         #[cfg(feature = "serde")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl<'de> $crate::serde::Deserialize<'de> for $name {
             fn deserialize<D>(deserializer: D) -> Result<$name, D::Error>
             where
@@ -380,6 +387,7 @@ macro_rules! serde_struct_human_string_impl {
         }
 
         #[cfg(feature = "serde")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl<'de> $crate::serde::Serialize for $name {
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
@@ -461,7 +469,8 @@ macro_rules! impl_bytes_newtype {
             }
         }
 
-        #[cfg(feature="serde")]
+        #[cfg(feature = "serde")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl $crate::serde::Serialize for $t {
             fn serialize<S: $crate::serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
                 if s.is_human_readable() {
@@ -472,7 +481,8 @@ macro_rules! impl_bytes_newtype {
             }
         }
 
-        #[cfg(feature="serde")]
+        #[cfg(feature = "serde")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl<'de> $crate::serde::Deserialize<'de> for $t {
             fn deserialize<D: $crate::serde::Deserializer<'de>>(d: D) -> Result<$t, D::Error> {
                 if d.is_human_readable() {
@@ -576,6 +586,7 @@ macro_rules! user_enum {
         }
 
         #[cfg(feature = "serde")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl<'de> $crate::serde::Deserialize<'de> for $name {
             #[inline]
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -625,6 +636,7 @@ macro_rules! user_enum {
         }
 
         #[cfg(feature = "serde")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl $crate::serde::Serialize for $name {
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where

@@ -18,7 +18,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-//! Merkle Block and Partial Merkle Tree
+//! Merkle Block and Partial Merkle Tree.
 //!
 //! Support proofs that transaction(s) belong to a block.
 //!
@@ -31,7 +31,7 @@
 //!
 //! // Get the proof from a groestlcoind by running in the terminal:
 //! // $ TXID="d0c54928d8ace117254e2786c308632976f0f612d62dd0f0a280b9e1db6e3dd7"
-//! // $ bitcoin-cli gettxoutproof [\"$TXID\"]
+//! // $ groestlcoin-cli gettxoutproof [\"$TXID\"]
 //! let mb_bytes = Vec::from_hex("0000002063280a27a86a2bf9c5e3ba174690c316bdbc12945a73a863650d00000\
 //! 0000000d4aefe8dcb716400868f87660cc7e59d2d5372121240801f5428a43ae735f66247af00625c331b1a3a8aee65\
 //! 0400000003b0e1f8e96bbde499c4564a1442643b203794e432c2c4ecfaaaf066b7772e3768d73d6edbe1b980a2f0d02\
@@ -52,6 +52,7 @@
 //! assert_eq!(1, index.len());
 //! assert_eq!(1, index[0]);
 //! ```
+
 use prelude::*;
 
 use io;
@@ -341,8 +342,8 @@ impl PartialMerkleTree {
     /// Helper method to produce SHA256D(left + right)
     fn parent_hash(left: TxMerkleNode, right: TxMerkleNode) -> TxMerkleNode {
         let mut encoder = TxMerkleNode::engine();
-        left.consensus_encode(&mut encoder).unwrap();
-        right.consensus_encode(&mut encoder).unwrap();
+        left.consensus_encode(&mut encoder).expect("engines don't error");
+        right.consensus_encode(&mut encoder).expect("engines don't error");
         TxMerkleNode::from_engine(encoder)
     }
 }
@@ -430,6 +431,7 @@ impl MerkleBlock {
 
     /// Create a MerkleBlock from a block, that contains proofs for specific txids.
     #[cfg(feature = "std")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     #[deprecated(since="0.26.2", note="use from_block_with_predicate")]
     pub fn from_block(block: &Block, match_txids: &::std::collections::HashSet<Txid>) -> Self {
         Self::from_block_with_predicate(block, |t| match_txids.contains(t))
@@ -449,7 +451,7 @@ impl MerkleBlock {
             .map(match_txids)
             .collect();
 
-        let pmt = PartialMerkleTree::from_txids(&block_txids, &matches);
+        let pmt = PartialMerkleTree::from_txids(block_txids, &matches);
         MerkleBlock {
             header: *header,
             txn: pmt,
@@ -458,6 +460,7 @@ impl MerkleBlock {
 
     /// Create a MerkleBlock from the block's header and txids, that should contain proofs for match_txids.
     #[cfg(feature = "std")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     #[deprecated(since="0.26.2", note="use from_header_txids_with_predicate")]
     pub fn from_header_txids(
         header: &BlockHeader,
@@ -532,7 +535,7 @@ mod tests {
 
             // Calculate the merkle root and height
             let hashes = txids.iter().map(|t| t.as_hash());
-            let merkle_root_1: TxMerkleNode = bitcoin_merkle_root(hashes).into();
+            let merkle_root_1: TxMerkleNode = bitcoin_merkle_root(hashes).expect("hashes is not empty").into();
             let mut height = 1;
             let mut ntx = num_tx;
             while ntx > 1 {

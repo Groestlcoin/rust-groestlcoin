@@ -12,21 +12,19 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Consensus-encodable types
+//! Groestlcoin consensus-encodable types.
 //!
 //! This is basically a replacement of the `Encodable` trait which does
-//! normalization for endianness, etc., to ensure that the encoding
-//! matches for endianness, etc., to ensure that the encoding matches
+//! normalization of endianness etc., to ensure that the encoding matches
 //! the network consensus encoding.
 //!
-//! Essentially, anything that must go on the -disk- or -network- must
-//! be encoded using the `Encodable` trait, since this data
-//! must be the same for all systems. Any data going to the -user-, e.g.
-//! over JSONRPC, should use the ordinary `Encodable` trait. (This
-//! should also be the same across systems, of course, but has some
-//! critical differences from the network format, e.g. scripts come
-//! with an opcode decode, hashes are big-endian, numbers are typically
-//! big-endian decimals, etc.)
+//! Essentially, anything that must go on the _disk_ or _network_ must be
+//! encoded using the `Encodable` trait, since this data must be the same for
+//! all systems. Any data going to the _user_ e.g., over JSONRPC, should use the
+//! ordinary `Encodable` trait. (This should also be the same across systems, of
+//! course, but has some critical differences from the network format e.g.,
+//! scripts come with an opcode decode, hashes are big-endian, numbers are
+//! typically big-endian decimals, etc.)
 //!
 
 use prelude::*;
@@ -34,13 +32,14 @@ use prelude::*;
 use core::{fmt, mem, u32, convert::From};
 #[cfg(feature = "std")] use std::error;
 
-use hashes::{sha256, sha256d, Hash, groestld};
+use hashes::{sha256d, Hash, sha256, groestld};
 use hash_types::{BlockHash, FilterHash, TxMerkleNode, FilterHeader};
 
 use io::{self, Cursor, Read};
 
 use util::endian;
 use util::psbt;
+use util::taproot::TapLeafHash;
 use hashes::hex::ToHex;
 
 use blockdata::transaction::{TxOut, Transaction, TxIn};
@@ -106,6 +105,7 @@ impl fmt::Display for Error {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl ::std::error::Error for Error {
     fn cause(&self) -> Option<&dyn  error::Error> {
         match *self {
@@ -139,7 +139,7 @@ impl From<psbt::Error> for Error {
 /// Encode an object into a vector
 pub fn serialize<T: Encodable + ?Sized>(data: &T) -> Vec<u8> {
     let mut encoder = Vec::new();
-    let len = data.consensus_encode(&mut encoder).unwrap();
+    let len = data.consensus_encode(&mut encoder).expect("in-memory writers don't error");
     debug_assert_eq!(len, encoder.len());
     encoder
 }
@@ -462,7 +462,7 @@ impl Encodable for String {
     fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, io::Error> {
         let b = self.as_bytes();
         let vi_len = VarInt(b.len() as u64).consensus_encode(&mut s)?;
-        s.emit_slice(&b)?;
+        s.emit_slice(b)?;
         Ok(vi_len + b.len())
     }
 }
@@ -481,7 +481,7 @@ impl Encodable for Cow<'static, str> {
     fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, io::Error> {
         let b = self.as_bytes();
         let vi_len = VarInt(b.len() as u64).consensus_encode(&mut s)?;
-        s.emit_slice(&b)?;
+        s.emit_slice(b)?;
         Ok(vi_len + b.len())
     }
 }
@@ -595,14 +595,15 @@ impl_vec!(TxOut);
 impl_vec!(TxIn);
 impl_vec!(Vec<u8>);
 impl_vec!(u64);
+impl_vec!(TapLeafHash);
 
 #[cfg(feature = "std")] impl_vec!(Inventory);
 #[cfg(feature = "std")] impl_vec!((u32, Address));
 #[cfg(feature = "std")] impl_vec!(AddrV2Message);
 
-fn consensus_encode_with_size<S: io::Write>(data: &[u8], mut s: S) -> Result<usize, io::Error> {
+pub(crate) fn consensus_encode_with_size<S: io::Write>(data: &[u8], mut s: S) -> Result<usize, io::Error> {
     let vi_len = VarInt(data.len() as u64).consensus_encode(&mut s)?;
-    s.emit_slice(&data)?;
+    s.emit_slice(data)?;
     Ok(vi_len + data.len())
 }
 
@@ -781,6 +782,18 @@ impl Encodable for groestld::Hash {
 }
 
 impl Decodable for groestld::Hash {
+    fn consensus_decode<D: io::Read>(d: D) -> Result<Self, Error> {
+        Ok(Self::from_inner(<<Self as Hash>::Inner>::consensus_decode(d)?))
+    }
+}
+
+impl Encodable for TapLeafHash {
+    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, io::Error> {
+        self.into_inner().consensus_encode(s)
+    }
+}
+
+impl Decodable for TapLeafHash {
     fn consensus_decode<D: io::Read>(d: D) -> Result<Self, Error> {
         Ok(Self::from_inner(<<Self as Hash>::Inner>::consensus_decode(d)?))
     }
