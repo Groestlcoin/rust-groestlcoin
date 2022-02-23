@@ -417,7 +417,7 @@ mod tests {
         // [test] TODO: check the transaction data
 
         assert_eq!(real_decode.get_size(), segwit_block.len());
-        assert_eq!(real_decode.get_strippedsize(), 4283);
+        assert_eq!(real_decode.get_strippedsize(), 385);
         assert_eq!(real_decode.get_weight(), 1685);
 
         assert!(real_decode.check_witness_commitment());

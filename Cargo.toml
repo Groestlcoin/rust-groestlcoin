@@ -29,7 +29,7 @@ std = ["secp256k1/std", "groestlcoin_hashes/std", "bech32/std"]
 no-std = ["hashbrown", "core2/alloc", "groestlcoin_hashes/alloc"]
 
 [package.metadata.docs.rs]
-features = [ "std", "secp-recovery", "base64", "rand", "use-serde", "bitcoinconsensus" ]
+features = [ "std", "secp-recovery", "base64", "rand", "use-serde", "groestlcoinconsensus" ]
 rustc-args = ["--cfg", "docsrs"]
 
 [dependencies]

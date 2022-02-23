@@ -592,14 +592,14 @@ impl Address {
     /// ```rust
     /// use groestlcoin::{Address, Network};
     ///
-    /// let address: Address = "2N83imGV3gPwBzKJQvWJ7cRUY2SpUyU6A5e".parse().unwrap();
+    /// let address: Address = "2N83imGV3gPwBzKJQvWJ7cRUY2SpUyKFNVU".parse().unwrap();
     /// assert!(address.is_valid_for_network(Network::Testnet));
     /// assert!(address.is_valid_for_network(Network::Regtest));
     /// assert!(address.is_valid_for_network(Network::Signet));
     ///
     /// assert_eq!(address.is_valid_for_network(Network::Groestlcoin), false);
     ///
-    /// let address: Address = "32iVBEu4dxkUQk9dJbZUiBiQdmypcEyJRf".parse().unwrap();
+    /// let address: Address = "32iVBEu4dxkUQk9dJbZUiBiQdmypaPrkNU".parse().unwrap();
     /// assert!(address.is_valid_for_network(Network::Groestlcoin));
     /// assert_eq!(address.is_valid_for_network(Network::Testnet), false);
     /// ```
