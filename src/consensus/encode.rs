@@ -34,7 +34,7 @@ use prelude::*;
 use core::{fmt, mem, u32, convert::From};
 #[cfg(feature = "std")] use std::error;
 
-use hashes::{sha256, sha256d, Hash, groestld};
+use hashes::{sha256d, Hash, sha256, groestld};
 use hash_types::{BlockHash, FilterHash, TxMerkleNode, FilterHeader};
 
 use io::{self, Cursor, Read};
@@ -106,6 +106,7 @@ impl fmt::Display for Error {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl ::std::error::Error for Error {
     fn cause(&self) -> Option<&dyn  error::Error> {
         match *self {
@@ -600,7 +601,7 @@ impl_vec!(u64);
 #[cfg(feature = "std")] impl_vec!((u32, Address));
 #[cfg(feature = "std")] impl_vec!(AddrV2Message);
 
-fn consensus_encode_with_size<S: io::Write>(data: &[u8], mut s: S) -> Result<usize, io::Error> {
+pub(crate) fn consensus_encode_with_size<S: io::Write>(data: &[u8], mut s: S) -> Result<usize, io::Error> {
     let vi_len = VarInt(data.len() as u64).consensus_encode(&mut s)?;
     s.emit_slice(&data)?;
     Ok(vi_len + data.len())
