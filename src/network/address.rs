@@ -38,7 +38,7 @@ pub struct Address {
     pub port: u16
 }
 
-const ONION : [u16; 3] = [0xFD87, 0xD87E, 0xEB43];
+const ONION: [u16; 3] = [0xFD87, 0xD87E, 0xEB43];
 
 impl Address {
     /// Create an address message for a socket
@@ -58,10 +58,7 @@ impl Address {
         if addr[0..3] == ONION {
             return Err(io::Error::from(io::ErrorKind::AddrNotAvailable));
         }
-        let ipv6 = Ipv6Addr::new(
-            addr[0],addr[1],addr[2],addr[3],
-            addr[4],addr[5],addr[6],addr[7]
-        );
+        let ipv6 = Ipv6Addr::new(addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
         if let Some(ipv4) = ipv6.to_ipv4() {
             Ok(SocketAddr::V4(SocketAddrV4::new(ipv4, self.port)))
         } else {
@@ -82,10 +79,7 @@ fn addr_to_be(addr: [u16; 8]) -> [u16; 8] {
 
 impl Encodable for Address {
     #[inline]
-    fn consensus_encode<S: io::Write>(
-        &self,
-        mut s: S,
-    ) -> Result<usize, io::Error> {
+    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, io::Error> {
         let len = self.services.consensus_encode(&mut s)?
             + addr_to_be(self.address).consensus_encode(&mut s)?
 
@@ -149,12 +143,11 @@ pub enum AddrV2 {
 impl Encodable for AddrV2 {
     fn consensus_encode<W: io::Write>(&self, e: W) -> Result<usize, io::Error> {
         fn encode_addr<W: io::Write>(mut e: W, network: u8, bytes: &[u8]) -> Result<usize, io::Error> {
-                let len =
-                    network.consensus_encode(&mut e)? +
-                    VarInt(bytes.len() as u64).consensus_encode(&mut e)? +
-                    bytes.len();
-                e.emit_slice(bytes)?;
-                Ok(len)
+            let len = network.consensus_encode(&mut e)?
+                + VarInt(bytes.len() as u64).consensus_encode(&mut e)?
+                + bytes.len();
+            e.emit_slice(bytes)?;
+            Ok(len)
         }
         Ok(match *self {
             AddrV2::Ipv4(ref addr) => encode_addr(e, 1, &addr.octets())?,
@@ -194,10 +187,7 @@ impl Decodable for AddrV2 {
                 if addr[0..6] == [0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xFFFF] {
                     return Err(encode::Error::ParseFailed("IPV4 wrapped address sent with IPv6 network id"));
                 }
-                AddrV2::Ipv6(Ipv6Addr::new(
-                    addr[0],addr[1],addr[2],addr[3],
-                    addr[4],addr[5],addr[6],addr[7]
-                ))
+                AddrV2::Ipv6(Ipv6Addr::new(addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]))
             },
             3 => {
                 if len != 10 {
@@ -230,10 +220,7 @@ impl Decodable for AddrV2 {
                     return Err(encode::Error::ParseFailed("Invalid CJDNS address"));
                 }
                 let addr = addr_to_be(addr);
-                AddrV2::Cjdns(Ipv6Addr::new(
-                    addr[0],addr[1],addr[2],addr[3],
-                    addr[4],addr[5],addr[6],addr[7]
-                ))
+                AddrV2::Cjdns(Ipv6Addr::new(addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]))
             },
             _ => {
                 // len already checked above to be <= 512
@@ -287,7 +274,7 @@ impl Encodable for AddrV2Message {
 
 impl Decodable for AddrV2Message {
     fn consensus_decode<D: io::Read>(mut d: D) -> Result<Self, encode::Error> {
-        Ok(AddrV2Message{
+        Ok(AddrV2Message {
             time: Decodable::consensus_decode(&mut d)?,
             services: ServiceFlags::from(VarInt::consensus_decode(&mut d)?.0),
             addr: Decodable::consensus_decode(&mut d)?,

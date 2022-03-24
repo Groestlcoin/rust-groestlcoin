@@ -80,9 +80,11 @@ hash_newtype!(FilterHeader, groestld::Hash, 32, doc="Filter header, as defined i
 
 impl_hashencode!(Txid);
 impl_hashencode!(Wtxid);
-impl_hashencode!(SigHash);
 impl_hashencode!(BlockHash);
+impl_hashencode!(SigHash);
+
 impl_hashencode!(TxMerkleNode);
 impl_hashencode!(WitnessMerkleNode);
+
 impl_hashencode!(FilterHash);
 impl_hashencode!(FilterHeader);

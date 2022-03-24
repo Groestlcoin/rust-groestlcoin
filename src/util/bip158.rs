@@ -519,7 +519,7 @@ mod test {
     use super::*;
 
     extern crate serde_json;
-    use self::serde_json::{Value};
+    use self::serde_json::Value;
 
     use consensus::encode::deserialize;
     use std::collections::HashMap;
@@ -576,7 +576,7 @@ mod test {
     }
 
     #[test]
-    fn test_filter () {
+    fn test_filter() {
         let mut patterns = HashSet::new();
 
         patterns.insert(Vec::from_hex("000000").unwrap());

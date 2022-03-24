@@ -215,7 +215,7 @@ impl TaprootSpendInfo {
         script_weights: I,
     ) -> Result<Self, TaprootBuilderError>
     where
-        I: IntoIterator<Item = (u32, Script)>,
+        I: IntoIterator<Item=(u32, Script)>,
         C: secp256k1::Verification,
     {
         let mut node_weights = BinaryHeap::<(Reverse<u64>, NodeInfo)>::new();
@@ -446,7 +446,7 @@ impl TaprootBuilder {
         Ok(TaprootSpendInfo::from_node_info(secp, internal_key, node))
     }
 
-    pub(crate) fn branch(&self) -> &[Option<NodeInfo>]{
+    pub(crate) fn branch(&self) -> &[Option<NodeInfo>] {
         &self.branch
     }
 
@@ -598,9 +598,7 @@ impl TaprootMerkleBranch {
         if sl.len() % TAPROOT_CONTROL_NODE_SIZE != 0 {
             Err(TaprootError::InvalidMerkleBranchSize(sl.len()))
         } else if sl.len() > TAPROOT_CONTROL_NODE_SIZE * TAPROOT_CONTROL_MAX_NODE_COUNT {
-            Err(TaprootError::InvalidMerkleTreeDepth(
-                sl.len() / TAPROOT_CONTROL_NODE_SIZE,
-            ))
+            Err(TaprootError::InvalidMerkleTreeDepth(sl.len() / TAPROOT_CONTROL_NODE_SIZE))
         } else {
             let inner = sl
                 // TODO: Use chunks_exact after MSRV changes to 1.31
@@ -682,7 +680,8 @@ impl ControlBlock {
         {
             return Err(TaprootError::InvalidControlBlockSize(sl.len()));
         }
-        let output_key_parity = secp256k1::Parity::from((sl[0] & 1) as i32);
+        let output_key_parity = secp256k1::Parity::from_i32((sl[0] & 1) as i32)
+            .map_err(TaprootError::InvalidParity)?;
         let leaf_version = LeafVersion::from_consensus(sl[0] & TAPROOT_LEAF_MASK)?;
         let internal_key = UntweakedPublicKey::from_slice(&sl[1..TAPROOT_CONTROL_BASE_SIZE])
             .map_err(TaprootError::InvalidInternalKey)?;
@@ -716,8 +715,7 @@ impl ControlBlock {
     /// applied when encoding this element as a witness.
     pub fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::with_capacity(self.size());
-        self.encode(&mut buf)
-            .expect("writers don't error");
+        self.encode(&mut buf).expect("writers don't error");
         buf
     }
 
@@ -873,8 +871,8 @@ impl fmt::UpperHex for LeafVersion {
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 impl ::serde::Serialize for LeafVersion {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: ::serde::Serializer,
+    where
+        S: ::serde::Serializer,
     {
         serializer.serialize_u8(self.to_consensus())
     }
@@ -884,7 +882,10 @@ impl ::serde::Serialize for LeafVersion {
 #[cfg(feature = "serde")]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 impl<'de> ::serde::Deserialize<'de> for LeafVersion {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: ::serde::Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: ::serde::Deserializer<'de>
+    {
         struct U8Visitor;
         impl<'de> ::serde::de::Visitor<'de> for U8Visitor {
             type Value = LeafVersion;
@@ -935,11 +936,9 @@ impl fmt::Display for TaprootBuilderError {
                 "Attempted to create a tree with two nodes at depth 0. There must\
                 only be a exactly one node at depth 0",
             ),
-            TaprootBuilderError::InvalidMerkleTreeDepth(d) => write!(
-                f,
-                "Merkle Tree depth({}) must be less than {}",
-                d, TAPROOT_CONTROL_MAX_NODE_COUNT
-            ),
+            TaprootBuilderError::InvalidMerkleTreeDepth(d) => {
+                write!(f, "Merkle Tree depth({}) must be less than {}", d, TAPROOT_CONTROL_MAX_NODE_COUNT)
+            }
             TaprootBuilderError::InvalidInternalKey(e) => {
                 write!(f, "Invalid Internal XOnly key : {}", e)
             }
@@ -970,6 +969,8 @@ pub enum TaprootError {
     InvalidControlBlockSize(usize),
     /// Invalid taproot internal key
     InvalidInternalKey(secp256k1::Error),
+    /// Invalid parity for internal key
+    InvalidParity(secp256k1::InvalidParityValue),
     /// Empty TapTree
     EmptyTree,
 }
@@ -999,6 +1000,7 @@ impl fmt::Display for TaprootError {
             ),
             // TODO: add source when in MSRV
             TaprootError::InvalidInternalKey(e) => write!(f, "Invalid Internal XOnly key : {}", e),
+            TaprootError::InvalidParity(e) => write!(f, "Invalid parity value for internal key: {}", e),
             TaprootError::EmptyTree => write!(f, "Taproot Tree must contain at least one script"),
         }
     }

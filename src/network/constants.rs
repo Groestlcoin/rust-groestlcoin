@@ -274,10 +274,7 @@ impl ops::BitXorAssign for ServiceFlags {
 
 impl Encodable for ServiceFlags {
     #[inline]
-    fn consensus_encode<S: io::Write>(
-        &self,
-        mut s: S,
-    ) -> Result<usize, io::Error> {
+    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, io::Error> {
         self.0.consensus_encode(&mut s)
     }
 }
@@ -296,39 +293,16 @@ mod tests {
 
     #[test]
     fn serialize_test() {
-        assert_eq!(
-            serialize(&Network::Groestlcoin.magic()),
-            &[0xf9, 0xbe, 0xb4, 0xd4]
-        );
-        assert_eq!(
-            serialize(&Network::Testnet.magic()),
-            &[0x0b, 0x11, 0x09, 0x07]
-        );
-        assert_eq!(
-            serialize(&Network::Signet.magic()),
-            &[0x6f, 0x89, 0x2b, 0x8f]
-        );
-        assert_eq!(
-            serialize(&Network::Regtest.magic()),
-            &[0xfa, 0xbf, 0xb5, 0xda]
-        );
+        assert_eq!(serialize(&Network::Groestlcoin.magic()), &[0xf9, 0xbe, 0xb4, 0xd4]);
+        assert_eq!(serialize(&Network::Testnet.magic()), &[0x0b, 0x11, 0x09, 0x07]);
+        assert_eq!(serialize(&Network::Signet.magic()), &[0x6f, 0x89, 0x2b, 0x8f]);
+        assert_eq!(serialize(&Network::Regtest.magic()), &[0xfa, 0xbf, 0xb5, 0xda]);
 
-        assert_eq!(
-            deserialize(&[0xf9, 0xbe, 0xb4, 0xd4]).ok(),
-            Some(Network::Groestlcoin.magic())
-        );
-        assert_eq!(
-            deserialize(&[0x0b, 0x11, 0x09, 0x07]).ok(),
-            Some(Network::Testnet.magic())
-        );
-        assert_eq!(
-            deserialize(&[0x6f, 0x89, 0x2b, 0x8f]).ok(),
-            Some(Network::Signet.magic())
-        );
-        assert_eq!(
-            deserialize(&[0xfa, 0xbf, 0xb5, 0xda]).ok(),
-            Some(Network::Regtest.magic())
-        );
+        assert_eq!(deserialize(&[0xf9, 0xbe, 0xb4, 0xd4]).ok(), Some(Network::Groestlcoin.magic()));
+        assert_eq!(deserialize(&[0x0b, 0x11, 0x09, 0x07]).ok(), Some(Network::Testnet.magic()));
+        assert_eq!(deserialize(&[0x6f, 0x89, 0x2b, 0x8f]).ok(), Some(Network::Signet.magic()));
+        assert_eq!(deserialize(&[0xfa, 0xbf, 0xb5, 0xda]).ok(), Some(Network::Regtest.magic()));
+
     }
 
     #[test]
