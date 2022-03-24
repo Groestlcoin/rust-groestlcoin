@@ -376,7 +376,7 @@ mod tests {
             &::base64::decode(&pubkey_base64).expect("base64 string")
         ).expect("pubkey slice");
 
-        let p2pkh = ::Address::p2pkh(&pubkey, ::Network::Bitcoin);
+        let p2pkh = ::Address::p2pkh(&pubkey, ::Network::Groestlcoin);
         assert_eq!(signature.is_signed_by_address(&secp, &p2pkh, msg_hash), Ok(false));
     }
 }
