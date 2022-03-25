@@ -38,7 +38,7 @@ use hashes::{Hash, hex};
 use policy::DUST_RELAY_TX_FEE;
 #[cfg(feature="groestlcoinconsensus")] use groestlcoinconsensus;
 #[cfg(feature="groestlcoinconsensus")] use core::convert::From;
-#[cfg(feature="groestlcoinconsensus")] use OutPoint;
+use OutPoint;
 
 use util::key::PublicKey;
 use util::address::WitnessVersion;
@@ -146,18 +146,31 @@ pub enum Error {
     /// Tried to read an array off the stack as a number when it was more than 4 bytes
     NumericOverflow,
     /// Error validating the script with groestlcoinconsensus library
-    #[cfg(feature = "groestlcoinconsensus")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
-    BitcoinConsensus(groestlcoinconsensus::Error),
+    BitcoinConsensus(BitcoinConsensusError),
     /// Can not find the spent output
-    #[cfg(feature = "groestlcoinconsensus")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
     UnknownSpentOutput(OutPoint),
     /// Can not serialize the spending transaction
-    #[cfg(feature = "groestlcoinconsensus")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
     SerializationError
 }
+
+/// A [`groestlcoinconsensus::Error`] alias. Exists to enable the compiler to ensure `groestlcoinconsensus`
+/// feature gating is correct.
+#[cfg(feature = "groestlcoinconsensus")]
+#[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
+pub type BitcoinConsensusError = groestlcoinconsensus::Error;
+
+/// Dummy error type used when `groestlcoinconsensus` feature is not enabled.
+#[cfg(not(feature = "groestlcoinconsensus"))]
+#[cfg_attr(docsrs, doc(cfg(not(feature = "groestlcoinconsensus"))))]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
+pub struct BitcoinConsensusError {
+    _uninhabited: Uninhabited,
+}
+
+#[cfg(not(feature = "groestlcoinconsensus"))]
+#[cfg_attr(docsrs, doc(cfg(not(feature = "groestlcoinconsensus"))))]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
+enum Uninhabited {}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -165,11 +178,8 @@ impl fmt::Display for Error {
             Error::NonMinimalPush => "non-minimal datapush",
             Error::EarlyEndOfScript => "unexpected end of script",
             Error::NumericOverflow => "numeric overflow (number on stack larger than 4 bytes)",
-            #[cfg(feature = "groestlcoinconsensus")]
             Error::BitcoinConsensus(ref _n) => "groestlcoinconsensus verification failed",
-            #[cfg(feature = "groestlcoinconsensus")]
             Error::UnknownSpentOutput(ref _point) => "unknown spent output Transaction::verify()",
-            #[cfg(feature = "groestlcoinconsensus")]
             Error::SerializationError => "can not serialize the spending transaction in Transaction::verify()",
         };
         f.write_str(str)
@@ -196,13 +206,11 @@ impl From<UintError> for Error {
     }
 }
 
-#[cfg(feature="groestlcoinconsensus")]
+#[cfg(feature = "groestlcoinconsensus")]
 #[doc(hidden)]
 impl From<groestlcoinconsensus::Error> for Error {
     fn from(err: groestlcoinconsensus::Error) -> Error {
-        match err {
-            _ => Error::BitcoinConsensus(err)
-        }
+        Error::BitcoinConsensus(err)
     }
 }
 /// Helper to encode an integer in script format
@@ -587,7 +595,7 @@ impl Script {
         }
     }
 
-    /// Shorthand for [`Self::verify_with_flags`] with flag [bitcoinconsensus::VERIFY_ALL].
+    /// Shorthand for [`Self::verify_with_flags`] with flag [groestlcoinconsensus::VERIFY_ALL].
     #[cfg(feature="groestlcoinconsensus")]
     #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
     pub fn verify (&self, index: usize, amount: ::Amount, spending: &[u8]) -> Result<(), Error> {
