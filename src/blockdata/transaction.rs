@@ -356,7 +356,7 @@ impl Transaction {
             return Ok(())
         }
 
-        let (sighash, anyone_can_pay) = EcdsaSigHashType::from_u32_consensus(sighash_type).split_anyonecanpay_flag();
+        let (sighash, anyone_can_pay) = EcdsaSigHashType::from_consensus(sighash_type).split_anyonecanpay_flag();
 
         // Build tx to sign
         let mut tx = Transaction {
@@ -788,7 +788,7 @@ impl str::FromStr for EcdsaSigHashType {
             "SIGHASH_ALL|SIGHASH_ANYONECANPAY" => Ok(EcdsaSigHashType::AllPlusAnyoneCanPay),
             "SIGHASH_NONE|SIGHASH_ANYONECANPAY" => Ok(EcdsaSigHashType::NonePlusAnyoneCanPay),
             "SIGHASH_SINGLE|SIGHASH_ANYONECANPAY" => Ok(EcdsaSigHashType::SinglePlusAnyoneCanPay),
-            _ => Err(SigHashTypeParseError{ unrecognized: s.to_owned() }),
+            _ => Err(SigHashTypeParseError { unrecognized: s.to_owned() }),
         }
     }
 }
