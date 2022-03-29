@@ -1302,7 +1302,7 @@ mod tests {
 
     #[test]
     fn test_is_related_to_pubkey_p2wpkh() {
-        let address_string = "bc1qhvd6suvqzjcu9pxjhrwhtrlj85ny3n2mqql5w4";
+        let address_string = "grs1qhvd6suvqzjcu9pxjhrwhtrlj85ny3n2ma3r4h5";
         let address = Address::from_str(address_string).expect("address");
 
         let pubkey_string = "0347ff3dacd07a1f43805ec6808e801505a6e18245178609972a68afbc2777ff2b";
@@ -1317,7 +1317,7 @@ mod tests {
 
     #[test]
     fn test_is_related_to_pubkey_p2shwpkh() {
-        let address_string = "3EZQk4F8GURH5sqVMLTFisD17yNeKa7Dfs";
+        let address_string = "3EZQk4F8GURH5sqVMLTFisD17yNeFMR4A6";
         let address = Address::from_str(address_string).expect("address");
 
         let pubkey_string = "0347ff3dacd07a1f43805ec6808e801505a6e18245178609972a68afbc2777ff2b";
@@ -1332,7 +1332,7 @@ mod tests {
 
     #[test]
     fn test_is_related_to_pubkey_p2pkh() {
-        let address_string = "1J4LVanjHMu3JkXbVrahNuQCTGCRRgfWWx";
+        let address_string = "FnE3wVX6qraakMYiNxaAqRCX7RUP5q7ba2";
         let address = Address::from_str(address_string).expect("address");
 
         let pubkey_string = "0347ff3dacd07a1f43805ec6808e801505a6e18245178609972a68afbc2777ff2b";
@@ -1347,7 +1347,7 @@ mod tests {
 
     #[test]
     fn test_is_related_to_pubkey_p2pkh_uncompressed_key() {
-        let address_string = "msvS7KzhReCDpQEJaV2hmGNvuQqVUDuC6p";
+        let address_string = "msvS7KzhReCDpQEJaV2hmGNvuQqVU47HuX";
         let address = Address::from_str(address_string).expect("address");
 
         let pubkey_string = "04e96e22004e3db93530de27ccddfdf1463975d2138ac018fc3e7ba1a2e5e0aad8e424d0b55e2436eb1d0dcd5cb2b8bcc6d53412c22f358de57803a6a655fbbd04";
@@ -1366,9 +1366,9 @@ mod tests {
         let pubkey = PublicKey::from_str(pubkey_string).expect("pubkey");
         let xonly_pubkey = XOnlyPublicKey::from(pubkey.inner);
         let tweaked_pubkey = TweakedPublicKey::dangerous_assume_tweaked(xonly_pubkey);
-        let address = Address::p2tr_tweaked(tweaked_pubkey, Network::Bitcoin);
+        let address = Address::p2tr_tweaked(tweaked_pubkey, Network::Groestlcoin);
 
-        assert_eq!(address, Address::from_str("bc1pgllnmtxs0g058qz7c6qgaqq4qknwrqj9z7rqn9e2dzhmcfmhlu4sfadf5e").expect("address"));
+        assert_eq!(address, Address::from_str("grs1pgllnmtxs0g058qz7c6qgaqq4qknwrqj9z7rqn9e2dzhmcfmhlu4sxxj9ma").expect("address"));
 
         let result = address.is_related_to_pubkey(&pubkey);
         assert!(result);
@@ -1383,9 +1383,9 @@ mod tests {
         let pubkey = PublicKey::from_str(pubkey_string).expect("pubkey");
         let xonly_pubkey = XOnlyPublicKey::from(pubkey.inner);
         let tweaked_pubkey = TweakedPublicKey::dangerous_assume_tweaked(xonly_pubkey);
-        let address = Address::p2tr_tweaked(tweaked_pubkey, Network::Bitcoin);
+        let address = Address::p2tr_tweaked(tweaked_pubkey, Network::Groestlcoin);
 
-        assert_eq!(address, Address::from_str("bc1pgllnmtxs0g058qz7c6qgaqq4qknwrqj9z7rqn9e2dzhmcfmhlu4sfadf5e").expect("address"));
+        assert_eq!(address, Address::from_str("grs1pgllnmtxs0g058qz7c6qgaqq4qknwrqj9z7rqn9e2dzhmcfmhlu4sxxj9ma").expect("address"));
 
         let result = address.is_related_to_xonly_pubkey(&xonly_pubkey);
         assert!(result);
