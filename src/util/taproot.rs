@@ -131,6 +131,21 @@ impl TapLeafHash {
     }
 }
 
+impl TapBranchHash {
+    /// Computes branch hash given two hashes of the nodes underneath it.
+    pub fn from_node_hashes(a: sha256::Hash, b: sha256::Hash) -> TapBranchHash {
+        let mut eng = TapBranchHash::engine();
+        if a < b {
+            eng.input(&a);
+            eng.input(&b);
+        } else {
+            eng.input(&b);
+            eng.input(&a);
+        };
+        TapBranchHash::from_engine(eng)
+    }
+}
+
 /// Maximum depth of a taproot tree script spend path.
 // https://github.com/bitcoin/bitcoin/blob/e826b22da252e0599c61d21c98ff89f366b3120f/src/script/interpreter.h#L229
 pub const TAPROOT_CONTROL_MAX_NODE_COUNT: usize = 128;
@@ -211,7 +226,7 @@ impl TaprootSpendInfo {
     }
 
     /// Creates a new key spend with `internal_key` and `merkle_root`. Provide [`None`] for
-    /// `merkle_root` if there is no script path.
+    /// the `merkle_root` if there is no script path.
     ///
     /// *Note*: As per BIP341
     ///
@@ -423,7 +438,7 @@ impl TaprootBuilder {
     /// are not provided in DFS walk order. The depth of the root node is 0.
     pub fn add_leaf_with_ver(
         self,
-        depth: usize,
+        depth: u8,
         script: Script,
         ver: LeafVersion,
     ) -> Result<Self, TaprootBuilderError> {
@@ -435,13 +450,13 @@ impl TaprootBuilder {
     /// leaves are not provided in DFS walk order. The depth of the root node is 0.
     ///
     /// See [`TaprootBuilder::add_leaf_with_ver`] for adding a leaf with specific version.
-    pub fn add_leaf(self, depth: usize, script: Script) -> Result<Self, TaprootBuilderError> {
+    pub fn add_leaf(self, depth: u8, script: Script) -> Result<Self, TaprootBuilderError> {
         self.add_leaf_with_ver(depth, script, LeafVersion::TapScript)
     }
 
     /// Adds a hidden/omitted node at `depth` to the builder. Errors if the leaves are not provided
     /// in DFS walk order. The depth of the root node is 0.
-    pub fn add_hidden(self, depth: usize, hash: sha256::Hash) -> Result<Self, TaprootBuilderError> {
+    pub fn add_hidden(self, depth: u8, hash: sha256::Hash) -> Result<Self, TaprootBuilderError> {
         let node = NodeInfo::new_hidden(hash);
         self.insert(node, depth)
     }
@@ -473,20 +488,20 @@ impl TaprootBuilder {
     }
 
     /// Inserts a leaf at `depth`.
-    fn insert(mut self, mut node: NodeInfo, mut depth: usize) -> Result<Self, TaprootBuilderError> {
+    fn insert(mut self, mut node: NodeInfo, mut depth: u8) -> Result<Self, TaprootBuilderError> {
         // early error on invalid depth. Though this will be checked later
         // while constructing TaprootMerkelBranch
-        if depth > TAPROOT_CONTROL_MAX_NODE_COUNT {
-            return Err(TaprootBuilderError::InvalidMerkleTreeDepth(depth));
+        if depth as usize > TAPROOT_CONTROL_MAX_NODE_COUNT {
+            return Err(TaprootBuilderError::InvalidMerkleTreeDepth(depth as usize));
         }
         // We cannot insert a leaf at a lower depth while a deeper branch is unfinished. Doing
         // so would mean the add_leaf/add_hidden invocations do not correspond to a DFS traversal of a
         // binary tree.
-        if depth + 1 < self.branch.len() {
+        if depth as usize + 1 < self.branch.len() {
             return Err(TaprootBuilderError::NodeNotInDfsOrder);
         }
 
-        while self.branch.len() == depth + 1 {
+        while self.branch.len() == depth as usize + 1 {
             let child = match self.branch.pop() {
                 None => unreachable!("Len of branch checked to be >= 1"),
                 Some(Some(child)) => child,
@@ -507,22 +522,26 @@ impl TaprootBuilder {
             depth -= 1;
         }
 
-        if self.branch.len() < depth + 1 {
+        if self.branch.len() < depth as usize + 1 {
             // add enough nodes so that we can insert node at depth `depth`
-            let num_extra_nodes = depth + 1 - self.branch.len();
+            let num_extra_nodes = depth as usize + 1 - self.branch.len();
             self.branch
                 .extend((0..num_extra_nodes).into_iter().map(|_| None));
         }
         // Push the last node to the branch
-        self.branch[depth] = Some(node);
+        self.branch[depth as usize] = Some(node);
         Ok(self)
     }
 }
 
 /// Represents the node information in taproot tree.
 ///
-/// You can use [`TaprootSpendInfo::from_node_info`] to a get [`TaprootSpendInfo`]
-/// from the merkle root [`NodeInfo`].
+/// Helper type used in merkle tree construction allowing one to build sparse merkle trees. The node
+/// represents part of the tree that has information about all of its descendants.
+/// See how [`TaprootBuilder`] works for more details.
+///
+/// You can use [`TaprootSpendInfo::from_node_info`] to a get a [`TaprootSpendInfo`] from the merkle
+/// root [`NodeInfo`].
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct NodeInfo {
@@ -561,16 +580,9 @@ impl NodeInfo {
             b_leaf.merkle_branch.push(a.hash)?; // add hashing partner
             all_leaves.push(b_leaf);
         }
-        let mut eng = TapBranchHash::engine();
-        if a.hash < b.hash {
-            eng.input(&a.hash);
-            eng.input(&b.hash);
-        } else {
-            eng.input(&b.hash);
-            eng.input(&a.hash);
-        };
+        let hash = TapBranchHash::from_node_hashes(a.hash, b.hash);
         Ok(Self {
-            hash: sha256::Hash::from_engine(eng),
+            hash: sha256::Hash::from_inner(hash.into_inner()),
             leaves: all_leaves,
         })
     }
@@ -704,11 +716,11 @@ impl ControlBlock {
     ///
     /// # Errors
     ///
-    /// - `TaprootError::InvalidControlBlockSize` if `sl` is not of size 1 + 32 + 32N for any N >= 0.
-    /// - `TaprootError::InvalidParity` if first byte of `sl` is not a valid output key parity.
-    /// - `TaprootError::InvalidTaprootLeafVersion` if first byte of `sl` is not a valid leaf version.
-    /// - `TaprootError::InvalidInternalKey` if internal key is invalid (first 32 bytes after the parity byte).
-    /// - `TaprootError::InvalidMerkleTreeDepth` if merkle tree is too deep (more than 128 levels).
+    /// - [`TaprootError::InvalidControlBlockSize`] if `sl` is not of size 1 + 32 + 32N for any N >= 0.
+    /// - [`TaprootError::InvalidParity`] if first byte of `sl` is not a valid output key parity.
+    /// - [`TaprootError::InvalidTaprootLeafVersion`] if first byte of `sl` is not a valid leaf version.
+    /// - [`TaprootError::InvalidInternalKey`] if internal key is invalid (first 32 bytes after the parity byte).
+    /// - [`TaprootError::InvalidMerkleTreeDepth`] if merkle tree is too deep (more than 128 levels).
     pub fn from_slice(sl: &[u8]) -> Result<ControlBlock, TaprootError> {
         if sl.len() < TAPROOT_CONTROL_BASE_SIZE
             || (sl.len() - TAPROOT_CONTROL_BASE_SIZE) % TAPROOT_CONTROL_NODE_SIZE != 0
@@ -775,16 +787,11 @@ impl ControlBlock {
         let mut curr_hash = TapBranchHash::from_inner(leaf_hash.into_inner());
         // Verify the proof
         for elem in self.merkle_branch.as_inner() {
-            let mut eng = TapBranchHash::engine();
-            if curr_hash.as_inner() < elem.as_inner() {
-                eng.input(&curr_hash);
-                eng.input(elem);
-            } else {
-                eng.input(elem);
-                eng.input(&curr_hash);
-            }
             // Recalculate the curr hash as parent hash
-            curr_hash = TapBranchHash::from_engine(eng);
+            curr_hash = TapBranchHash::from_node_hashes(
+                sha256::Hash::from_inner(curr_hash.into_inner()),
+                *elem
+            );
         }
         // compute the taptweak
         let tweak = TapTweakHash::from_key_and_tweak(self.internal_key, Some(curr_hash));
@@ -1270,7 +1277,7 @@ mod test {
             v: &serde_json::Value,
             mut builder: TaprootBuilder,
             leaves: &mut Vec<(Script, LeafVersion)>,
-            depth: usize,
+            depth: u8,
         ) -> TaprootBuilder {
             if v.is_null() {
                 // nothing to push

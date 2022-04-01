@@ -44,7 +44,7 @@ hash_newtype!(TxidInternal, sha256::Hash, 32, doc="A groestlcoin transaction has
 hash_newtype!(Wtxid, sha256d::Hash, 32, doc="A groestlcoin witness transaction ID.");
 hash_newtype!(WtxidInternal, sha256::Hash, 32, doc="A groestlcoin witness transaction ID.");
 hash_newtype!(BlockHash, groestld::Hash, 32, doc="A groestlcoin block hash.");
-hash_newtype!(SigHash, sha256::Hash, 32, doc="Hash of the transaction according to the signature algorithm");
+hash_newtype!(Sighash, sha256::Hash, 32, doc="Hash of the transaction according to the signature algorithm");
 
 impl From<TxidInternal> for Txid {
     fn from(txid: TxidInternal) -> Self {
@@ -81,7 +81,7 @@ hash_newtype!(FilterHeader, groestld::Hash, 32, doc="Filter header, as defined i
 impl_hashencode!(Txid);
 impl_hashencode!(Wtxid);
 impl_hashencode!(BlockHash);
-impl_hashencode!(SigHash);
+impl_hashencode!(Sighash);
 
 impl_hashencode!(TxMerkleNode);
 impl_hashencode!(WitnessMerkleNode);

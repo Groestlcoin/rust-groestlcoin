@@ -20,10 +20,10 @@
 //!
 
 use hashes::Hash;
-use hash_types::SigHash;
+use hash_types::Sighash;
 use blockdata::script::Script;
 use blockdata::witness::Witness;
-use blockdata::transaction::{Transaction, TxIn, EcdsaSigHashType};
+use blockdata::transaction::{Transaction, TxIn, EcdsaSighashType};
 use consensus::{encode, Encodable};
 
 use io;
@@ -33,16 +33,16 @@ use util::sighash;
 /// Parts of a sighash which are common across inputs or signatures, and which are
 /// sufficient (in conjunction with a private key) to sign the transaction
 #[derive(Clone, PartialEq, Eq, Debug)]
-#[deprecated(since = "0.24.0", note = "please use [sighash::SigHashCache] instead")]
+#[deprecated(since = "0.24.0", note = "please use [sighash::SighashCache] instead")]
 pub struct SighashComponents {
     tx_version: i32,
     tx_locktime: u32,
     /// Hash of all the previous outputs
-    pub hash_prevouts: SigHash,
+    pub hash_prevouts: Sighash,
     /// Hash of all the input sequence nos
-    pub hash_sequence: SigHash,
+    pub hash_sequence: Sighash,
     /// Hash of all the outputs in this transaction
-    pub hash_outputs: SigHash,
+    pub hash_outputs: Sighash,
 }
 
 #[allow(deprecated)]
@@ -53,27 +53,27 @@ impl SighashComponents {
     /// script_sig and witnesses.
     pub fn new(tx: &Transaction) -> SighashComponents {
         let hash_prevouts = {
-            let mut enc = SigHash::engine();
+            let mut enc = Sighash::engine();
             for txin in &tx.input {
                 txin.previous_output.consensus_encode(&mut enc).expect("engines don't error");
             }
-            SigHash::from_engine(enc)
+            Sighash::from_engine(enc)
         };
 
         let hash_sequence = {
-            let mut enc = SigHash::engine();
+            let mut enc = Sighash::engine();
             for txin in &tx.input {
                 txin.sequence.consensus_encode(&mut enc).expect("engines don't error");
             }
-            SigHash::from_engine(enc)
+            Sighash::from_engine(enc)
         };
 
         let hash_outputs = {
-            let mut enc = SigHash::engine();
+            let mut enc = Sighash::engine();
             for txout in &tx.output {
                 txout.consensus_encode(&mut enc).expect("engines don't error");
             }
-            SigHash::from_engine(enc)
+            Sighash::from_engine(enc)
         };
 
         SighashComponents {
@@ -87,8 +87,8 @@ impl SighashComponents {
 
     /// Compute the BIP143 sighash for a `SIGHASH_ALL` signature for the given
     /// input.
-    pub fn sighash_all(&self, txin: &TxIn, script_code: &Script, value: u64) -> SigHash {
-        let mut enc = SigHash::engine();
+    pub fn sighash_all(&self, txin: &TxIn, script_code: &Script, value: u64) -> Sighash {
+        let mut enc = Sighash::engine();
         self.tx_version.consensus_encode(&mut enc).expect("engines don't error");
         self.hash_prevouts.consensus_encode(&mut enc).expect("engines don't error");
         self.hash_sequence.consensus_encode(&mut enc).expect("engines don't error");
@@ -102,14 +102,14 @@ impl SighashComponents {
         self.hash_outputs.consensus_encode(&mut enc).expect("engines don't error");
         self.tx_locktime.consensus_encode(&mut enc).expect("engines don't error");
         1u32.consensus_encode(&mut enc).expect("engines don't error"); // hashtype
-        SigHash::from_engine(enc)
+        Sighash::from_engine(enc)
     }
 }
 
 /// A replacement for SigHashComponents which supports all sighash modes
-#[deprecated(since = "0.28.0", note = "please use [sighash::SigHashCache] instead")]
+#[deprecated(since = "0.28.0", note = "please use [sighash::SighashCache] instead")]
 pub struct SigHashCache<R: Deref<Target = Transaction>> {
-    cache: sighash::SigHashCache<R>,
+    cache: sighash::SighashCache<R>,
 }
 
 #[allow(deprecated)]
@@ -119,7 +119,7 @@ impl<R: Deref<Target = Transaction>> SigHashCache<R> {
     /// For the generated sighashes to be valid, no fields in the transaction may change except for
     /// script_sig and witnesses.
     pub fn new(tx: R) -> Self {
-        Self { cache: sighash::SigHashCache::new(tx) }
+        Self { cache: sighash::SighashCache::new(tx) }
     }
 
     /// Encode the BIP143 signing data for any flag type into a given object implementing a
@@ -130,7 +130,7 @@ impl<R: Deref<Target = Transaction>> SigHashCache<R> {
         input_index: usize,
         script_code: &Script,
         value: u64,
-        sighash_type: EcdsaSigHashType,
+        sighash_type: EcdsaSighashType,
     ) -> Result<(), encode::Error> {
         self.cache
             .segwit_encode_signing_data_to(writer, input_index, script_code, value, sighash_type)
@@ -145,12 +145,12 @@ impl<R: Deref<Target = Transaction>> SigHashCache<R> {
         input_index: usize,
         script_code: &Script,
         value: u64,
-        sighash_type: EcdsaSigHashType
-    ) -> SigHash {
-        let mut enc = SigHash::engine();
+        sighash_type: EcdsaSighashType
+    ) -> Sighash {
+        let mut enc = Sighash::engine();
         self.encode_signing_data_to(&mut enc, input_index, script_code, value, sighash_type)
             .expect("engines don't error");
-        SigHash::from_engine(enc)
+        Sighash::from_engine(enc)
     }
 }
 
@@ -164,7 +164,7 @@ impl<R: DerefMut<Target = Transaction>> SigHashCache<R> {
     /// panics if `input_index` is out of bounds with respect of the number of inputs
     ///
     /// ```
-    /// use groestlcoin::blockdata::transaction::{Transaction, EcdsaSigHashType};
+    /// use groestlcoin::blockdata::transaction::{Transaction, EcdsaSighashType};
     /// use groestlcoin::util::bip143::SigHashCache;
     /// use groestlcoin::Script;
     ///
@@ -174,7 +174,7 @@ impl<R: DerefMut<Target = Transaction>> SigHashCache<R> {
     /// let mut sig_hasher = SigHashCache::new(&mut tx_to_sign);
     /// for inp in 0..input_count {
     ///     let prevout_script = Script::new();
-    ///     let _sighash = sig_hasher.signature_hash(inp, &prevout_script, 42, EcdsaSigHashType::All);
+    ///     let _sighash = sig_hasher.signature_hash(inp, &prevout_script, 42, EcdsaSighashType::All);
     ///     // ... sign the sighash
     ///     sig_hasher.access_witness(inp).push(&[]);
     /// }
@@ -188,7 +188,7 @@ impl<R: DerefMut<Target = Transaction>> SigHashCache<R> {
 #[allow(deprecated)]
 mod tests {
     use std::str::FromStr;
-    use hash_types::SigHash;
+    use hash_types::Sighash;
     use blockdata::script::Script;
     use blockdata::transaction::Transaction;
     use consensus::encode::deserialize;
@@ -208,10 +208,10 @@ mod tests {
     fn run_test_sighash_bip143(tx: &str, script: &str, input_index: usize, value: u64, hash_type: u32, expected_result: &str) {
         let tx: Transaction = deserialize(&Vec::<u8>::from_hex(tx).unwrap()[..]).unwrap();
         let script = Script::from(Vec::<u8>::from_hex(script).unwrap());
-        let raw_expected = SigHash::from_hex(expected_result).unwrap();
-        let expected_result = SigHash::from_slice(&raw_expected[..]).unwrap();
+        let raw_expected = Sighash::from_hex(expected_result).unwrap();
+        let expected_result = Sighash::from_slice(&raw_expected[..]).unwrap();
         let mut cache = SigHashCache::new(&tx);
-        let sighash_type = EcdsaSigHashType::from_u32_consensus(hash_type);
+        let sighash_type = EcdsaSighashType::from_u32_consensus(hash_type);
         let actual_result = cache.signature_hash(input_index, &script, value, sighash_type);
         assert_eq!(actual_result, expected_result);
     }
@@ -237,20 +237,20 @@ mod tests {
                 tx_version: 1,
                 tx_locktime: 17,
                 hash_prevouts: hex_hash!(
-                    SigHash, "c771f7ed8ee6224d08700833d1c6d31e7a1f6b7a3840c4e186c22136e8c9a6ed"
+                    Sighash, "c771f7ed8ee6224d08700833d1c6d31e7a1f6b7a3840c4e186c22136e8c9a6ed"
                 ),
                 hash_sequence: hex_hash!(
-                    SigHash, "b258c7ef98e1770484c86e4023c5b7361eb8e02e56b6fb7233af17ebe9eb017e"
+                    Sighash, "b258c7ef98e1770484c86e4023c5b7361eb8e02e56b6fb7233af17ebe9eb017e"
                 ),
                 hash_outputs: hex_hash!(
-                    SigHash, "48f88af72cd8cc9af8cbeb53b6c60b20b4a074dcd5be578cbc279311c7d72ea9"
+                    Sighash, "48f88af72cd8cc9af8cbeb53b6c60b20b4a074dcd5be578cbc279311c7d72ea9"
                 ),
             }
         );
 
         assert_eq!(
             comp.sighash_all(&tx.input[1], &witness_script, value),
-            hex_hash!(SigHash, "78d30165e9873c05d3e3eea458d41559dbb42ad5bb79db4e5be4827a05ed62b4")
+            hex_hash!(Sighash, "78d30165e9873c05d3e3eea458d41559dbb42ad5bb79db4e5be4827a05ed62b4")
         );
     }
 
@@ -273,20 +273,20 @@ mod tests {
                 tx_version: 1,
                 tx_locktime: 1170,
                 hash_prevouts: hex_hash!(
-                    SigHash, "cddf06e3e7cc7c2b515aa8960e7ee526ffe975f30a421ca092075ade5cf47533"
+                    Sighash, "cddf06e3e7cc7c2b515aa8960e7ee526ffe975f30a421ca092075ade5cf47533"
                 ),
                 hash_sequence: hex_hash!(
-                    SigHash, "b4248c210a2905b94345e1a8414d0e12efcfb2f4f0f2397159a71283397a0ccd"
+                    Sighash, "b4248c210a2905b94345e1a8414d0e12efcfb2f4f0f2397159a71283397a0ccd"
                 ),
                 hash_outputs: hex_hash!(
-                    SigHash, "324d2443ed14b2ca1e7af61aba2d7fa517c5b8feb6433106b67a653a98b5c1a1"
+                    Sighash, "324d2443ed14b2ca1e7af61aba2d7fa517c5b8feb6433106b67a653a98b5c1a1"
                 ),
             }
         );
 
         assert_eq!(
             comp.sighash_all(&tx.input[0], &witness_script, value),
-            hex_hash!(SigHash, "12885c3df56d146075151c6dbf2afe9506333d4f3e6cea38f58ca8520805a30f")
+            hex_hash!(Sighash, "12885c3df56d146075151c6dbf2afe9506333d4f3e6cea38f58ca8520805a30f")
         );
     }
 
@@ -316,20 +316,20 @@ mod tests {
                 tx_version: 1,
                 tx_locktime: 0,
                 hash_prevouts: hex_hash!(
-                    SigHash, "1f1f6dc580200b32c0579c35acc3f5e54045e46fe1b6e6d3dbe75e3ad9e5125d"
+                    Sighash, "1f1f6dc580200b32c0579c35acc3f5e54045e46fe1b6e6d3dbe75e3ad9e5125d"
                 ),
                 hash_sequence: hex_hash!(
-                    SigHash, "ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e"
+                    Sighash, "ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e"
                 ),
                 hash_outputs: hex_hash!(
-                    SigHash, "691738022230671f6f97f0f6343ac62568f82a3e02bfb20dba155d509480c523"
+                    Sighash, "691738022230671f6f97f0f6343ac62568f82a3e02bfb20dba155d509480c523"
                 ),
             }
         );
 
         assert_eq!(
             comp.sighash_all(&tx.input[0], &witness_script, value),
-            hex_hash!(SigHash, "f49b945ea2188fbb44771c80c51e3b5185e90748b4600dd45c3e6268f634fa8a")
+            hex_hash!(Sighash, "f49b945ea2188fbb44771c80c51e3b5185e90748b4600dd45c3e6268f634fa8a")
         );
     }
     #[test]
