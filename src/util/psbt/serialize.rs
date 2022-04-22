@@ -355,7 +355,7 @@ impl Deserialize for TapTree {
             builder = builder.add_leaf_with_ver(*depth, script, leaf_version)
                 .map_err(|_| encode::Error::ParseFailed("Tree not in DFS order"))?;
         }
-        if builder.is_finalized() || !builder.has_hidden_nodes() {
+        if builder.is_finalized() && !builder.has_hidden_nodes() {
             Ok(TapTree(builder))
         } else {
             Err(encode::Error::ParseFailed("Incomplete taproot Tree"))
@@ -393,14 +393,14 @@ mod tests {
         let mut builder = compose_taproot_builder(0x51, &[2, 2, 2]);
         builder = builder.add_leaf_with_ver(3, Script::from_hex("b9").unwrap(), LeafVersion::from_consensus(0xC2).unwrap()).unwrap();
         builder = builder.add_hidden_node(3, sha256::Hash::default()).unwrap();
-        assert!(TapTree::from_inner(builder.clone()).is_err());
+        assert!(TapTree::from_builder(builder.clone()).is_err());
     }
 
     #[test]
     fn taptree_roundtrip() {
         let mut builder = compose_taproot_builder(0x51, &[2, 2, 2, 3]);
         builder = builder.add_leaf_with_ver(3, Script::from_hex("b9").unwrap(), LeafVersion::from_consensus(0xC2).unwrap()).unwrap();
-        let tree = TapTree::from_inner(builder).unwrap();
+        let tree = TapTree::from_builder(builder).unwrap();
         let tree_prime = TapTree::deserialize(&tree.serialize()).unwrap();
         assert_eq!(tree, tree_prime);
     }
