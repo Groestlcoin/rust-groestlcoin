@@ -6,6 +6,13 @@
 Library with support for de/serialization, parsing and executing on data
 structures and network messages related to Groestlcoin.
 
+
+**Heads up for contributors: upcoming edition change**
+
+We're currently preparing to bump MSRV and **change the edition to 2018**.
+To minimize the churn we recommend you to submit your local WIP changes ASAP.
+There will be a lot of rebasing after the edition change.
+
 [Documentation](https://docs.rs/groestlcoin/)
 
 Supports (or should support)
@@ -57,7 +64,9 @@ please join us in
 [libera.chat](https://libera.chat).
 
 ## Minimum Supported Rust Version (MSRV)
-This library should always compile with any combination of features on **Rust 1.41**.
+
+This library should always compile with any combination of features (minus
+`no-std`) on **Rust 1.41.1** or **Rust 1.47** with `no-std`.
 
 Because some dependencies have broken the build in minor/patch releases, to
 compile with 1.41.0 you will need to run the following version-pinning command:
