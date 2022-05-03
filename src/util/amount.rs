@@ -1689,7 +1689,7 @@ mod tests {
     }
 
     check_format_non_negative_show_denom! {
-        Satoshi, " satoshi";
+        Satoshi, " gro";
         sat_check_fmt_non_negative_show_denom_0, 0, "{}", "0";
         sat_check_fmt_non_negative_show_denom_1, 0, "{:2}", "0";
         sat_check_fmt_non_negative_show_denom_2, 0, "{:02}", "0";
@@ -1775,7 +1775,7 @@ mod tests {
     }
 
     check_format_non_negative_show_denom! {
-        Bitcoin, " BTC";
+        Bitcoin, " GRS";
         btc_check_fmt_non_negative_show_denom_0, 1, "{:14.1}", "0.00000001";
         btc_check_fmt_non_negative_show_denom_1, 1, "{:14.8}", "0.00000001";
         btc_check_fmt_non_negative_show_denom_2, 1, "{:15}", " 0.00000001";
@@ -1787,7 +1787,7 @@ mod tests {
     }
 
     check_format_non_negative_show_denom! {
-        Bitcoin, " BTC ";
+        Bitcoin, " GRS ";
         btc_check_fmt_non_negative_show_denom_align_0, 1, "{:<15}", "0.00000001";
         btc_check_fmt_non_negative_show_denom_align_1, 1, "{:^15}", "0.00000001";
         btc_check_fmt_non_negative_show_denom_align_2, 1, "{:^16}", " 0.00000001";
