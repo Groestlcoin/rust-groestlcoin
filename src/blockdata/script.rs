@@ -23,28 +23,28 @@
 //! This module provides the structures and functions needed to support scripts.
 //!
 
-use prelude::*;
+use crate::prelude::*;
 
-use io;
+use crate::io;
 use core::{fmt, default::Default};
 use core::ops::Index;
 
 #[cfg(feature = "serde")] use serde;
 
-use hash_types::{PubkeyHash, WPubkeyHash, ScriptHash, WScriptHash};
-use blockdata::opcodes;
-use consensus::{encode, Decodable, Encodable};
-use hashes::{Hash, hex};
-use policy::DUST_RELAY_TX_FEE;
+use crate::hash_types::{PubkeyHash, WPubkeyHash, ScriptHash, WScriptHash};
+use crate::blockdata::opcodes;
+use crate::consensus::{encode, Decodable, Encodable};
+use crate::hashes::{Hash, hex};
+use crate::policy::DUST_RELAY_TX_FEE;
 #[cfg(feature="groestlcoinconsensus")] use groestlcoinconsensus;
 #[cfg(feature="groestlcoinconsensus")] use core::convert::From;
-use OutPoint;
+use crate::OutPoint;
 
-use util::key::PublicKey;
-use util::address::WitnessVersion;
-use util::taproot::{LeafVersion, TapBranchHash, TapLeafHash};
+use crate::util::key::PublicKey;
+use crate::util::address::WitnessVersion;
+use crate::util::taproot::{LeafVersion, TapBranchHash, TapLeafHash};
 use secp256k1::{Secp256k1, Verification, XOnlyPublicKey};
-use schnorr::{TapTweak, TweakedPublicKey, UntweakedPublicKey};
+use crate::schnorr::{TapTweak, TweakedPublicKey, UntweakedPublicKey};
 
 /// A Groestlcoin script.
 #[derive(Clone, Default, PartialOrd, Ord, PartialEq, Eq, Hash)]
@@ -557,7 +557,7 @@ impl Script {
 
     /// Checks whether a script can be proven to have no satisfying input.
     pub fn is_provably_unspendable(&self) -> bool {
-        use blockdata::opcodes::Class::{ReturnOp, IllegalOp};
+        use crate::blockdata::opcodes::Class::{ReturnOp, IllegalOp};
 
         match self.0.first() {
             Some(b) => {
@@ -572,7 +572,7 @@ impl Script {
 
     /// Returns the minimum value an output with this script should have in order to be
     /// broadcastable on today's Bitcoin network.
-    pub fn dust_value(&self) -> ::Amount {
+    pub fn dust_value(&self) -> crate::Amount {
         // This must never be lower than Bitcoin Core's GetDustThreshold() (as of v0.21) as it may
         // otherwise allow users to create transactions which likely can never be broadcast/confirmed.
         let sats = DUST_RELAY_TX_FEE as u64 / 1000 * // The default dust relay fee is 3000 satoshi/kB (i.e. 3 sat/vByte)
@@ -588,7 +588,7 @@ impl Script {
             self.consensus_encode(&mut sink()).expect("sinks don't error") as u64 // The serialized size of this script_pubkey
         };
 
-        ::Amount::from_sat(sats)
+        crate::Amount::from_sat(sats)
     }
 
     /// Iterates over the script in the form of `Instruction`s, which are an enum covering opcodes,
@@ -617,7 +617,7 @@ impl Script {
     /// Shorthand for [`Self::verify_with_flags`] with flag [groestlcoinconsensus::VERIFY_ALL].
     #[cfg(feature="groestlcoinconsensus")]
     #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
-    pub fn verify (&self, index: usize, amount: ::Amount, spending: &[u8]) -> Result<(), Error> {
+    pub fn verify (&self, index: usize, amount: crate::Amount, spending: &[u8]) -> Result<(), Error> {
         self.verify_with_flags(index, amount, spending, ::groestlcoinconsensus::VERIFY_ALL)
     }
 
@@ -630,7 +630,7 @@ impl Script {
     ///  * `flags` - Verification flags, see [`groestlcoinconsensus::VERIFY_ALL`] and similar.
     #[cfg(feature="groestlcoinconsensus")]
     #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
-    pub fn verify_with_flags<F: Into<u32>>(&self, index: usize, amount: ::Amount, spending: &[u8], flags: F) -> Result<(), Error> {
+    pub fn verify_with_flags<F: Into<u32>>(&self, index: usize, amount: crate::Amount, spending: &[u8], flags: F) -> Result<(), Error> {
         Ok(groestlcoinconsensus::verify_with_flags (&self.0[..], amount.as_sat(), spending, index, flags.into())?)
     }
 
@@ -1075,11 +1075,11 @@ mod test {
     use super::*;
     use super::build_scriptint;
 
-    use hashes::hex::{FromHex, ToHex};
-    use consensus::encode::{deserialize, serialize};
-    use blockdata::opcodes;
-    use util::key::PublicKey;
-    use util::psbt::serialize::Serialize;
+    use crate::hashes::hex::{FromHex, ToHex};
+    use crate::consensus::encode::{deserialize, serialize};
+    use crate::blockdata::opcodes;
+    use crate::util::key::PublicKey;
+    use crate::util::psbt::serialize::Serialize;
 
     #[test]
     fn script() {
@@ -1440,7 +1440,7 @@ mod test {
 		// a random segwit transaction from the blockchain using native segwit
 		let spent = Builder::from(Vec::from_hex("0014f2075f97aaef79587e621275f0ba25e47e750e1a").unwrap()).into_script();
 		let spending = Vec::from_hex("020000000001019e0e6d901a29f49fc217edb0e18c036727115834fb6ada9c764e9740a16a83b90000000000ffffffff0198e6180207000000160014bb380c38f25920fc9946f6a84b6442eebbb77248024730440220786b3e70502d1c0ec300d3144d74b4cbc87fb1168e5821b78404962aaab05e9902203e27204e4ad621802c4191fee6eed8d1b97c7b2ba7e083fb7e4d09380cb7d0a401210223b5e6c2231dc61a800fde397f64d271dc8e65d8fd01a7932d3e4270dd32774e00000000").unwrap();
-		spent.verify(0, ::Amount::from_sat(30099980000), spending.as_slice()).unwrap();
+		spent.verify(0, crate::Amount::from_sat(30099980000), spending.as_slice()).unwrap();
 	}
 
     #[test]
@@ -1449,7 +1449,7 @@ mod test {
         // well-known scriptPubKey types.
         let script_p2wpkh = Builder::new().push_int(0).push_slice(&[42; 20]).into_script();
         assert!(script_p2wpkh.is_v0_p2wpkh());
-        assert_eq!(script_p2wpkh.dust_value(), ::Amount::from_sat(294));
+        assert_eq!(script_p2wpkh.dust_value(), crate::Amount::from_sat(294));
 
         let script_p2pkh = Builder::new()
             .push_opcode(opcodes::all::OP_DUP)
@@ -1459,7 +1459,7 @@ mod test {
             .push_opcode(opcodes::all::OP_CHECKSIG)
             .into_script();
         assert!(script_p2pkh.is_p2pkh());
-        assert_eq!(script_p2pkh.dust_value(), ::Amount::from_sat(546));
+        assert_eq!(script_p2pkh.dust_value(), crate::Amount::from_sat(546));
     }
 
     #[test]

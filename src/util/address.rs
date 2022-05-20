@@ -32,7 +32,7 @@
 //! let address = Address::p2pkh(&public_key, Network::Groestlcoin);
 //! ```
 
-use prelude::*;
+use crate::prelude::*;
 
 use core::fmt;
 use core::num::ParseIntError;
@@ -41,16 +41,16 @@ use core::str::FromStr;
 
 use secp256k1::{Secp256k1, Verification, XOnlyPublicKey};
 use bech32;
-use hashes::{sha256, Hash, HashEngine};
-use hash_types::{PubkeyHash, ScriptHash};
-use blockdata::{script, opcodes};
-use blockdata::constants::{PUBKEY_ADDRESS_PREFIX_MAIN, SCRIPT_ADDRESS_PREFIX_MAIN, PUBKEY_ADDRESS_PREFIX_TEST, SCRIPT_ADDRESS_PREFIX_TEST, MAX_SCRIPT_ELEMENT_SIZE};
-use network::constants::Network;
-use util::base58;
-use util::taproot::TapBranchHash;
-use util::key::PublicKey;
-use blockdata::script::Instruction;
-use util::schnorr::{TapTweak, UntweakedPublicKey, TweakedPublicKey};
+use crate::hashes::{sha256, Hash, HashEngine};
+use crate::hash_types::{PubkeyHash, ScriptHash};
+use crate::blockdata::{script, opcodes};
+use crate::blockdata::constants::{PUBKEY_ADDRESS_PREFIX_MAIN, SCRIPT_ADDRESS_PREFIX_MAIN, PUBKEY_ADDRESS_PREFIX_TEST, SCRIPT_ADDRESS_PREFIX_TEST, MAX_SCRIPT_ELEMENT_SIZE};
+use crate::network::constants::Network;
+use crate::util::base58;
+use crate::util::taproot::TapBranchHash;
+use crate::util::key::PublicKey;
+use crate::blockdata::script::Instruction;
+use crate::util::schnorr::{TapTweak, UntweakedPublicKey, TweakedPublicKey};
 
 /// Address error.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -468,6 +468,15 @@ impl Payload {
             program: output_key.as_inner().serialize().to_vec(),
         }
     }
+
+    /// Returns a byte slice of the payload
+    pub fn as_bytes(&self) -> &[u8] {
+        match self {
+            Payload::ScriptHash(hash) => hash,
+            Payload::PubkeyHash(hash) => hash,
+            Payload::WitnessProgram { program, .. } => program,
+        }
+    }
 }
 
 /// A utility struct to encode an address payload with the given parameters.
@@ -722,7 +731,7 @@ impl Address {
     /// given key. For taproot addresses, the supplied key is assumed to be tweaked
     pub fn is_related_to_pubkey(&self, pubkey: &PublicKey) -> bool {
         let pubkey_hash = pubkey.pubkey_hash();
-        let payload = self.payload_as_bytes();
+        let payload = self.payload.as_bytes();
         let xonly_pubkey = XOnlyPublicKey::from(pubkey.inner);
 
         (*pubkey_hash == *payload) || (xonly_pubkey.serialize() == *payload) || (*segwit_redeem_hash(&pubkey_hash) == *payload)
@@ -733,17 +742,8 @@ impl Address {
     /// This will only work for Taproot addresses. The Public Key is
     /// assumed to have already been tweaked.
     pub fn is_related_to_xonly_pubkey(&self, xonly_pubkey: &XOnlyPublicKey) -> bool {
-        let payload = self.payload_as_bytes();
+        let payload = self.payload.as_bytes();
         payload == xonly_pubkey.serialize()
-    }
-
-    /// Return the address payload as a byte slice
-    fn payload_as_bytes(&self) -> &[u8] {
-        match &self.payload {
-            Payload::ScriptHash(hash) => hash,
-            Payload::PubkeyHash(hash) => hash,
-            Payload::WitnessProgram { program, .. } => program,
-        }
     }
 }
 
@@ -889,22 +889,22 @@ impl fmt::Debug for Address {
 }
 
 /// Convert a byte array of a pubkey hash into a segwit redeem hash
-fn segwit_redeem_hash(pubkey_hash: &[u8]) -> ::hashes::hash160::Hash {
+fn segwit_redeem_hash(pubkey_hash: &[u8]) -> crate::hashes::hash160::Hash {
     let mut sha_engine = sha256::Hash::engine();
     sha_engine.input(&[0, 20]);
     sha_engine.input(pubkey_hash);
-    ::hashes::hash160::Hash::from_engine(sha_engine)
+    crate::hashes::hash160::Hash::from_engine(sha_engine)
 }
 
 #[cfg(test)]
 mod tests {
     use core::str::FromStr;
 
-    use hashes::hex::{FromHex, ToHex};
+    use crate::hashes::hex::{FromHex, ToHex};
 
-    use blockdata::script::Script;
-    use network::constants::Network::{Groestlcoin, Testnet};
-    use util::key::PublicKey;
+    use crate::blockdata::script::Script;
+    use crate::network::constants::Network::{Groestlcoin, Testnet};
+    use crate::util::key::PublicKey;
     use secp256k1::XOnlyPublicKey;
 
     use super::*;

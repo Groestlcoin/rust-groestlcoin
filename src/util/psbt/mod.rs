@@ -21,15 +21,15 @@
 
 use core::cmp;
 
-use blockdata::script::Script;
-use blockdata::transaction::{ TxOut, Transaction};
-use consensus::{encode, Encodable, Decodable};
-use consensus::encode::MAX_VEC_SIZE;
-pub use util::sighash::Prevouts;
+use crate::blockdata::script::Script;
+use crate::blockdata::transaction::{ TxOut, Transaction};
+use crate::consensus::{encode, Encodable, Decodable};
+use crate::consensus::encode::MAX_VEC_SIZE;
+pub use crate::util::sighash::Prevouts;
 
-use prelude::*;
+use crate::prelude::*;
 
-use io;
+use crate::io;
 mod error;
 pub use self::error::Error;
 
@@ -44,7 +44,7 @@ mod map;
 pub use self::map::{Input, Output, TapTree, PsbtSighashType, IncompleteTapTree};
 use self::map::Map;
 
-use util::bip32::{ExtendedPubKey, KeySource};
+use crate::util::bip32::{ExtendedPubKey, KeySource};
 
 /// Partially signed transaction, commonly referred to as a PSBT.
 pub type Psbt = PartiallySignedTransaction;
@@ -53,26 +53,23 @@ pub type Psbt = PartiallySignedTransaction;
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PartiallySignedTransaction {
-    /// The unsigned transaction, scriptSigs and witnesses for each input must be
-    /// empty.
+    /// The unsigned transaction, scriptSigs and witnesses for each input must be empty.
     pub unsigned_tx: Transaction,
     /// The version number of this PSBT. If omitted, the version number is 0.
     pub version: u32,
     /// A global map from extended public keys to the used key fingerprint and
-    /// derivation path as defined by BIP 32
+    /// derivation path as defined by BIP 32.
     pub xpub: BTreeMap<ExtendedPubKey, KeySource>,
     /// Global proprietary key-value pairs.
-    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_as_seq_byte_values"))]
+    #[cfg_attr(feature = "serde", serde(with = "crate::serde_utils::btreemap_as_seq_byte_values"))]
     pub proprietary: BTreeMap<raw::ProprietaryKey, Vec<u8>>,
     /// Unknown global key-value pairs.
-    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_as_seq_byte_values"))]
+    #[cfg_attr(feature = "serde", serde(with = "crate::serde_utils::btreemap_as_seq_byte_values"))]
     pub unknown: BTreeMap<raw::Key, Vec<u8>>,
 
-    /// The corresponding key-value map for each input in the unsigned
-    /// transaction.
+    /// The corresponding key-value map for each input in the unsigned transaction.
     pub inputs: Vec<Input>,
-    /// The corresponding key-value map for each output in the unsigned
-    /// transaction.
+    /// The corresponding key-value map for each output in the unsigned transaction.
     pub outputs: Vec<Output>,
 }
 
@@ -103,8 +100,7 @@ impl PartiallySignedTransaction {
         })
     }
 
-    /// Checks that unsigned transaction does not have scriptSig's or witness
-    /// data
+    /// Checks that unsigned transaction does not have scriptSig's or witness data.
     fn unsigned_tx_checks(&self) -> Result<(), Error> {
         for txin in &self.unsigned_tx.input {
             if !txin.script_sig.is_empty() {
@@ -119,8 +115,11 @@ impl PartiallySignedTransaction {
         Ok(())
     }
 
-    /// Create a PartiallySignedTransaction from an unsigned transaction, error
-    /// if not unsigned
+    /// Creates a PSBT from an unsigned transaction.
+    ///
+    /// # Errors
+    ///
+    /// If transactions is not unsigned.
     pub fn from_unsigned_tx(tx: Transaction) -> Result<Self, Error> {
         let psbt = PartiallySignedTransaction {
             inputs: vec![Default::default(); tx.input.len()],
@@ -136,8 +135,7 @@ impl PartiallySignedTransaction {
         Ok(psbt)
     }
 
-    /// Extract the Transaction from a PartiallySignedTransaction by filling in
-    /// the available signature information in place.
+    /// Extracts the `Transaction` from a PSBT by filling in the available signature information.
     pub fn extract_tx(self) -> Transaction {
         let mut tx: Transaction = self.unsigned_tx;
 
@@ -194,7 +192,7 @@ impl PartiallySignedTransaction {
                         entry.insert((fingerprint1, derivation1));
                         continue
                     }
-                    return Err(Error::CombineInconsistentKeySources(xpub));
+                    return Err(Error::CombineInconsistentKeySources(Box::new(xpub)));
                 }
             }
         }
@@ -219,16 +217,16 @@ mod display_from_str {
     use super::PartiallySignedTransaction;
     use core::fmt::{Display, Formatter, self};
     use core::str::FromStr;
-    use consensus::encode::{Error, self};
-    use ::base64::display::Base64Display;
+    use crate::consensus::encode::{Error, self};
+    use base64::display::Base64Display;
 
-    /// Error happening during PSBT decoding from Base64 string
+    /// Error encountered during PSBT decoding from Base64 string.
     #[derive(Debug)]
     #[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
     pub enum PsbtParseError {
-        /// Error in internal PSBT data structure
+        /// Error in internal PSBT data structure.
         PsbtEncoding(Error),
-        /// Error in PSBT Base64 encoding
+        /// Error in PSBT Base64 encoding.
         Base64Encoding(::base64::DecodeError)
     }
 
@@ -337,22 +335,22 @@ impl Decodable for PartiallySignedTransaction {
 mod tests {
     use super::*;
 
-    use hashes::hex::FromHex;
-    use hashes::{sha256, hash160, Hash, ripemd160};
-    use hash_types::Txid;
+    use crate::hashes::hex::FromHex;
+    use crate::hashes::{sha256, hash160, Hash, ripemd160};
+    use crate::hash_types::Txid;
 
     use secp256k1::{Secp256k1, self};
 
-    use blockdata::script::Script;
-    use blockdata::transaction::{Transaction, TxIn, TxOut, OutPoint};
-    use network::constants::Network::Groestlcoin;
-    use consensus::encode::{deserialize, serialize, serialize_hex};
-    use util::bip32::{ChildNumber, ExtendedPrivKey, ExtendedPubKey, Fingerprint, KeySource};
-    use util::psbt::map::{Output, Input};
-    use util::psbt::raw;
+    use crate::blockdata::script::Script;
+    use crate::blockdata::transaction::{Transaction, TxIn, TxOut, OutPoint};
+    use crate::network::constants::Network::Groestlcoin;
+    use crate::consensus::encode::{deserialize, serialize, serialize_hex};
+    use crate::util::bip32::{ChildNumber, ExtendedPrivKey, ExtendedPubKey, Fingerprint, KeySource};
+    use crate::util::psbt::map::{Output, Input};
+    use crate::util::psbt::raw;
 
     use std::collections::BTreeMap;
-    use blockdata::witness::Witness;
+    use crate::blockdata::witness::Witness;
 
     #[test]
     fn trivial_psbt() {
@@ -497,8 +495,8 @@ mod tests {
     fn test_serde_psbt() {
         //! Create a full PSBT value with various fields filled and make sure it can be JSONized.
         use hashes::sha256d;
-        use util::psbt::map::Input;
-        use EcdsaSighashType;
+        use crate::util::psbt::map::Input;
+        use crate::EcdsaSighashType;
 
         // create some values to use in the PSBT
         let tx = Transaction {
@@ -595,17 +593,17 @@ mod tests {
         #[cfg(feature = "base64")]
         use std::str::FromStr;
 
-        use hashes::hex::FromHex;
-        use hash_types::Txid;
+        use crate::hashes::hex::FromHex;
+        use crate::hash_types::Txid;
 
-        use blockdata::script::Script;
-        use blockdata::transaction::{EcdsaSighashType, Transaction, TxIn, TxOut, OutPoint};
-        use consensus::encode::serialize_hex;
-        use util::psbt::map::{Map, Input, Output};
-        use util::psbt::raw;
-        use util::psbt::{PartiallySignedTransaction, Error};
+        use crate::blockdata::script::Script;
+        use crate::blockdata::transaction::{EcdsaSighashType, Transaction, TxIn, TxOut, OutPoint};
+        use crate::consensus::encode::serialize_hex;
+        use crate::util::psbt::map::{Map, Input, Output};
+        use crate::util::psbt::raw;
+        use crate::util::psbt::{PartiallySignedTransaction, Error};
         use std::collections::BTreeMap;
-        use blockdata::witness::Witness;
+        use crate::blockdata::witness::Witness;
 
         #[test]
         #[should_panic(expected = "InvalidMagic")]
@@ -633,7 +631,7 @@ mod tests {
         #[test]
         #[should_panic(expected = "ConsensusEncoding")]
         fn invalid_vector_2_base64() {
-            use util::psbt::PsbtParseError;
+            use crate::util::psbt::PsbtParseError;
             PartiallySignedTransaction::from_str("cHNidP8BAHUCAAAAASaBcTce3/KF6Tet7qSze3gADAVmy7OtZGQXE8pCFxv2AAAAAAD+////AtPf9QUAAAAAGXapFNDFmQPFusKGh2DpD9UhpGZap2UgiKwA4fUFAAAAABepFDVF5uM7gyxHBQ8k0+65PJwDlIvHh7MuEwAAAQD9pQEBAAAAAAECiaPHHqtNIOA3G7ukzGmPopXJRjr6Ljl/hTPMti+VZ+UBAAAAFxYAFL4Y0VKpsBIDna89p95PUzSe7LmF/////4b4qkOnHf8USIk6UwpyN+9rRgi7st0tAXHmOuxqSJC0AQAAABcWABT+Pp7xp0XpdNkCxDVZQ6vLNL1TU/////8CAMLrCwAAAAAZdqkUhc/xCX/Z4Ai7NK9wnGIZeziXikiIrHL++E4sAAAAF6kUM5cluiHv1irHU6m80GfWx6ajnQWHAkcwRAIgJxK+IuAnDzlPVoMR3HyppolwuAJf3TskAinwf4pfOiQCIAGLONfc0xTnNMkna9b7QPZzMlvEuqFEyADS8vAtsnZcASED0uFWdJQbrUqZY3LLh+GFbTZSYG2YVi/jnF6efkE/IQUCSDBFAiEA0SuFLYXc2WHS9fSrZgZU327tzHlMDDPOXMMJ/7X85Y0CIGczio4OFyXBl/saiK9Z9R5E5CVbIBZ8hoQDHAXR8lkqASECI7cr7vCWXRC+B3jv7NYfysb3mk6haTkzgHNEZPhPKrMAAAAAAA==")
                 // This weird thing is necessary since rustc 0.29 prints out I/O error in a different format than later versions
                 .map_err(|err| match err {

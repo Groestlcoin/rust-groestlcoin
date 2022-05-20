@@ -20,7 +20,7 @@
 //! hash).
 //!
 
-use hashes::{Hash, sha256, sha256d, hash160, groestld};
+use crate::hashes::{Hash, sha256, sha256d, hash160, hash_newtype, groestld};
 
 macro_rules! impl_hashencode {
     ($hashtype:ident) => {

@@ -16,8 +16,8 @@
 //! This module provides support for taproot tagged hashes.
 //!
 
-use prelude::*;
-use io;
+use crate::prelude::*;
+use crate::io;
 use secp256k1::{self, Secp256k1};
 
 use core::fmt;
@@ -25,12 +25,12 @@ use core::cmp::Reverse;
 #[cfg(feature = "std")]
 use std::error;
 
-use hashes::{sha256, sha256t, Hash, HashEngine};
-use schnorr::{TweakedPublicKey, UntweakedPublicKey, TapTweak};
-use util::key::XOnlyPublicKey;
-use Script;
+use crate::hashes::{sha256, Hash, HashEngine};
+use crate::schnorr::{TweakedPublicKey, UntweakedPublicKey, TapTweak};
+use crate::util::key::XOnlyPublicKey;
+use crate::Script;
 
-use consensus::Encodable;
+use crate::consensus::Encodable;
 
 /// The SHA-256 midstate value for the TapLeaf hash.
 const MIDSTATE_TAPLEAF: [u8; 32] = [
@@ -60,41 +60,17 @@ const MIDSTATE_TAPSIGHASH: [u8; 32] = [
 ];
 // f504a425d7f8783b1363868ae3e556586eee945dbc7888dd02a6e2c31873fe9f
 
-/// Internal macro to speficy the different taproot tagged hashes.
-macro_rules! sha256t_hash_newtype {
-    ($newtype:ident, $tag:ident, $midstate:ident, $midstate_len:expr, $docs:meta, $reverse: expr) => {
-        sha256t_hash_newtype!($newtype, $tag, $midstate, $midstate_len, $docs, $reverse, stringify!($newtype));
-    };
-
-    ($newtype:ident, $tag:ident, $midstate:ident, $midstate_len:expr, $docs:meta, $reverse: expr, $sname:expr) => {
-        #[doc = "The tag used for ["]
-        #[doc = $sname]
-        #[doc = "]"]
-        #[derive(Copy, Clone, PartialEq, Eq, Default, PartialOrd, Ord, Hash)]
-        pub struct $tag;
-
-        impl sha256t::Tag for $tag {
-            fn engine() -> sha256::HashEngine {
-                let midstate = sha256::Midstate::from_inner($midstate);
-                sha256::HashEngine::from_midstate(midstate, $midstate_len)
-            }
-        }
-
-        hash_newtype!($newtype, sha256t::Hash<$tag>, 32, $docs, $reverse);
-    };
-}
-
 // Taproot test vectors from BIP-341 state the hashes without any reversing
-sha256t_hash_newtype!(TapLeafHash, TapLeafTag, MIDSTATE_TAPLEAF, 64,
+hashes::sha256t_hash_newtype!(TapLeafHash, TapLeafTag, MIDSTATE_TAPLEAF, 64,
     doc="Taproot-tagged hash for tapscript Merkle tree leafs", false
 );
-sha256t_hash_newtype!(TapBranchHash, TapBranchTag, MIDSTATE_TAPBRANCH, 64,
+hashes::sha256t_hash_newtype!(TapBranchHash, TapBranchTag, MIDSTATE_TAPBRANCH, 64,
     doc="Taproot-tagged hash for tapscript Merkle tree branches", false
 );
-sha256t_hash_newtype!(TapTweakHash, TapTweakTag, MIDSTATE_TAPTWEAK, 64,
+hashes::sha256t_hash_newtype!(TapTweakHash, TapTweakTag, MIDSTATE_TAPTWEAK, 64,
     doc="Taproot-tagged hash for public key tweaks", false
 );
-sha256t_hash_newtype!(TapSighashHash, TapSighashTag, MIDSTATE_TAPSIGHASH, 64,
+hashes::sha256t_hash_newtype!(TapSighashHash, TapSighashTag, MIDSTATE_TAPSIGHASH, 64,
     doc="Taproot-tagged hash for the taproot signature hash", false
 );
 
@@ -402,7 +378,7 @@ impl TaprootBuilder {
     /// If the script weight calculations overflow, a sub-optimal tree may be generated. This should
     /// not happen unless you are dealing with billions of branches with weights close to 2^32.
     ///
-    /// [`TapTree`]: ::util::psbt::TapTree
+    /// [`TapTree`]: crate::util::psbt::TapTree
     pub fn with_huffman_tree<I>(
         script_weights: I,
     ) -> Result<Self, TaprootBuilderError>
@@ -808,7 +784,7 @@ impl ControlBlock {
     /// Serializes the control block.
     ///
     /// This would be required when using [`ControlBlock`] as a witness element while spending an
-    /// output via script path. This serialization does not include the [`::VarInt`] prefix that would
+    /// output via script path. This serialization does not include the [`crate::VarInt`] prefix that would
     /// be applied when encoding this element as a witness.
     pub fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::with_capacity(self.size());
@@ -1096,13 +1072,13 @@ impl fmt::Display for TaprootError {
 impl error::Error for TaprootError {}
 #[cfg(test)]
 mod test {
-    use {Address, Network};
-    use schnorr::TapTweak;
+    use crate::{Address, Network};
+    use crate::schnorr::TapTweak;
 
     use super::*;
-    use hashes::hex::{FromHex, ToHex};
-    use hashes::sha256t::Tag;
-    use hashes::{sha256, Hash, HashEngine};
+    use crate::hashes::hex::{FromHex, ToHex};
+    use crate::hashes::sha256t::Tag;
+    use crate::hashes::{sha256, Hash, HashEngine};
     use secp256k1::{VerifyOnly, XOnlyPublicKey};
     use core::str::FromStr;
     extern crate serde_json;

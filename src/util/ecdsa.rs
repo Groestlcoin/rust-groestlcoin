@@ -16,13 +16,13 @@
 //!
 //! This module provides ECDSA signatures used Bitcoin that can be roundtrip (de)serialized.
 
-use prelude::*;
+use crate::prelude::*;
 use core::str::FromStr;
 use core::{fmt, iter};
-use hashes::hex::{self, FromHex};
-use blockdata::transaction::NonStandardSighashType;
+use crate::hashes::hex::{self, FromHex};
+use crate::blockdata::transaction::NonStandardSighashType;
 use secp256k1;
-use EcdsaSighashType;
+use crate::EcdsaSighashType;
 
 /// An ECDSA signature with the corresponding hash type.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -35,7 +35,7 @@ pub struct EcdsaSig {
 }
 
 impl EcdsaSig {
-    /// Constructs ECDSA bitcoin signature for [`EcdsaSighashType::All`]
+    /// Constructs an ECDSA bitcoin signature for [`EcdsaSighashType::All`].
     pub fn sighash_all(sig: secp256k1::ecdsa::Signature) -> EcdsaSig {
         EcdsaSig {
             sig,
@@ -43,7 +43,7 @@ impl EcdsaSig {
         }
     }
 
-    /// Deserialize from slice following the standardness rules for [`EcdsaSighashType`]
+    /// Deserializes from slice following the standardness rules for [`EcdsaSighashType`].
     pub fn from_slice(sl: &[u8]) -> Result<Self, EcdsaSigError> {
         let (hash_ty, sig) = sl.split_last()
             .ok_or(EcdsaSigError::EmptySignature)?;
@@ -54,7 +54,7 @@ impl EcdsaSig {
         Ok(EcdsaSig { sig, hash_ty })
     }
 
-    /// Serialize EcdsaSig
+    /// Serializes an ECDSA signature (inner secp256k1 signature in DER format).
     pub fn to_vec(&self) -> Vec<u8> {
         // TODO: add support to serialize to a writer to SerializedSig
         self.sig.serialize_der()

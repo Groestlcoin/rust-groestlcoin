@@ -10,6 +10,7 @@ description = "General groestlcoin library for using and interoperating with Gro
 keywords = [ "crypto", "groestlcoin" ]
 readme = "README.md"
 exclude = ["./test_data"]
+edition = "2018"
 
 # Please don't forget to add relevant features to docs.rs below
 [features]
