@@ -39,7 +39,7 @@ use crate::blockdata::script::Script;
 use crate::blockdata::witness::Witness;
 use crate::consensus::{encode, Decodable, Encodable};
 use crate::consensus::encode::MAX_VEC_SIZE;
-use hash_types::{Sighash, Txid, TxidInternal, Wtxid, WtxidInternal};
+use crate::hash_types::{Sighash, Txid, TxidInternal, Wtxid, WtxidInternal};
 use crate::VarInt;
 
 #[cfg(doc)]
