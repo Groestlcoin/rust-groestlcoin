@@ -179,7 +179,7 @@ pub fn genesis_block(network: Network) -> Block {
 // Mainnet value can be verified at https://github.com/lightning/bolts/blob/master/00-introduction.md
 const GENESIS_BLOCK_HASH_BITCOIN: [u8; 32] = [35, 144, 99, 59, 112, 240, 98, 203, 58, 61, 104, 20, 182, 126, 41, 168, 13, 157, 117, 129, 219, 11, 204, 73, 77, 89, 124, 146, 197, 10, 0, 0];
 const GENESIS_BLOCK_HASH_TESTNET: [u8; 32] = [54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99, 193, 110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0];
-const GENESIS_BLOCK_HASH_SIGNET: [u8; 32] = [54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99, 193, 110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0];
+const GENESIS_BLOCK_HASH_SIGNET: [u8; 32] = [49, 171, 20, 187, 146, 53, 242, 162, 235, 108, 135, 123, 81, 175, 87, 67, 37, 140, 129, 231, 233, 205, 198, 147, 121, 162, 162, 202, 127, 0, 0, 0];
 const GENESIS_BLOCK_HASH_REGTEST: [u8; 32] = [54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99, 193, 110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0];
 
 /// The uniquely identifying hash of the target blockchain.
