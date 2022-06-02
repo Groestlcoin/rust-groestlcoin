@@ -177,10 +177,10 @@ pub fn genesis_block(network: Network) -> Block {
 }
 
 // Mainnet value can be verified at https://github.com/lightning/bolts/blob/master/00-introduction.md
-const GENESIS_BLOCK_HASH_BITCOIN: [u8; 32] = [111, 226, 140, 10, 182, 241, 179, 114, 193, 166, 162, 70, 174, 99, 247, 79, 147, 30, 131, 101, 225, 90, 8, 156, 104, 214, 25, 0, 0, 0, 0, 0];
-const GENESIS_BLOCK_HASH_TESTNET: [u8; 32] = [67, 73, 127, 215, 248, 38, 149, 113, 8, 244, 163, 15, 217, 206, 195, 174, 186, 121, 151, 32, 132, 233, 14, 173, 1, 234, 51, 9, 0, 0, 0, 0];
-const GENESIS_BLOCK_HASH_SIGNET: [u8; 32] = [246, 30, 238, 59, 99, 163, 128, 164, 119, 160, 99, 175, 50, 178, 187, 201, 124, 159, 249, 240, 31, 44, 66, 37, 233, 115, 152, 129, 8, 0, 0, 0];
-const GENESIS_BLOCK_HASH_REGTEST: [u8; 32] = [6, 34, 110, 70, 17, 26, 11, 89, 202, 175, 18, 96, 67, 235, 91, 191, 40, 195, 79, 58, 94, 51, 42, 31, 199, 178, 183, 60, 241, 136, 145, 15];
+const GENESIS_BLOCK_HASH_BITCOIN: [u8; 32] = [35, 144, 99, 59, 112, 240, 98, 203, 58, 61, 104, 20, 182, 126, 41, 168, 13, 157, 117, 129, 219, 11, 204, 73, 77, 89, 124, 146, 197, 10, 0, 0];
+const GENESIS_BLOCK_HASH_TESTNET: [u8; 32] = [54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99, 193, 110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0];
+const GENESIS_BLOCK_HASH_SIGNET: [u8; 32] = [54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99, 193, 110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0];
+const GENESIS_BLOCK_HASH_REGTEST: [u8; 32] = [54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99, 193, 110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0];
 
 /// The uniquely identifying hash of the target blockchain.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -195,7 +195,7 @@ impl ChainHash {
     /// for specification.
     pub fn using_genesis_block(network: Network) -> Self {
         match network {
-            Network::Bitcoin => ChainHash(GENESIS_BLOCK_HASH_BITCOIN),
+            Network::Groestlcoin => ChainHash(GENESIS_BLOCK_HASH_BITCOIN),
             Network::Testnet => ChainHash(GENESIS_BLOCK_HASH_TESTNET),
             Network::Signet => ChainHash(GENESIS_BLOCK_HASH_SIGNET),
             Network::Regtest => ChainHash(GENESIS_BLOCK_HASH_REGTEST),
@@ -306,7 +306,7 @@ mod test {
     }
 
     chain_hash_genesis_block! {
-        mainnet_chain_hash_genesis_block, Network::Bitcoin;
+        mainnet_chain_hash_genesis_block, Network::Groestlcoin;
         testnet_chain_hash_genesis_block, Network::Testnet;
         signet_chain_hash_genesis_block, Network::Signet;
         regtest_chain_hash_genesis_block, Network::Regtest;
@@ -315,8 +315,8 @@ mod test {
     // Test vector taken from: https://github.com/lightning/bolts/blob/master/00-introduction.md
     #[test]
     fn mainnet_chain_hash_test_vector() {
-        let got = format!("{:x}", ChainHash::using_genesis_block(Network::Bitcoin));
-        let want = "6fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000";
+        let got = format!("{:x}", ChainHash::using_genesis_block(Network::Groestlcoin));
+        let want = "2390633b70f062cb3a3d6814b67e29a80d9d7581db0bcc494d597c92c50a0000";
         assert_eq!(got, want);
     }
 }
