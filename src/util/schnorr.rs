@@ -39,6 +39,7 @@ pub type UntweakedPublicKey = crate::XOnlyPublicKey;
 /// Tweaked BIP-340 X-coord-only public key
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(crate = "actual_serde"))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct TweakedPublicKey(crate::XOnlyPublicKey);
 
@@ -60,6 +61,7 @@ pub type UntweakedKeyPair = crate::KeyPair;
 /// Tweaked BIP-340 key pair
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(crate = "actual_serde"))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct TweakedKeyPair(crate::KeyPair);
 
@@ -109,10 +111,10 @@ impl TapTweak for UntweakedPublicKey {
     /// The tweaked key and its parity.
     fn tap_tweak<C: Verification>(self, secp: &Secp256k1<C>, merkle_root: Option<TapBranchHash>) -> (TweakedPublicKey, secp256k1::Parity) {
         let tweak_value = TapTweakHash::from_key_and_tweak(self, merkle_root).into_inner();
-        let mut output_key = self.clone();
-        let parity = output_key.tweak_add_assign(&secp, &tweak_value).expect("Tap tweak failed");
+        let mut output_key = self;
+        let parity = output_key.tweak_add_assign(secp, &tweak_value).expect("Tap tweak failed");
 
-        debug_assert!(self.tweak_add_check(&secp, &output_key, parity, tweak_value));
+        debug_assert!(self.tweak_add_check(secp, &output_key, parity, tweak_value));
         (TweakedPublicKey(output_key), parity)
     }
 
@@ -140,7 +142,7 @@ impl TapTweak for UntweakedKeyPair {
     fn tap_tweak<C: Verification>(mut self, secp: &Secp256k1<C>, merkle_root: Option<TapBranchHash>) -> TweakedKeyPair {
         let pubkey = crate::XOnlyPublicKey::from_keypair(&self);
         let tweak_value = TapTweakHash::from_key_and_tweak(pubkey, merkle_root).into_inner();
-        self.tweak_add_assign(&secp, &tweak_value).expect("Tap tweak failed");
+        self.tweak_add_assign(secp, &tweak_value).expect("Tap tweak failed");
         TweakedKeyPair(self)
     }
 
@@ -165,11 +167,6 @@ impl TweakedPublicKey {
         self.0
     }
 
-    /// Returns a reference to underlying public key.
-    pub fn as_inner(&self) -> &crate::XOnlyPublicKey {
-        &self.0
-    }
-
     /// Serialize the key as a byte-encoded pair of values. In compressed form
     /// the y-coordinate is represented by only a single bit, as x determines
     /// it up to one bit.
@@ -192,7 +189,14 @@ impl TweakedKeyPair {
 
     /// Returns the underlying key pair
     #[inline]
+    #[deprecated(since = "0.29.0", note = "use to_inner instead")]
     pub fn into_inner(self) -> crate::KeyPair {
+        self.0
+    }
+
+    /// Returns the underlying key pair.
+    #[inline]
+    pub fn to_inner(self) -> crate::KeyPair {
         self.0
     }
 }
@@ -214,6 +218,7 @@ impl From<TweakedKeyPair> for crate::KeyPair {
 /// A BIP340-341 serialized schnorr signature with the corresponding hash type.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(crate = "actual_serde"))]
 pub struct SchnorrSig {
     /// The underlying schnorr signature
     pub sig: secp256k1::schnorr::Signature,
@@ -229,7 +234,7 @@ impl SchnorrSig {
                 // default type
                 let sig = secp256k1::schnorr::Signature::from_slice(sl)
                     .map_err(SchnorrSigError::Secp256k1)?;
-                return Ok( SchnorrSig { sig, hash_ty : SchnorrSighashType::Default });
+                Ok(SchnorrSig { sig, hash_ty: SchnorrSighashType::Default })
             },
             65 => {
                 let (hash_ty, sig) = sl.split_last().expect("Slice len checked == 65");
@@ -261,6 +266,7 @@ impl SchnorrSig {
 
 /// A schnorr sig related error.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[non_exhaustive]
 pub enum SchnorrSigError {
     /// Base58 encoding error
     InvalidSighashType(u8),
@@ -277,7 +283,7 @@ impl fmt::Display for SchnorrSigError {
             SchnorrSigError::InvalidSighashType(hash_ty) =>
                 write!(f, "Invalid signature hash type {}", hash_ty),
             SchnorrSigError::Secp256k1(ref e) =>
-                write!(f, "Schnorr Signature has correct len, but is malformed : {}", e),
+                write_err!(f, "Schnorr signature has correct len but is malformed"; e),
             SchnorrSigError::InvalidSchnorrSigSize(sz) =>
                 write!(f, "Invalid Schnorr signature size: {}", sz),
         }

@@ -32,6 +32,16 @@ macro_rules! impl_consensus_encoding {
         }
 
         impl $crate::consensus::Decodable for $thing {
+
+            #[inline]
+            fn consensus_decode_from_finite_reader<D: $crate::io::Read>(
+                mut d: D,
+            ) -> Result<$thing, $crate::consensus::encode::Error> {
+                Ok($thing {
+                    $($field: $crate::consensus::Decodable::consensus_decode_from_finite_reader(&mut d)?),+
+                })
+            }
+
             #[inline]
             fn consensus_decode<D: $crate::io::Read>(
                 d: D,
@@ -84,7 +94,7 @@ macro_rules! impl_array_newtype {
             pub fn into_bytes(self) -> [$ty; $len] { self.0 }
         }
 
-        impl<'a> ::core::convert::From<&'a [$ty]> for $thing {
+        impl<'a> core::convert::From<&'a [$ty]> for $thing {
             fn from(data: &'a [$ty]) -> $thing {
                 assert_eq!(data.len(), $len);
                 let mut ret = [0; $len];
@@ -109,7 +119,7 @@ macro_rules! impl_array_newtype {
 
 macro_rules! display_from_debug {
     ($thing:ident) => {
-        impl ::core::fmt::Display for $thing {
+        impl core::fmt::Display for $thing {
             fn fmt(&self, f: &mut ::core::fmt::Formatter) -> Result<(), ::core::fmt::Error> {
                 ::core::fmt::Debug::fmt(self, f)
             }
@@ -365,13 +375,13 @@ macro_rules! impl_bytes_newtype {
 
         impl ::core::fmt::Display for $t {
             fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                fmt::LowerHex::fmt(self, f)
+                ::core::fmt::LowerHex::fmt(self, f)
             }
         }
 
         impl ::core::fmt::Debug for $t {
             fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                fmt::LowerHex::fmt(self, f)
+                ::core::fmt::LowerHex::fmt(self, f)
             }
         }
 
@@ -563,4 +573,23 @@ macro_rules! user_enum {
             }
         }
     );
+}
+
+/// Formats error. If `std` feature is OFF appends error source (delimited by `: `). We do this
+/// because `e.source()` is only available in std builds, without this macro the error source is
+/// lost for no-std builds.
+macro_rules! write_err {
+    ($writer:expr, $string:literal $(, $args:expr),*; $source:expr) => {
+        {
+            #[cfg(feature = "std")]
+            {
+                let _ = &$source;   // Prevents clippy warnings.
+                write!($writer, $string $(, $args)*)
+            }
+            #[cfg(not(feature = "std"))]
+            {
+                write!($writer, concat!($string, ": {}") $(, $args)*, $source)
+            }
+        }
+    }
 }

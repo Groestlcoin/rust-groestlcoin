@@ -27,6 +27,7 @@ use crate::EcdsaSighashType;
 /// An ECDSA signature with the corresponding hash type.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(crate = "actual_serde"))]
 pub struct EcdsaSig {
     /// The underlying ECDSA Signature
     pub sig: secp256k1::ecdsa::Signature,
@@ -58,7 +59,7 @@ impl EcdsaSig {
     pub fn to_vec(&self) -> Vec<u8> {
         // TODO: add support to serialize to a writer to SerializedSig
         self.sig.serialize_der()
-            .iter().map(|x| *x)
+            .iter().copied()
             .chain(iter::once(self.hash_ty as u8))
             .collect()
     }
@@ -87,6 +88,7 @@ impl FromStr for EcdsaSig {
 
 /// A key-related error.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[non_exhaustive]
 pub enum EcdsaSigError {
     /// Hex encoding error
     HexEncoding(hex::Error),
@@ -102,14 +104,14 @@ pub enum EcdsaSigError {
 impl fmt::Display for EcdsaSigError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            EcdsaSigError::HexEncoding(e) =>
-                write!(f, "EcdsaSig hex encoding error: {}", e),
+            EcdsaSigError::HexEncoding(ref e) =>
+                write_err!(f, "EcdsaSig hex encoding error"; e),
             EcdsaSigError::NonStandardSighashType(hash_ty) =>
                 write!(f, "Non standard signature hash type {}", hash_ty),
             EcdsaSigError::EmptySignature =>
                 write!(f, "Empty ECDSA signature"),
             EcdsaSigError::Secp256k1(ref e) =>
-                write!(f, "Invalid Ecdsa signature: {}", e),
+                write_err!(f, "invalid ECDSA signature"; e),
         }
     }
 }

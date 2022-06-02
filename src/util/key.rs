@@ -31,6 +31,7 @@ use crate::util::base58;
 
 /// A key-related error.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[non_exhaustive]
 pub enum Error {
     /// Base58 encoding error
     Base58(base58::Error),
@@ -45,10 +46,10 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Error::Base58(ref e) => write!(f, "Key base58 error: {}", e),
-            Error::Secp256k1(ref e) => write!(f, "Key secp256k1 error: {}", e),
-            Error::InvalidKeyPrefix(ref e) => write!(f, "Key prefix invalid: {}", e),
-            Error::Hex(ref e) => write!(f, "Key hex decoding error: {}", e)
+            Error::Base58(ref e) => write_err!(f, "key base58 error"; e),
+            Error::Secp256k1(ref e) => write_err!(f, "key secp256k1 error"; e),
+            Error::InvalidKeyPrefix(ref b) => write!(f, "key prefix invalid: {}", b),
+            Error::Hex(ref e) => write_err!(f, "key hex decoding error"; e)
         }
     }
 }
@@ -228,7 +229,7 @@ impl FromStr for PublicKey {
         match s.len() {
             66 => PublicKey::from_slice(&<[u8; 33]>::from_hex(s)?),
             130 => PublicKey::from_slice(&<[u8; 65]>::from_hex(s)?),
-            len => return Err(Error::Hex(hex::Error::InvalidLength(66, len)))
+            len => Err(Error::Hex(hex::Error::InvalidLength(66, len))),
         }
     }
 }

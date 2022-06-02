@@ -1,6 +1,6 @@
 #!/bin/sh -ex
 
-FEATURES="base64 groestlcoinconsensus use-serde rand secp-recovery"
+FEATURES="base64 groestlcoinconsensus serde rand secp-recovery"
 
 # Use toolchain if explicitly specified
 if [ -n "$TOOLCHAIN" ]
@@ -59,7 +59,7 @@ if [ "$AS_DEPENDENCY" = true ]
 then
     cargo new dep_test
     cd dep_test
-    echo 'groestlcoin = { path = "..", features = ["use-serde"] }' >> Cargo.toml
+    echo 'groestlcoin = { path = "..", features = ["serde"] }' >> Cargo.toml
 
     cargo test --verbose
 fi

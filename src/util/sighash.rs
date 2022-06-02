@@ -125,9 +125,6 @@ pub enum SchnorrSighashType {
     NonePlusAnyoneCanPay = 0x82,
     /// 0x83: Sign one output and only this input (see `Single` for what "one output" means).
     SinglePlusAnyoneCanPay = 0x83,
-
-    /// Reserved for future use, `#[non_exhaustive]` is not available with MSRV 1.29.0
-    Reserved = 0xFF,
 }
 serde_string_impl!(SchnorrSighashType, "a SchnorrSighashType data");
 
@@ -141,7 +138,6 @@ impl fmt::Display for SchnorrSighashType {
             SchnorrSighashType::AllPlusAnyoneCanPay => "SIGHASH_ALL|SIGHASH_ANYONECANPAY",
             SchnorrSighashType::NonePlusAnyoneCanPay => "SIGHASH_NONE|SIGHASH_ANYONECANPAY",
             SchnorrSighashType::SinglePlusAnyoneCanPay => "SIGHASH_SINGLE|SIGHASH_ANYONECANPAY",
-            SchnorrSighashType::Reserved => "SIGHASH_RESERVED",
         };
         f.write_str(s)
     }
@@ -159,7 +155,6 @@ impl str::FromStr for SchnorrSighashType {
             "SIGHASH_ALL|SIGHASH_ANYONECANPAY" => Ok(SchnorrSighashType::AllPlusAnyoneCanPay),
             "SIGHASH_NONE|SIGHASH_ANYONECANPAY" => Ok(SchnorrSighashType::NonePlusAnyoneCanPay),
             "SIGHASH_SINGLE|SIGHASH_ANYONECANPAY" => Ok(SchnorrSighashType::SinglePlusAnyoneCanPay),
-            "SIGHASH_RESERVED" => Ok(SchnorrSighashType::Reserved),
             _ => Err(SighashTypeParseError{ unrecognized: s.to_owned() }),
         }
     }
@@ -167,6 +162,7 @@ impl str::FromStr for SchnorrSighashType {
 
 /// Possible errors in computing the signature message.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[non_exhaustive]
 pub enum Error {
     /// Could happen only by using `*_encode_signing_*` methods with custom writers, engines writers
     /// like the ones used in methods `*_signature_hash` do not error.
@@ -211,7 +207,7 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Io(ref e) => write!(f, "Writer errored: {:?}", e),
+            Error::Io(error_kind) => write!(f, "writer errored: {:?}", error_kind),
             Error::IndexOutOfInputsBounds { index, inputs_size } => write!(f, "Requested index ({}) is greater or equal than the number of transaction inputs ({})", index, inputs_size),
             Error::SingleWithoutCorrespondingOutput { index, outputs_size } => write!(f, "SIGHASH_SINGLE for input ({}) haven't a corresponding output (#outputs:{})", index, outputs_size),
             Error::PrevoutsSize => write!(f, "Number of supplied prevouts differs from the number of inputs in transaction"),
@@ -329,7 +325,6 @@ impl SchnorrSighashType {
             SchnorrSighashType::AllPlusAnyoneCanPay => (SchnorrSighashType::All, true),
             SchnorrSighashType::NonePlusAnyoneCanPay => (SchnorrSighashType::None, true),
             SchnorrSighashType::SinglePlusAnyoneCanPay => (SchnorrSighashType::Single, true),
-            SchnorrSighashType::Reserved => (SchnorrSighashType::Reserved, false),
         }
     }
 
@@ -343,7 +338,6 @@ impl SchnorrSighashType {
             0x81 => Ok(SchnorrSighashType::AllPlusAnyoneCanPay),
             0x82 => Ok(SchnorrSighashType::NonePlusAnyoneCanPay),
             0x83 => Ok(SchnorrSighashType::SinglePlusAnyoneCanPay),
-            0xFF => Ok(SchnorrSighashType::Reserved),
             x => Err(Error::InvalidSighashType(x as u32)),
         }
     }
@@ -440,7 +434,7 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
                     .tx
                     .input
                     .get(input_index)
-                    .ok_or_else(|| Error::IndexOutOfInputsBounds {
+                    .ok_or(Error::IndexOutOfInputsBounds {
                         index: input_index,
                         inputs_size: self.tx.input.len(),
                     })?;
@@ -473,7 +467,7 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
             self.tx
                 .output
                 .get(input_index)
-                .ok_or_else(|| Error::SingleWithoutCorrespondingOutput {
+                .ok_or(Error::SingleWithoutCorrespondingOutput {
                     index: input_index,
                     outputs_size: self.tx.output.len(),
                 })?
@@ -597,7 +591,7 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
                     .tx
                     .input
                     .get(input_index)
-                    .ok_or_else(|| Error::IndexOutOfInputsBounds {
+                    .ok_or(Error::IndexOutOfInputsBounds {
                         index: input_index,
                         inputs_size: self.tx.input.len(),
                     })?;
@@ -1173,7 +1167,6 @@ mod tests {
             ("SIGHASH_ALL|SIGHASH_ANYONECANPAY", SchnorrSighashType::AllPlusAnyoneCanPay),
             ("SIGHASH_NONE|SIGHASH_ANYONECANPAY", SchnorrSighashType::NonePlusAnyoneCanPay),
             ("SIGHASH_SINGLE|SIGHASH_ANYONECANPAY", SchnorrSighashType::SinglePlusAnyoneCanPay),
-            ("SIGHASH_RESERVED", SchnorrSighashType::Reserved),
         ];
         for (s, sht) in sighashtypes {
             assert_eq!(sht.to_string(), s);

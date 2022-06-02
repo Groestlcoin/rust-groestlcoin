@@ -53,6 +53,10 @@ const UINT256_ONE: [u8; 32] = [
 ];
 
 /// A reference to a transaction output.
+///
+/// ### Groestlcoin Core References
+///
+/// * [COutPoint definition](https://github.com/Groestlcoin/groestlcoin/blob/6bc186e7f3ca1c7c80f14cf58b777ab9f69d7049/src/primitives/transaction.h#L26)
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct OutPoint {
     /// The referenced transaction's txid.
@@ -114,6 +118,7 @@ impl fmt::Display for OutPoint {
 
 /// An error in parsing an OutPoint.
 #[derive(Clone, PartialEq, Eq, Debug)]
+#[non_exhaustive]
 pub enum ParseOutPointError {
     /// Error in TXID part.
     Txid(hashes::hex::Error),
@@ -130,8 +135,8 @@ pub enum ParseOutPointError {
 impl fmt::Display for ParseOutPointError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            ParseOutPointError::Txid(ref e) => write!(f, "error parsing TXID: {}", e),
-            ParseOutPointError::Vout(ref e) => write!(f, "error parsing vout: {}", e),
+            ParseOutPointError::Txid(ref e) => write_err!(f, "error parsing TXID"; e),
+            ParseOutPointError::Vout(ref e) => write_err!(f, "error parsing vout"; e),
             ParseOutPointError::Format => write!(f, "OutPoint not in <txid>:<vout> format"),
             ParseOutPointError::TooLong => write!(f, "vout should be at most 10 digits"),
             ParseOutPointError::VoutNotCanonical => write!(f, "no leading zeroes or + allowed in vout part"),
@@ -187,9 +192,18 @@ impl ::core::str::FromStr for OutPoint {
     }
 }
 
-/// A transaction input, which defines old coins to be consumed
+/// Groestlcoin transaction input.
+///
+/// It contains the location of the previous transaction's output,
+/// that it spends and set of scripts that satisfy its spending
+/// conditions.
+///
+/// ### Groestlcoin Core References
+///
+/// * [CTxIn definition](https://github.com/Groestlcoin/groestlcoin/blob/6bc186e7f3ca1c7c80f14cf58b777ab9f69d7049/src/primitives/transaction.h#L65)
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(crate = "actual_serde"))]
 pub struct TxIn {
     /// The reference to the previous output that is being used an an input.
     pub previous_output: OutPoint,
@@ -220,9 +234,20 @@ impl Default for TxIn {
     }
 }
 
-/// A transaction output, which defines new coins to be created from old ones.
+/// Groestlcoin transaction output.
+///
+/// Defines new coins to be created as a result of the transaction,
+/// along with spending conditions ("script", aka "output script"),
+/// which an input spending it must satisfy.
+///
+/// An output that is not yet spent by an input is called Unspent Transaction Output ("UTXO").
+///
+/// ### Groestlcoin Core References
+///
+/// * [CTxOut definition](https://github.com/Groestlcoin/groestlcoin/blob/6bc186e7f3ca1c7c80f14cf58b777ab9f69d7049/src/primitives/transaction.h#L148)
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(crate = "actual_serde"))]
 pub struct TxOut {
     /// The value of the output, in satoshis.
     pub value: u64,
@@ -237,7 +262,15 @@ impl Default for TxOut {
     }
 }
 
-/// A Groestlcoin transaction, which describes an authenticated movement of coins.
+/// Groestlcoin transaction.
+///
+/// An authenticated movement of coins.
+///
+/// ### Groestlcoin Core References
+///
+/// * [CTtransaction definition](https://github.com/Groestlcoin/groestlcoin/blob/6bc186e7f3ca1c7c80f14cf58b777ab9f69d7049/src/primitives/transaction.h#L279)
+///
+/// ### Serialization notes
 ///
 /// If any inputs have nonempty witnesses, the entire transaction is serialized
 /// in the post-BIP141 Segwit format which includes a list of witnesses. If all
@@ -269,6 +302,7 @@ impl Default for TxOut {
 /// for 0-input transactions, which results in unambiguously parseable transactions.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(crate = "actual_serde"))]
 pub struct Transaction {
     /// The protocol version, is currently expected to be 1 or 2 (BIP 68).
     pub version: i32,
@@ -353,7 +387,7 @@ impl Transaction {
             // will result in the data written to the writer being hashed, however the correct
             // handling of the SIGHASH_SINGLE bug is to return the 'one array' - either implement
             // this behaviour manually or use `signature_hash()`.
-            writer.write(b"[not a transaction] SIGHASH_SINGLE bug")?;
+            writer.write_all(b"[not a transaction] SIGHASH_SINGLE bug")?;
             return Ok(())
         }
 
@@ -639,13 +673,19 @@ impl Encodable for TxIn {
     }
 }
 impl Decodable for TxIn {
-    fn consensus_decode<D: io::Read>(mut d: D) -> Result<Self, encode::Error> {
+    #[inline]
+    fn consensus_decode_from_finite_reader<D: io::Read>(mut d: D) -> Result<Self, encode::Error> {
         Ok(TxIn {
-            previous_output: Decodable::consensus_decode(&mut d)?,
-            script_sig: Decodable::consensus_decode(&mut d)?,
-            sequence: Decodable::consensus_decode(d)?,
+            previous_output: Decodable::consensus_decode_from_finite_reader(&mut d)?,
+            script_sig: Decodable::consensus_decode_from_finite_reader(&mut d)?,
+            sequence: Decodable::consensus_decode_from_finite_reader(d)?,
             witness: Witness::default(),
         })
+    }
+
+    #[inline]
+    fn consensus_decode<D: io::Read>(d: D) -> Result<Self, encode::Error> {
+        Self::consensus_decode_from_finite_reader(d.take(MAX_VEC_SIZE as u64))
     }
 }
 
@@ -680,20 +720,19 @@ impl Encodable for Transaction {
 }
 
 impl Decodable for Transaction {
-    fn consensus_decode<D: io::Read>(d: D) -> Result<Self, encode::Error> {
-        let mut d = d.take(MAX_VEC_SIZE as u64);
-        let version = i32::consensus_decode(&mut d)?;
-        let input = Vec::<TxIn>::consensus_decode(&mut d)?;
+    fn consensus_decode_from_finite_reader<D: io::Read>(mut d: D) -> Result<Self, encode::Error> {
+        let version = i32::consensus_decode_from_finite_reader(&mut d)?;
+        let input = Vec::<TxIn>::consensus_decode_from_finite_reader(&mut d)?;
         // segwit
         if input.is_empty() {
-            let segwit_flag = u8::consensus_decode(&mut d)?;
+            let segwit_flag = u8::consensus_decode_from_finite_reader(&mut d)?;
             match segwit_flag {
                 // BIP144 input witnesses
                 1 => {
-                    let mut input = Vec::<TxIn>::consensus_decode(&mut d)?;
-                    let output = Vec::<TxOut>::consensus_decode(&mut d)?;
+                    let mut input = Vec::<TxIn>::consensus_decode_from_finite_reader(&mut d)?;
+                    let output = Vec::<TxOut>::consensus_decode_from_finite_reader(&mut d)?;
                     for txin in input.iter_mut() {
-                        txin.witness = Decodable::consensus_decode(&mut d)?;
+                        txin.witness = Decodable::consensus_decode_from_finite_reader(&mut d)?;
                     }
                     if !input.is_empty() && input.iter().all(|input| input.witness.is_empty()) {
                         Err(encode::Error::ParseFailed("witness flag set but no witnesses present"))
@@ -702,7 +741,7 @@ impl Decodable for Transaction {
                             version,
                             input,
                             output,
-                            lock_time: Decodable::consensus_decode(d)?,
+                            lock_time: Decodable::consensus_decode_from_finite_reader(d)?,
                         })
                     }
                 }
@@ -714,10 +753,14 @@ impl Decodable for Transaction {
             Ok(Transaction {
                 version,
                 input,
-                output: Decodable::consensus_decode(&mut d)?,
-                lock_time: Decodable::consensus_decode(d)?,
+                output: Decodable::consensus_decode_from_finite_reader(&mut d)?,
+                lock_time: Decodable::consensus_decode_from_finite_reader(d)?,
             })
         }
+    }
+
+    fn consensus_decode<D: io::Read>(d: D) -> Result<Self, encode::Error> {
+        Self::consensus_decode_from_finite_reader(d.take(MAX_VEC_SIZE as u64))
     }
 }
 

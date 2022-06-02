@@ -15,10 +15,9 @@ edition = "2018"
 # Please don't forget to add relevant features to docs.rs below
 [features]
 default = [ "std", "secp-recovery" ]
-base64 = [ "base64-compat" ]
 unstable = []
 rand = ["secp256k1/rand-std"]
-use-serde = ["serde", "groestlcoin_hashes/serde", "secp256k1/serde"]
+serde = ["actual-serde", "groestlcoin_hashes/serde", "secp256k1/serde"]
 secp-lowmemory = ["secp256k1/lowmemory"]
 secp-recovery = ["secp256k1/recovery"]
 
@@ -31,7 +30,7 @@ std = ["secp256k1/std", "groestlcoin_hashes/std", "bech32/std"]
 no-std = ["hashbrown", "core2/alloc", "groestlcoin_hashes/alloc", "secp256k1/alloc"]
 
 [package.metadata.docs.rs]
-features = [ "std", "secp-recovery", "base64", "rand", "use-serde", "groestlcoinconsensus" ]
+features = [ "std", "secp-recovery", "base64", "rand", "serde", "groestlcoinconsensus" ]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
@@ -40,9 +39,10 @@ groestlcoin_hashes = { version = "0.10.0", default-features = false }
 secp256k1 = { version = "0.22.0", default-features = false }
 core2 = { version = "0.3.0", optional = true, default-features = false }
 
-base64-compat = { version = "1.0.0", optional = true }
+base64 = { version = "0.13.0", optional = true }
 groestlcoinconsensus = { git = "https://github.com/Groestlcoin/rust-groestlcoinconsensus", tag = "2.19.1-3", version = "2.19.1-3", optional = true }
-serde = { version = "1", default-features = false, features = [ "derive", "alloc" ], optional = true }
+# Do NOT use this as a feature! Use the `serde` feature instead.
+actual-serde = { package = "serde", version = "1", default-features = false, features = [ "derive", "alloc" ], optional = true }
 hashbrown = { version = "0.8", optional = true }
 
 [dev-dependencies]
@@ -50,8 +50,6 @@ serde_json = "<1.0.45"
 serde_test = "1"
 secp256k1 = { version = "0.22.0", features = [ "recovery", "rand-std" ] }
 bincode = "1.3.1"
-# We need to pin ryu (transitive dep from serde_json) to stay compatible with Rust 1.22.0
-ryu = "<1.0.5"
 
 [[example]]
 name = "bip32"

@@ -48,6 +48,7 @@ mod message_signing {
     /// An error used for dealing with Bitcoin Signed Messages.
     #[cfg_attr(docsrs, doc(cfg(feature = "secp-recovery")))]
     #[derive(Debug, PartialEq, Eq)]
+    #[non_exhaustive]
     pub enum MessageSignatureError {
         /// Signature is expected to be 65 bytes.
         InvalidLength,
@@ -63,7 +64,7 @@ mod message_signing {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match *self {
                 MessageSignatureError::InvalidLength => write!(f, "length not 65 bytes"),
-                MessageSignatureError::InvalidEncoding(ref e) => write!(f, "invalid encoding: {}", e),
+                MessageSignatureError::InvalidEncoding(ref e) => write_err!(f, "invalid encoding"; e),
                 MessageSignatureError::InvalidBase64 => write!(f, "invalid base64"),
                 MessageSignatureError::UnsupportedAddressType(ref address_type) => write!(f, "unsupported address type: {}", address_type),
             }
