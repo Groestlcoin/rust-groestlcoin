@@ -206,7 +206,6 @@ impl ChainHash {
 #[cfg(test)]
 mod test {
     use core::default::Default;
-    use hashes::sha256;
     use super::*;
     use crate::hashes::hex::FromHex;
     use crate::network::constants::Network;
@@ -280,7 +279,7 @@ mod test {
     // The *_chain_hash tests are sanity/regression tests, they verify that the const byte array
     // representing the genesis block is the same as that created by hashing the genesis block.
     fn chain_hash_and_genesis_block(network: Network) {
-        use hashes::{Hash};
+        use hashes::{sha256, Hash};
 
         // The genesis block hash is a double-groestl and it is displayed backwards.
         let genesis_hash = genesis_block(network).block_hash();
