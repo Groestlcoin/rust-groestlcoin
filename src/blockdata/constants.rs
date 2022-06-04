@@ -279,12 +279,12 @@ mod test {
     // The *_chain_hash tests are sanity/regression tests, they verify that the const byte array
     // representing the genesis block is the same as that created by hashing the genesis block.
     fn chain_hash_and_genesis_block(network: Network) {
-        use hashes::{groestld, Hash};
+        use hashes::{sha256, Hash};
 
         // The genesis block hash is a double-groestl and it is displayed backwards.
         let genesis_hash = genesis_block(network).block_hash();
-        // We abuse the groestl hash here so we get a LowerHex impl that does not print the hex backwards.
-        let hash = groestld::Hash::from_slice(&genesis_hash.into_inner()).unwrap();
+        // We abuse the sha256 hash here so we get a LowerHex impl that does not print the hex backwards.
+        let hash = sha256::Hash::from_slice(&genesis_hash.into_inner()).unwrap();
         let want = format!("{:02x}", hash);
 
         let chain_hash = ChainHash::using_genesis_block(network);
