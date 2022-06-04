@@ -560,7 +560,7 @@ impl Amount {
     /// ```
     /// # use groestlcoin::{Amount, Denomination};
     /// let amount = Amount::from_sat(100_000);
-    /// assert_eq!(amount.to_btc(), amount.to_float_in(Denomination::Groestlcoin))
+    /// assert_eq!(amount.to_btc(), amount.to_float_in(Denomination::Bitcoin))
     /// ```
     pub fn to_btc(self) -> f64 {
         self.to_float_in(Denomination::Bitcoin)
