@@ -39,7 +39,14 @@ macro_rules! impl_hashencode {
     }
 }
 
-hash_newtype!(Txid, sha256d::Hash, 32, doc="A groestlcoin transaction hash/transaction ID.");
+hash_newtype!(Txid, sha256d::Hash, 32, doc="A groestlcoin transaction hash/transaction ID.
+
+For compatibility with the existing Groestlcoin infrastructure and historical
+and current versions of the Groestlcoin Core software itself, this and
+other [`sha256d::Hash`] types, are serialized in reverse
+byte order when converted to a hex string via [`std::fmt::Display`] trait operations.
+See [`hashes::Hash::DISPLAY_BACKWARD`] for more details.
+");
 hash_newtype!(TxidInternal, sha256::Hash, 32, doc="A groestlcoin transaction hash/transaction ID.");
 hash_newtype!(Wtxid, sha256d::Hash, 32, doc="A groestlcoin witness transaction ID.");
 hash_newtype!(WtxidInternal, sha256::Hash, 32, doc="A groestlcoin witness transaction ID.");
