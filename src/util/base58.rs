@@ -299,7 +299,7 @@ mod tests {
         assert_eq!(&encode_slice(&[0, 0, 0, 0, 13, 36][..]), "1111211");
 
         // Long input (>100 bytes => has to use heap)
-        let res = encode_slice(&"GroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestl\
+        let res = encode_slice("GroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestl\
         coinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoin".as_bytes());
         let exp = "2hXiLBbH9kmBoA9HWRRpWuHu29Hg49ApfMGzw6CXJkHn2sVUFjm8qF8FQQm29jFNXHjUXs59Q\
         K9gk2MrWjiLokRHQ2t71bY5HjQUmutR2rTU91sc9gZjixxegH45Zs19PkCweG4bshVEm3XvqSDnELis8yjxkb\
