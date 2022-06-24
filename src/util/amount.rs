@@ -1307,7 +1307,7 @@ pub mod serde {
         }
         fn des_btc<'d, D: Deserializer<'d>>(d: D) -> Result<Self, D::Error> {
             use serde::de::Error;
-            Ok(Amount::from_btc(f64::deserialize(d)?).map_err(D::Error::custom)?)
+            Amount::from_btc(f64::deserialize(d)?).map_err(D::Error::custom)
         }
     }
 
@@ -1335,7 +1335,7 @@ pub mod serde {
         }
         fn des_btc<'d, D: Deserializer<'d>>(d: D) -> Result<Self, D::Error> {
             use serde::de::Error;
-            Ok(SignedAmount::from_btc(f64::deserialize(d)?).map_err(D::Error::custom)?)
+            SignedAmount::from_btc(f64::deserialize(d)?).map_err(D::Error::custom)
         }
     }
 
@@ -1619,9 +1619,9 @@ mod tests {
         assert_eq!(p("1.1", btc), Ok(Amount::from_sat(1_100_000_00)));
         assert_eq!(p("100", sat), Ok(Amount::from_sat(100)));
         assert_eq!(p("55", sat), Ok(Amount::from_sat(55)));
-        assert_eq!(p("5500000000000000000", sat), Ok(Amount::from_sat(5_500_000_000_000_000_000)));
+        assert_eq!(p("5500000000000000000", sat), Ok(Amount::from_sat(55_000_000_000_000_000_00)));
         // Should this even pass?
-        assert_eq!(p("5500000000000000000.", sat), Ok(Amount::from_sat(5_500_000_000_000_000_000)));
+        assert_eq!(p("5500000000000000000.", sat), Ok(Amount::from_sat(55_000_000_000_000_000_00)));
         assert_eq!(
             p("12345678901.12345678", btc),
             Ok(Amount::from_sat(12_345_678_901__123_456_78))
@@ -2003,6 +2003,7 @@ mod tests {
 
     #[cfg(feature = "serde")]
     #[test]
+    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per bitcoin.
     fn serde_as_btc() {
         use serde_json;
 
@@ -2038,6 +2039,7 @@ mod tests {
 
     #[cfg(feature = "serde")]
     #[test]
+    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per bitcoin.
     fn serde_as_btc_opt() {
         use serde_json;
 
@@ -2051,8 +2053,8 @@ mod tests {
         }
 
         let with = T {
-            amt: Some(Amount::from_sat(2__500_000_00)),
-            samt: Some(SignedAmount::from_sat(-2__500_000_00)),
+            amt: Some(Amount::from_sat(2_500_000_00)),
+            samt: Some(SignedAmount::from_sat(-2_500_000_00)),
         };
         let without = T {
             amt: None,
@@ -2082,6 +2084,7 @@ mod tests {
 
     #[cfg(feature = "serde")]
     #[test]
+    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per bitcoin.
     fn serde_as_sat_opt() {
         use serde_json;
 
@@ -2095,8 +2098,8 @@ mod tests {
         }
 
         let with = T {
-            amt: Some(Amount::from_sat(2__500_000_00)),
-            samt: Some(SignedAmount::from_sat(-2__500_000_00)),
+            amt: Some(Amount::from_sat(2_500_000_00)),
+            samt: Some(SignedAmount::from_sat(-2_500_000_00)),
         };
         let without = T {
             amt: None,
