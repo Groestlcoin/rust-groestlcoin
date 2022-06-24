@@ -544,7 +544,7 @@ impl Amount {
         f64::from_str(&self.to_string_in(denom)).unwrap()
     }
 
-    /// Express this [Amount] as a floating-point value in Bitcoin.
+    /// Express this [Amount] as a floating-point value in Groestlcoin.
     ///
     /// Equivalent to `to_float_in(Denomination::Bitcoin)`.
     #[deprecated(since = "0.29.0", note = "use to_btc instead")]
@@ -552,7 +552,7 @@ impl Amount {
         self.to_btc()
     }
 
-    /// Express this [`Amount`] as a floating-point value in Bitcoin.
+    /// Express this [`Amount`] as a floating-point value in Groestlcoin.
     ///
     /// Please be aware of the risk of using floating-point numbers.
     ///
@@ -852,9 +852,9 @@ pub struct SignedAmount(i64);
 impl SignedAmount {
     /// The zero amount.
     pub const ZERO: SignedAmount = SignedAmount(0);
-    /// Exactly one satoshi.
+    /// Exactly one gro.
     pub const ONE_SAT: SignedAmount = SignedAmount(1);
-    /// Exactly one bitcoin.
+    /// Exactly one groestlcoin.
     pub const ONE_BTC: SignedAmount = SignedAmount(100_000_000);
     /// The maximum value allowed as an amount. Useful for sanity checking.
     pub const MAX_MONEY: SignedAmount = SignedAmount(21_000_000 * 100_000_000);
@@ -927,7 +927,7 @@ impl SignedAmount {
         f64::from_str(&self.to_string_in(denom)).unwrap()
     }
 
-    /// Express this [SignedAmount] as a floating-point value in Bitcoin.
+    /// Express this [SignedAmount] as a floating-point value in Groestlcoin.
     ///
     /// Equivalent to `to_float_in(Denomination::Bitcoin)`.
     ///
@@ -937,7 +937,7 @@ impl SignedAmount {
         self.to_btc()
     }
 
-    /// Express this [`SignedAmount`] as a floating-point value in Bitcoin.
+    /// Express this [`SignedAmount`] as a floating-point value in Groestlcoin.
     ///
     /// Equivalent to `to_float_in(Denomination::Bitcoin)`.
     ///
@@ -1596,7 +1596,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per bitcoin.
+    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per groestlcoin.
     fn parsing() {
         use super::ParseAmountError as E;
         let btc = Denomination::Bitcoin;
@@ -1866,7 +1866,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per bitcoin.
+    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per groestlcoin.
     fn from_str() {
         use super::ParseAmountError as E;
         let p = Amount::from_str;
@@ -1905,7 +1905,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per bitcoin.
+    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per groestlcoin.
     fn to_from_string_in() {
         use super::Denomination as D;
         let ua_str = Amount::from_str_in;
@@ -2003,7 +2003,7 @@ mod tests {
 
     #[cfg(feature = "serde")]
     #[test]
-    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per bitcoin.
+    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per groestlcoin.
     fn serde_as_btc() {
         use serde_json;
 
@@ -2039,7 +2039,7 @@ mod tests {
 
     #[cfg(feature = "serde")]
     #[test]
-    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per bitcoin.
+    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per groestlcoin.
     fn serde_as_btc_opt() {
         use serde_json;
 
@@ -2084,7 +2084,7 @@ mod tests {
 
     #[cfg(feature = "serde")]
     #[test]
-    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per bitcoin.
+    #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per groestlcoin.
     fn serde_as_sat_opt() {
         use serde_json;
 
