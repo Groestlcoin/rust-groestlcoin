@@ -107,7 +107,7 @@ fn bitcoin_genesis_tx() -> Transaction {
         .push_opcode(opcodes::all::OP_CHECKSIG)
         .into_script();
     ret.output.push(TxOut {
-        value: 0 * COIN_VALUE,
+        value: 0,
         script_pubkey: out_script
     });
 
