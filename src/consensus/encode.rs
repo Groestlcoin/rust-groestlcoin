@@ -837,14 +837,14 @@ impl Decodable for sha256::Hash {
 }
 
 impl Encodable for groestld::Hash {
-    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, io::Error> {
-        self.into_inner().consensus_encode(s)
+    fn consensus_encode<W: io::Write + ?Sized>(&self, w: &mut W) -> Result<usize, io::Error> {
+        self.into_inner().consensus_encode(w)
     }
 }
 
 impl Decodable for groestld::Hash {
-    fn consensus_decode<D: io::Read>(d: D) -> Result<Self, Error> {
-        Ok(Self::from_inner(<<Self as Hash>::Inner>::consensus_decode(d)?))
+    fn consensus_decode<R: io::Read + ?Sized>(r: &mut R) -> Result<Self, Error> {
+        Ok(Self::from_inner(<<Self as Hash>::Inner>::consensus_decode(r)?))
     }
 }
 
