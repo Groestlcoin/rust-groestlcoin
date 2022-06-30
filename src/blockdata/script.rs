@@ -23,10 +23,10 @@
 //! This module provides the structures and functions needed to support scripts.
 //!
 
-use crate::consensus::encode::MAX_VEC_SIZE;
 use crate::prelude::*;
 
 use crate::io;
+use core::convert::TryFrom;
 use core::{fmt, default::Default};
 use core::ops::Index;
 
@@ -155,31 +155,14 @@ pub enum Error {
     /// Tried to read an array off the stack as a number when it was more than 4 bytes
     NumericOverflow,
     /// Error validating the script with groestlcoinconsensus library
-    BitcoinConsensus(BitcoinConsensusError),
+    #[cfg(feature = "groestlcoinconsensus")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
+    BitcoinConsensus(groestlcoinconsensus::Error),
     /// Can not find the spent output
     UnknownSpentOutput(OutPoint),
     /// Can not serialize the spending transaction
     SerializationError
 }
-
-/// A [`groestlcoinconsensus::Error`] alias. Exists to enable the compiler to ensure `groestlcoinconsensus`
-/// feature gating is correct.
-#[cfg(feature = "groestlcoinconsensus")]
-#[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
-pub type BitcoinConsensusError = groestlcoinconsensus::Error;
-
-/// Dummy error type used when `groestlcoinconsensus` feature is not enabled.
-#[cfg(not(feature = "groestlcoinconsensus"))]
-#[cfg_attr(docsrs, doc(cfg(not(feature = "groestlcoinconsensus"))))]
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
-pub struct BitcoinConsensusError {
-    _uninhabited: Uninhabited,
-}
-
-#[cfg(not(feature = "groestlcoinconsensus"))]
-#[cfg_attr(docsrs, doc(cfg(not(feature = "groestlcoinconsensus"))))]
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
-enum Uninhabited {}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -187,6 +170,7 @@ impl fmt::Display for Error {
             Error::NonMinimalPush => "non-minimal datapush",
             Error::EarlyEndOfScript => "unexpected end of script",
             Error::NumericOverflow => "numeric overflow (number on stack larger than 4 bytes)",
+            #[cfg(feature = "groestlcoinconsensus")]
             Error::BitcoinConsensus(ref _n) => "groestlcoinconsensus verification failed",
             Error::UnknownSpentOutput(ref _point) => "unknown spent output Transaction::verify()",
             Error::SerializationError => "can not serialize the spending transaction in Transaction::verify()",
@@ -205,9 +189,10 @@ impl std::error::Error for Error {
             NonMinimalPush
             | EarlyEndOfScript
             | NumericOverflow
-            | BitcoinConsensus(_)
             | UnknownSpentOutput(_)
             | SerializationError => None,
+            #[cfg(feature = "groestlcoinconsensus")]
+            BitcoinConsensus(_) => None,
         }
     }
 }
@@ -492,7 +477,7 @@ impl Script {
     /// Returns witness version of the script, if any, assuming the script is a `scriptPubkey`.
     #[inline]
     pub fn witness_version(&self) -> Option<WitnessVersion> {
-        self.0.get(0).and_then(|opcode| WitnessVersion::from_opcode(opcodes::All::from(*opcode)).ok())
+        self.0.get(0).and_then(|opcode| WitnessVersion::try_from(opcodes::All::from(*opcode)).ok())
     }
 
     /// Checks whether a script pubkey is a P2SH output.
@@ -544,7 +529,7 @@ impl Script {
         }
         let ver_opcode = opcodes::All::from(self.0[0]); // Version 0 or PUSHNUM_1-PUSHNUM_16
         let push_opbyte = self.0[1]; // Second byte push opcode 2-40 bytes
-        WitnessVersion::from_opcode(ver_opcode).is_ok()
+        WitnessVersion::try_from(ver_opcode).is_ok()
             && push_opbyte >= opcodes::all::OP_PUSHBYTES_2.to_u8()
             && push_opbyte <= opcodes::all::OP_PUSHBYTES_40.to_u8()
             // Check that the rest of the script has the correct size
@@ -1086,20 +1071,15 @@ impl serde::Serialize for Script {
 
 impl Encodable for Script {
     #[inline]
-    fn consensus_encode<S: io::Write>(&self, s: S) -> Result<usize, io::Error> {
-        self.0.consensus_encode(s)
+    fn consensus_encode<W: io::Write + ?Sized>(&self, w: &mut W) -> Result<usize, io::Error> {
+        self.0.consensus_encode(w)
     }
 }
 
 impl Decodable for Script {
     #[inline]
-    fn consensus_decode_from_finite_reader<D: io::Read>(d: D) -> Result<Self, encode::Error> {
-        Ok(Script(Decodable::consensus_decode_from_finite_reader(d)?))
-    }
-
-    #[inline]
-    fn consensus_decode<D: io::Read>(d: D) -> Result<Self, encode::Error> {
-        Self::consensus_decode_from_finite_reader(d.take(MAX_VEC_SIZE as u64))
+    fn consensus_decode_from_finite_reader<R: io::Read + ?Sized>(r: &mut R) -> Result<Self, encode::Error> {
+        Ok(Script(Decodable::consensus_decode_from_finite_reader(r)?))
     }
 }
 

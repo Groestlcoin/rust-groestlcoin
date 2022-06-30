@@ -12,6 +12,8 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
+use core::convert::TryFrom;
+
 use crate::prelude::*;
 
 use crate::io::{self, Cursor, Read};
@@ -100,8 +102,8 @@ impl Map for PartiallySignedTransaction {
 }
 
 impl PartiallySignedTransaction {
-    pub(crate) fn consensus_decode_global<D: io::Read>(d: D) -> Result<Self, encode::Error> {
-        let mut d = d.take(MAX_VEC_SIZE as u64);
+    pub(crate) fn consensus_decode_global<R: io::Read + ?Sized>(r: &mut R) -> Result<Self, encode::Error> {
+        let mut r = r.take(MAX_VEC_SIZE as u64);
         let mut tx: Option<Transaction> = None;
         let mut version: Option<u32> = None;
         let mut unknowns: BTreeMap<raw::Key, Vec<u8>> = Default::default();
@@ -109,7 +111,7 @@ impl PartiallySignedTransaction {
         let mut proprietary: BTreeMap<raw::ProprietaryKey, Vec<u8>> = Default::default();
 
         loop {
-            match raw::Pair::consensus_decode(&mut d) {
+            match raw::Pair::consensus_decode(&mut r) {
                 Ok(pair) => {
                     match pair.key.type_value {
                         PSBT_GLOBAL_UNSIGNED_TX => {
@@ -191,7 +193,7 @@ impl PartiallySignedTransaction {
                                 return Err(Error::InvalidKey(pair.key).into())
                             }
                         }
-                        PSBT_GLOBAL_PROPRIETARY => match proprietary.entry(raw::ProprietaryKey::from_key(pair.key.clone())?) {
+                        PSBT_GLOBAL_PROPRIETARY => match proprietary.entry(raw::ProprietaryKey::try_from(pair.key.clone())?) {
                             btree_map::Entry::Vacant(empty_key) => {
                                 empty_key.insert(pair.value);
                             },

@@ -20,6 +20,7 @@
 
 use crate::prelude::*;
 use core::fmt;
+use core::convert::TryFrom;
 
 use crate::io;
 use crate::consensus::encode::{self, ReadExt, WriteExt, Decodable, Encodable, VarInt, serialize, deserialize, MAX_VEC_SIZE};
@@ -79,8 +80,8 @@ impl fmt::Display for Key {
 }
 
 impl Decodable for Key {
-    fn consensus_decode<D: io::Read>(mut d: D) -> Result<Self, encode::Error> {
-        let VarInt(byte_size): VarInt = Decodable::consensus_decode(&mut d)?;
+    fn consensus_decode<R: io::Read + ?Sized>(r: &mut R) -> Result<Self, encode::Error> {
+        let VarInt(byte_size): VarInt = Decodable::consensus_decode(r)?;
 
         if byte_size == 0 {
             return Err(Error::NoMorePairs.into());
@@ -95,11 +96,11 @@ impl Decodable for Key {
             })
         }
 
-        let type_value: u8 = Decodable::consensus_decode(&mut d)?;
+        let type_value: u8 = Decodable::consensus_decode(r)?;
 
         let mut key = Vec::with_capacity(key_byte_size as usize);
         for _ in 0..key_byte_size {
-            key.push(Decodable::consensus_decode(&mut d)?);
+            key.push(Decodable::consensus_decode(r)?);
         }
 
         Ok(Key { type_value, key })
@@ -107,14 +108,14 @@ impl Decodable for Key {
 }
 
 impl Encodable for Key {
-    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, io::Error> {
+    fn consensus_encode<W: io::Write + ?Sized>(&self, w: &mut W) -> Result<usize, io::Error> {
         let mut len = 0;
-        len += VarInt((self.key.len() + 1) as u64).consensus_encode(&mut s)?;
+        len += VarInt((self.key.len() + 1) as u64).consensus_encode(w)?;
 
-        len += self.type_value.consensus_encode(&mut s)?;
+        len += self.type_value.consensus_encode(w)?;
 
         for key in &self.key {
-            len += key.consensus_encode(&mut s)?
+            len += key.consensus_encode(w)?
         }
 
         Ok(len)
@@ -122,36 +123,36 @@ impl Encodable for Key {
 }
 
 impl Encodable for Pair {
-    fn consensus_encode<S: io::Write>(&self, mut s: S) -> Result<usize, io::Error> {
-        let len = self.key.consensus_encode(&mut s)?;
-        Ok(len + self.value.consensus_encode(s)?)
+    fn consensus_encode<W: io::Write + ?Sized>(&self, w: &mut W) -> Result<usize, io::Error> {
+        let len = self.key.consensus_encode(w)?;
+        Ok(len + self.value.consensus_encode(w)?)
     }
 }
 
 impl Decodable for Pair {
-    fn consensus_decode<D: io::Read>(mut d: D) -> Result<Self, encode::Error> {
+    fn consensus_decode<R: io::Read + ?Sized>(r: &mut R) -> Result<Self, encode::Error> {
         Ok(Pair {
-            key: Decodable::consensus_decode(&mut d)?,
-            value: Decodable::consensus_decode(d)?,
+            key: Decodable::consensus_decode(r)?,
+            value: Decodable::consensus_decode(r)?,
         })
     }
 }
 
 impl<Subtype> Encodable for ProprietaryKey<Subtype> where Subtype: Copy + From<u8> + Into<u8> {
-    fn consensus_encode<W: io::Write>(&self, mut e: W) -> Result<usize, io::Error> {
-        let mut len = self.prefix.consensus_encode(&mut e)? + 1;
-        e.emit_u8(self.subtype.into())?;
-        e.write_all(&self.key)?;
+    fn consensus_encode<W: io::Write + ?Sized>(&self, w: &mut W) -> Result<usize, io::Error> {
+        let mut len = self.prefix.consensus_encode(w)? + 1;
+        w.emit_u8(self.subtype.into())?;
+        w.write_all(&self.key)?;
         len += self.key.len();
         Ok(len)
     }
 }
 
 impl<Subtype> Decodable for ProprietaryKey<Subtype> where Subtype: Copy + From<u8> + Into<u8> {
-    fn consensus_decode<D: io::Read>(mut d: D) -> Result<Self, encode::Error> {
-        let prefix = Vec::<u8>::consensus_decode(&mut d)?;
-        let subtype = Subtype::from(d.read_u8()?);
-        let key = read_to_end(d)?;
+    fn consensus_decode<R: io::Read + ?Sized>(r: &mut R) -> Result<Self, encode::Error> {
+        let prefix = Vec::<u8>::consensus_decode(r)?;
+        let subtype = Subtype::from(r.read_u8()?);
+        let key = read_to_end(r)?;
 
         Ok(ProprietaryKey { prefix, subtype, key })
     }
@@ -160,12 +161,9 @@ impl<Subtype> Decodable for ProprietaryKey<Subtype> where Subtype: Copy + From<u
 impl<Subtype> ProprietaryKey<Subtype> where Subtype: Copy + From<u8> + Into<u8> {
     /// Constructs [ProprietaryKey] from [Key]; returns
     /// [Error::InvalidProprietaryKey] if `key` do not starts with 0xFC byte
+    #[deprecated(since = "0.29.0", note = "use try_from instead")]
     pub fn from_key(key: Key) -> Result<Self, Error> {
-        if key.type_value != 0xFC {
-            return Err(Error::InvalidProprietaryKey)
-        }
-
-        Ok(deserialize(&key.key)?)
+        Self::try_from(key)
     }
 
     /// Constructs full [Key] corresponding to this proprietary key type
@@ -174,5 +172,23 @@ impl<Subtype> ProprietaryKey<Subtype> where Subtype: Copy + From<u8> + Into<u8> 
             type_value: 0xFC,
             key: serialize(self)
         }
+    }
+}
+
+impl<Subtype> TryFrom<Key> for ProprietaryKey<Subtype>
+where
+    Subtype:Copy + From<u8> + Into<u8> {
+    type Error = Error;
+
+    /// Constructs a [`ProprietaryKey`] from a [`Key`].
+    ///
+    /// # Errors
+    /// Returns [`Error::InvalidProprietaryKey`] if `key` does not start with `0xFC` byte.
+    fn try_from(key: Key) -> Result<Self, Self::Error> {
+        if key.type_value != 0xFC {
+            return Err(Error::InvalidProprietaryKey)
+        }
+
+        Ok(deserialize(&key.key)?)
     }
 }
