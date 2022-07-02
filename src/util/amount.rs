@@ -1675,7 +1675,7 @@ mod tests {
 
     // Creates individual test functions to make it easier to find which check failed.
     macro_rules! check_format_non_negative {
-        ($denom:ident; $($test_name:ident, $val:expr, $format_string:expr, $expected:expr);* $(;)?) => {
+        ($denom:ident; $($test_name:ident, $val:literal, $format_string:literal, $expected:literal);* $(;)?) => {
             $(
                 #[test]
                 fn $test_name() {
@@ -1687,7 +1687,7 @@ mod tests {
     }
 
     macro_rules! check_format_non_negative_show_denom {
-        ($denom:ident, $denom_suffix:expr; $($test_name:ident, $val:expr, $format_string:expr, $expected:expr);* $(;)?) => {
+        ($denom:ident, $denom_suffix:literal; $($test_name:ident, $val:literal, $format_string:literal, $expected:literal);* $(;)?) => {
             $(
                 #[test]
                 fn $test_name() {
