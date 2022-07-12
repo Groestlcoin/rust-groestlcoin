@@ -1,16 +1,4 @@
-// Rust Bitcoin Library
-// Written in 2021 by
-//   The rust-bitcoin developers
-//
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
-//
-// You should have received a copy of the CC0 Public Domain Dedication
-// along with this software.
-// If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-//
+// SPDX-License-Identifier: CC0-1.0
 
 //! Generalized, efficient, signature hash implementation.
 //!
@@ -1137,11 +1125,10 @@ mod tests {
             };
 
             // tests
-            let keypair = secp256k1::KeyPair::from_secret_key(secp, internal_priv_key);
-            let internal_key = XOnlyPublicKey::from_keypair(&keypair);
+            let keypair = secp256k1::KeyPair::from_secret_key(secp, &internal_priv_key);
+            let (internal_key, _parity) = XOnlyPublicKey::from_keypair(&keypair);
             let tweak = TapTweakHash::from_key_and_tweak(internal_key, merkle_root);
-            let mut tweaked_keypair = keypair;
-            tweaked_keypair.tweak_add_assign(secp, &tweak).unwrap();
+            let tweaked_keypair = keypair.add_xonly_tweak(secp, &tweak.to_scalar()).unwrap();
             let mut sig_msg = Vec::new();
             cache.taproot_encode_signing_data_to(
                 &mut sig_msg,

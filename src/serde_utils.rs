@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC0-1.0
+
 //! Groestlcoin serde utilities.
 //!
 //! This module is for special serde serializations.

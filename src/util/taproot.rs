@@ -1,15 +1,4 @@
-// Rust Bitcoin Library
-// Written in 2019 by
-//     The rust-bitcoin developers.
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
-//
-// You should have received a copy of the CC0 Public Domain Dedication
-// along with this software.
-// If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-//
+// SPDX-License-Identifier: CC0-1.0
 
 //! Bitcoin Taproot.
 //!
@@ -18,7 +7,7 @@
 
 use crate::prelude::*;
 use crate::io;
-use secp256k1::{self, Secp256k1};
+use secp256k1::{self, Secp256k1, Scalar};
 
 use core::convert::TryFrom;
 use core::fmt;
@@ -89,6 +78,12 @@ impl TapTweakHash {
             // nothing to hash
         }
         TapTweakHash::from_engine(eng)
+    }
+
+    /// Converts a `TapTweakHash` into a `Scalar` ready for use with key tweaking API.
+    pub fn to_scalar(&self) -> Scalar {
+        // This is statistically extremely unlikely to panic.
+        Scalar::from_be_bytes(self.into_inner()).expect("hash value greater than curve order")
     }
 }
 
@@ -847,12 +842,12 @@ impl ControlBlock {
             );
         }
         // compute the taptweak
-        let tweak = TapTweakHash::from_key_and_tweak(self.internal_key, Some(curr_hash));
+        let tweak = TapTweakHash::from_key_and_tweak(self.internal_key, Some(curr_hash)).to_scalar();
         self.internal_key.tweak_add_check(
             secp,
             &output_key,
             self.output_key_parity,
-            tweak.into_inner(),
+            tweak,
         )
     }
 }
