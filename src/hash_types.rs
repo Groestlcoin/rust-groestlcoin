@@ -9,7 +9,7 @@
 //! hash).
 //!
 
-use crate::hashes::{Hash, sha256, sha256d, hash160, hash_newtype, groestld};
+use groestlcoin_hashes::{sha256, sha256d, hash160, hash_newtype, groestld};
 
 macro_rules! impl_hashencode {
     ($hashtype:ident) => {

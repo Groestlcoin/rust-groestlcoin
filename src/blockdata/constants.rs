@@ -13,7 +13,7 @@ use crate::prelude::*;
 use core::default::Default;
 
 use crate::hashes::hex::{self, HexIterator};
-use crate::hashes::sha256d;
+use crate::hashes::{Hash, sha256d};
 use crate::blockdata::opcodes;
 use crate::blockdata::script;
 use crate::blockdata::transaction::{OutPoint, Transaction, TxOut, TxIn};
@@ -114,7 +114,7 @@ pub fn genesis_block(network: Network) -> Block {
             Block {
                 header: BlockHeader {
                     version: 112,
-                    prev_blockhash: Default::default(),
+                    prev_blockhash: Hash::all_zeros(),
                     merkle_root,
                     time: 1395342829,
                     bits: 0x1e0fffff,
@@ -127,7 +127,7 @@ pub fn genesis_block(network: Network) -> Block {
             Block {
                 header: BlockHeader {
                     version: 3,
-                    prev_blockhash: Default::default(),
+                    prev_blockhash: Hash::all_zeros(),
                     merkle_root,
                     time: 1440000002,
                     bits: 0x1e00ffff,
@@ -140,7 +140,7 @@ pub fn genesis_block(network: Network) -> Block {
             Block {
                 header: BlockHeader {
                     version: 3,
-                    prev_blockhash: Default::default(),
+                    prev_blockhash: Hash::all_zeros(),
                     merkle_root,
                     time: 1606082400,
                     bits: 0x1e00ffff,
@@ -153,7 +153,7 @@ pub fn genesis_block(network: Network) -> Block {
             Block {
                 header: BlockHeader {
                     version: 3,
-                    prev_blockhash: Default::default(),
+                    prev_blockhash: Hash::all_zeros(),
                     merkle_root,
                     time: 1440000002,
                     bits: 0x1e00ffff,
@@ -194,7 +194,6 @@ impl ChainHash {
 
 #[cfg(test)]
 mod test {
-    use core::default::Default;
     use super::*;
     use crate::hashes::hex::{ToHex, FromHex};
     use crate::network::constants::Network;
@@ -206,7 +205,7 @@ mod test {
 
         assert_eq!(gen.version, 1);
         assert_eq!(gen.input.len(), 1);
-        assert_eq!(gen.input[0].previous_output.txid, Default::default());
+        assert_eq!(gen.input[0].previous_output.txid, Hash::all_zeros());
         assert_eq!(gen.input[0].previous_output.vout, 0xFFFFFFFF);
         assert_eq!(serialize(&gen.input[0].script_sig),
                    Vec::from_hex("3a04ffff001d0104325072657373757265206d75737420626520707574206f6e20566c6164696d697220507574696e206f766572204372696d6561").unwrap());
@@ -226,7 +225,7 @@ mod test {
         let gen = genesis_block(Network::Groestlcoin);
 
         assert_eq!(gen.header.version, 112);
-        assert_eq!(gen.header.prev_blockhash, Default::default());
+        assert_eq!(gen.header.prev_blockhash, Hash::all_zeros());
         assert_eq!(gen.header.merkle_root.to_hex(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
 
         assert_eq!(gen.header.time, 1395342829);
@@ -239,7 +238,7 @@ mod test {
     fn testnet_genesis_full_block() {
         let gen = genesis_block(Network::Testnet);
         assert_eq!(gen.header.version, 3);
-        assert_eq!(gen.header.prev_blockhash, Default::default());
+        assert_eq!(gen.header.prev_blockhash, Hash::all_zeros());
         assert_eq!(gen.header.merkle_root.to_hex(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
         assert_eq!(gen.header.time, 1440000002);
         assert_eq!(gen.header.bits, 0x1e00ffff);
@@ -251,7 +250,7 @@ mod test {
     fn signet_genesis_full_block() {
         let gen = genesis_block(Network::Signet);
         assert_eq!(gen.header.version, 3);
-        assert_eq!(gen.header.prev_blockhash, Default::default());
+        assert_eq!(gen.header.prev_blockhash, Hash::all_zeros());
         assert_eq!(gen.header.merkle_root.to_hex(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
         assert_eq!(gen.header.time, 1606082400);
         assert_eq!(gen.header.bits, 0x1e00ffff);
@@ -262,7 +261,7 @@ mod test {
     // The *_chain_hash tests are sanity/regression tests, they verify that the const byte array
     // representing the genesis block is the same as that created by hashing the genesis block.
     fn chain_hash_and_genesis_block(network: Network) {
-        use hashes::{sha256, Hash};
+        use crate::hashes::sha256;
 
         // The genesis block hash is a double-groestl and it is displayed backwards.
         let genesis_hash = genesis_block(network).block_hash();
