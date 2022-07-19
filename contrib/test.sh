@@ -13,6 +13,14 @@ then
     export RUSTFLAGS="-C link-dead-code"
 fi
 
+cargo --version
+rustc --version
+
+# Work out if we are using a nightly toolchain.
+NIGHTLY=false
+if cargo --version | grep nightly; then
+    NIGHTLY=true
+fi
 
 echo "********* Testing std *************"
 # Test without any features other than std first

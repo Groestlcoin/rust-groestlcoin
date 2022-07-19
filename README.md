@@ -15,10 +15,10 @@ Supports (or should support)
 * De/serialization of blocks and transactions
 * Script de/serialization
 * Private keys and address creation, de/serialization and validation (including full BIP32 support)
-* PSBT creation, manipulation, merging and finalization
+* PSBT v0 de/serialization and all but the Input Finalizer role. Use [rust-miniscript](https://docs.rs/miniscript/latest/miniscript/psbt/index.html) to finalize.
 
 For JSONRPC interaction with Groestlcoin Core, it is recommended to use
-[rust-bitcoincore-rpc](https://github.com/rust-bitcoin/rust-bitcoincore-rpc).
+[rust-groestlcoincore-rpc](https://github.com/Groestlcoin/rust-groestlcoincore-rpc).
 
 ## Known limitations
 
@@ -94,7 +94,14 @@ Please refer to the [`cargo` documentation](https://doc.rust-lang.org/stable/car
 We build docs with the nightly toolchain, you may wish to use the following
 shell alias to check your documentation changes build correctly.
 
-```alias build-docs='RUSTDOCFLAGS="--cfg docsrs" cargo +nightly rustdoc --features="$FEATURES" -- -D rustdoc::broken-intra-doc-links'```
+```
+alias build-docs='RUSTDOCFLAGS="--cfg docsrs" cargo +nightly rustdoc --features="$FEATURES" -- -D rustdoc::broken-intra-doc-links'
+```
+
+### Running benchmarks
+
+We use a custom Rust compiler configuration conditional to guard the bench mark code. To run the
+bench marks use: `RUSTFLAGS='--cfg=bench' cargo +nightly bench`.
 
 ## Pull Requests
 

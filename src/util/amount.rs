@@ -182,7 +182,22 @@ impl fmt::Display for ParseAmountError {
 
 #[cfg(feature = "std")]
 #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
-impl std::error::Error for ParseAmountError {}
+impl std::error::Error for ParseAmountError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        use self::ParseAmountError::*;
+
+        match *self {
+            Negative
+                | TooBig
+                | TooPrecise
+                | InvalidFormat
+                | InputTooLarge
+                | InvalidCharacter(_)
+                | UnknownDenomination(_)
+                | PossiblyConfusingDenomination(_) => None
+        }
+    }
+}
 
 fn is_too_precise(s: &str, precision: usize) -> bool {
     s.contains('.') || precision >= s.len() || s.chars().rev().take(precision).any(|d| d != '0')
@@ -761,7 +776,7 @@ impl FromStr for Amount {
     }
 }
 
-impl ::core::iter::Sum for Amount {
+impl core::iter::Sum for Amount {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         let sats: u64 = iter.map(|amt| amt.0).sum();
         Amount::from_sat(sats)
@@ -1192,7 +1207,7 @@ impl FromStr for SignedAmount {
     }
 }
 
-impl ::core::iter::Sum for SignedAmount {
+impl core::iter::Sum for SignedAmount {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         let sats: i64 = iter.map(|amt| amt.0).sum();
         SignedAmount::from_sat(sats)

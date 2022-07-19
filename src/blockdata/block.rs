@@ -524,7 +524,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "unstable"))]
+#[cfg(bench)]
 mod benches {
     use super::Block;
     use crate::EmptyWrite;
