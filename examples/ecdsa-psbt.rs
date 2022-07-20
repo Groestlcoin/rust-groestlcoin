@@ -3,17 +3,17 @@
 //! The workflow we simulate is that of a setup using a watch-only online wallet (contains only
 //! public keys) and a cold-storage signing wallet (contains the private keys).
 //!
-//! You can verify the workflow using `bitcoind` and `bitcoin-cli`.
+//! You can verify the workflow using `groestlcoind` and `groestlcoin-cli`.
 //!
 //! ## Example Setup
 //!
-//! 1. Start Bitcoin Core in Regtest mode, for example:
+//! 1. Start Groestlcoin Core in Regtest mode, for example:
 //!
-//!    `bitcoind -regtest -server -daemon -fallbackfee=0.0002 -rpcuser=admin -rpcpassword=pass -rpcallowip=127.0.0.1/0 -rpcbind=127.0.0.1 -blockfilterindex=1 -peerblockfilters=1`
+//!    `groestlcoind -regtest -server -daemon -fallbackfee=0.0002 -rpcuser=admin -rpcpassword=pass -rpcallowip=127.0.0.1/0 -rpcbind=127.0.0.1 -blockfilterindex=1 -peerblockfilters=1`
 //!
-//! 2. Define a shell alias to `bitcoin-cli`, for example:
+//! 2. Define a shell alias to `groestlcoin-cli`, for example:
 //!
-//!    `alias bt=bitcoin-cli -rpcuser=admin -rpcpassword=pass -rpcport=18443`
+//!    `alias bt=groestlcoin-cli -rpcuser=admin -rpcpassword=pass -rpcport=18443`
 //!
 //! 3. Create (or load) a default wallet, for example:
 //!
@@ -32,37 +32,37 @@ use std::fmt;
 use std::str::FromStr;
 use std::collections::BTreeMap;
 
-use bitcoin::{Address, Amount, Network, OutPoint, PublicKey, PrivateKey, Sequence, Script, Transaction, Txid, TxOut, TxIn, Witness};
-use bitcoin::consensus::encode;
-use bitcoin::hashes::hex::{self, FromHex};
-use bitcoin::secp256k1::{Secp256k1, Signing, Verification};
-use bitcoin::util::address;
-use bitcoin::util::amount::ParseAmountError;
-use bitcoin::util::bip32::{self, ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint, IntoDerivationPath};
-use bitcoin::util::psbt::{self, Input, Psbt, PsbtSighashType};
+use groestlcoin::{Address, Amount, Network, OutPoint, PublicKey, PrivateKey, Sequence, Script, Transaction, Txid, TxOut, TxIn, Witness};
+use groestlcoin::consensus::encode;
+use groestlcoin::hashes::hex::{self, FromHex};
+use groestlcoin::secp256k1::{Secp256k1, Signing, Verification};
+use groestlcoin::util::address;
+use groestlcoin::util::amount::ParseAmountError;
+use groestlcoin::util::bip32::{self, ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint, IntoDerivationPath};
+use groestlcoin::util::psbt::{self, Input, Psbt, PsbtSighashType};
 
 use self::psbt_sign::*;
 
 type Result<T> = std::result::Result<T, Error>;
 
 // Get this from the output of `bt dumpwallet <file>`.
-const EXTENDED_MASTER_PRIVATE_KEY: &str = "tprv8ZgxMBicQKsPeSHZFZWT8zxie2dXWcwemnTkf4grVzMvP2UABUxqbPTCHzZ4ztwhBghpfFw27sJqEgW6y1ZTZcfvCUdtXE1L6qMF7TBdbqQ";
+const EXTENDED_MASTER_PRIVATE_KEY: &str = "tprv8ZgxMBicQKsPeNMKEpskTmJzZCMDFxHwjYvSqotFjCwmoMqKeGxCsLVJeBXDsLxs4wqKikD9gSpaGQjf2qW6ueqhzNZN1ARJR5otrCR3CMD";
 
 // Set these with valid data from output of step 5 above. Please note, input utxo must be a p2wpkh.
-const INPUT_UTXO_TXID: &str = "295f06639cde6039bf0c3dbf4827f0e3f2b2c2b476408e2f9af731a8d7a9c7fb";
+const INPUT_UTXO_TXID: &str = "debcc96e8393f609e674aed08bee52862569109ee981efdce25bf163b8777418";
 const INPUT_UTXO_VOUT: u32 = 0;
-const INPUT_UTXO_SCRIPT_PUBKEY: &str = "00149891eeb8891b3e80a2a1ade180f143add23bf5de";
-const INPUT_UTXO_VALUE: &str = "50 BTC";
+const INPUT_UTXO_SCRIPT_PUBKEY: &str = "0014e2f83ac18f753167390b35f52a33b61cb1c9b9f0";
+const INPUT_UTXO_VALUE: &str = "512 GRS";
 // Get this from the desciptor,
-// "wpkh([97f17dca/0'/0'/0']02749483607dafb30c66bd93ece4474be65745ce538c2d70e8e246f17e7a4e0c0c)#m9n56cx0".
-const INPUT_UTXO_DERIVATION_PATH: &str = "m/0h/0h/0h";
+// "wpkh([19ef7cdd/0'/0'/3']03b0821181136555b68e7e65f62b9d6368ff341a19728986d925fc06faa6afa1a2)#ymv35a8p".
+const INPUT_UTXO_DERIVATION_PATH: &str = "m/0h/0h/3h";
 
 // Grab an address to receive on: `bt generatenewaddress` (obviously contrived but works as an example).
-const RECEIVE_ADDRESS: &str = "bcrt1qcmnpjjjw78yhyjrxtql6lk7pzpujs3h244p7ae"; // The address to receive the coins we send.
+const RECEIVE_ADDRESS: &str = "grsrt1q5udclaxlvslfnqsw2gyd5xj52r4kra749e5e9k"; // The address to receive the coins we send.
 
-// These should be correct if the UTXO above should is for 50 BTC.
-const OUTPUT_AMOUNT_BTC: &str = "1 BTC";
-const CHANGE_AMOUNT_BTC: &str = "48.99999 BTC"; // 1000 sat transaction fee.
+// These should be correct if the UTXO above should is for 512 GRS.
+const OUTPUT_AMOUNT_BTC: &str = "1 GRS";
+const CHANGE_AMOUNT_BTC: &str = "510.99999 GRS"; // 1000 gro transaction fee.
 
 const NETWORK: Network = Network::Regtest;
 
@@ -179,10 +179,10 @@ struct WatchOnly {
 impl WatchOnly {
     /// Constructs a new watch-only wallet.
     ///
-    /// A watch-only wallet would typically be online and connected to the Bitcoin network. We
+    /// A watch-only wallet would typically be online and connected to the Groestlcoin network. We
     /// 'import' into the wallet the `account_0_xpub` and `master_fingerprint`.
     ///
-    /// The reason for importing the `input_xpub` is so one can use bitcoind to grab a valid input
+    /// The reason for importing the `input_xpub` is so one can use groestlcoind to grab a valid input
     /// to verify the workflow presented in this file.
     fn new(account_0_xpub: ExtendedPubKey, input_xpub: ExtendedPubKey, master_fingerprint: Fingerprint) -> Self {
         WatchOnly { account_0_xpub, input_xpub, master_fingerprint }
@@ -253,7 +253,7 @@ impl WatchOnly {
 
     /// Finalizes the PSBT, in BIP174 parlance this is the 'Finalizer'.
     fn finalize_psbt(&self, mut psbt: Psbt) -> Result<Psbt> {
-        use bitcoin::util::psbt::serialize::Serialize;
+        use groestlcoin::util::psbt::serialize::Serialize;
 
         if psbt.inputs.is_empty() {
             return Err(Error::InputsEmpty);
@@ -316,7 +316,7 @@ enum Error {
     Psbt(psbt::Error),
     /// PSBT sighash error.
     PsbtSighash(SighashError),
-    /// Bitcoin_hashes hex error.
+    /// Groestlcoin_hashes hex error.
     Hex(hex::Error),
     /// Address error.
     Address(address::Error),
@@ -384,7 +384,7 @@ impl From<ParseAmountError> for Error {
 
 /// This module implements signing a PSBT. It is based on code in `rust-miniscript` with a bit of a
 /// look at `bdk` as well. Since this example only uses ECDSA signatures the signing code is
-/// sufficient however before we can merge this into the main `rust-bitcoin` crate we need to handle
+/// sufficient however before we can merge this into the main `rust-groestlcoin` crate we need to handle
 /// taproot as well. See PR: https://github.com/rust-bitcoin/rust-bitcoin/pull/957
 ///
 /// All functions that take a `psbt` argument should be implemented on `Psbt` and use `self` instead.
@@ -392,10 +392,10 @@ mod psbt_sign {
     use std::fmt;
     use std::ops::Deref;
 
-    use bitcoin::{EcdsaSig, EcdsaSighashType, EcdsaSigError, PrivateKey, SchnorrSighashType, Script, Transaction, TxOut};
-    use bitcoin::psbt::{Input, Prevouts, Psbt, PsbtSighashType};
-    use bitcoin::util::sighash::{self, SighashCache};
-    use bitcoin::util::taproot::TapLeafHash;
+    use groestlcoin::{EcdsaSig, EcdsaSighashType, EcdsaSigError, PrivateKey, SchnorrSighashType, Script, Transaction, TxOut};
+    use groestlcoin::psbt::{Input, Prevouts, Psbt, PsbtSighashType};
+    use groestlcoin::util::sighash::{self, SighashCache};
+    use groestlcoin::util::taproot::TapLeafHash;
 
     use secp256k1::{Message, Signing, Secp256k1};
 
@@ -590,7 +590,7 @@ mod psbt_sign {
                 SighashError::MissingRedeemScript => write!(f, "missing redeem script"),
                 SighashError::InvalidSighashType => write!(f, "invalid sighash type"),
                 SighashError::NotWpkh => write!(f, "the scriptPubkey is not a P2WPKH script"),
-                // If merged into rust-bitcoin these two should use `write_err!`.
+                // If merged into rust-groestlcoin these two should use `write_err!`.
                 SighashError::SighashComputation(e) => write!(f, "sighash: {}", e),
                 SighashError::EcdsaSig(e) => write!(f, "ecdsa: {}", e),
             }

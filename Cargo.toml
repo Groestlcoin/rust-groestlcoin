@@ -59,4 +59,4 @@ required-features = ["std"]
 
 [[example]]
 name = "ecdsa-psbt"
-required-features = ["std", "bitcoinconsensus"]
+required-features = ["std", "groestlcoinconsensus"]
