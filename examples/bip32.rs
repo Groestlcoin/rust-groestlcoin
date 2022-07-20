@@ -1,17 +1,14 @@
 extern crate groestlcoin;
 
-use std::{env, process};
 use std::str::FromStr;
+use std::{env, process};
 
-use groestlcoin::secp256k1::Secp256k1;
-use groestlcoin::PublicKey;
-use groestlcoin::util::bip32::ExtendedPrivKey;
-use groestlcoin::util::bip32::ExtendedPubKey;
-use groestlcoin::util::bip32::DerivationPath;
-use groestlcoin::util::bip32::ChildNumber;
-use groestlcoin::util::address::Address;
-use groestlcoin::secp256k1::ffi::types::AlignedType;
 use groestlcoin::hashes::hex::FromHex;
+use groestlcoin::secp256k1::ffi::types::AlignedType;
+use groestlcoin::secp256k1::Secp256k1;
+use groestlcoin::util::address::Address;
+use groestlcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
+use groestlcoin::PublicKey;
 
 fn main() {
     // This example derives root xprv from a 32-byte seed,
@@ -55,10 +52,7 @@ fn main() {
     // generate first receiving address at m/0/0
     // manually creating indexes this time
     let zero = ChildNumber::from_normal_idx(0).unwrap();
-    let public_key = xpub.derive_pub(&secp, &vec![zero, zero])
-                         .unwrap()
-                         .public_key;
+    let public_key = xpub.derive_pub(&secp, &vec![zero, zero]).unwrap().public_key;
     let address = Address::p2wpkh(&PublicKey::new(public_key), network).unwrap();
     println!("First receiving address: {}", address);
-
 }

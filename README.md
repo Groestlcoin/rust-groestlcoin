@@ -20,6 +20,9 @@ Supports (or should support)
 For JSONRPC interaction with Groestlcoin Core, it is recommended to use
 [rust-groestlcoincore-rpc](https://github.com/Groestlcoin/rust-groestlcoincore-rpc).
 
+It is recommended to always use [cargo-crev](https://github.com/crev-dev/cargo-crev)
+to verify the trustworthiness of each of your dependencies, including this one.
+
 ## Known limitations
 
 ### Consensus
