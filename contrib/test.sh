@@ -62,6 +62,8 @@ do
     cargo test --verbose --features="$feature"
 done
 
+cargo run --example ecdsa-psbt --features=groestlcoinconsensus
+
 # Use as dependency if told to
 if [ "$AS_DEPENDENCY" = true ]
 then
