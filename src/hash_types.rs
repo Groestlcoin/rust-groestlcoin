@@ -32,6 +32,7 @@ pub use newtypes::*;
 
 #[rustfmt::skip]
 mod newtypes {
+    use hashes::Hash; // needed for From implimentations to convert hash types
     use crate::hashes::{sha256, sha256d, hash160, hash_newtype, groestld};
 
     hash_newtype!(
