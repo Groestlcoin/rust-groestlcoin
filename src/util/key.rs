@@ -191,7 +191,7 @@ impl PublicKey {
     ///
     /// ```rust
     /// use std::str::FromStr;
-    /// use bitcoin::PublicKey;
+    /// use groestlcoin::PublicKey;
     ///
     /// let pk = |s| PublicKey::from_str(s).unwrap();
     ///
