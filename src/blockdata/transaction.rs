@@ -870,7 +870,7 @@ impl Transaction {
         }
     }
 
-    /// Shorthand for [`Self::verify_with_flags`] with flag [`bitcoinconsensus::VERIFY_ALL`].
+    /// Shorthand for [`Self::verify_with_flags`] with flag [`groestlcoinconsensus::VERIFY_ALL`].
     #[cfg(feature="groestlcoinconsensus")]
     #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
     pub fn verify<S>(&self, spent: S) -> Result<(), script::Error>

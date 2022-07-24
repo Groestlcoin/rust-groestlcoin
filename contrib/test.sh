@@ -23,7 +23,7 @@ if cargo --version | grep nightly; then
 fi
 
 # We should not have any duplicate dependencies. This catches mistakes made upgrading dependencies
-# in one crate and not in another (e.g. upgrade bitcoin_hashes in bitcoin but not in secp).
+# in one crate and not in another (e.g. upgrade groestlcoin_hashes in groestlcoin but not in secp).
 duplicate_dependencies=$(cargo tree  --target=all --all-features --duplicates | wc -l)
 if [ "$duplicate_dependencies" -ne 0 ]; then
     echo "Dependency tree is broken, contains duplicates"
