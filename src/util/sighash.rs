@@ -22,6 +22,7 @@ use crate::io;
 use crate::util::taproot::{TapLeafHash, TAPROOT_ANNEX_PREFIX, TapSighashHash};
 use crate::Sighash;
 use crate::{Script, Transaction, TxOut};
+use crate::internal_macros::serde_string_impl;
 
 use super::taproot::LeafVersion;
 
@@ -819,6 +820,7 @@ mod tests {
     use crate::hashes::hex::ToHex;
     use crate::util::taproot::{TapTweakHash, TapSighashHash, TapBranchHash, TapLeafHash};
     use secp256k1::{self, SecretKey, XOnlyPublicKey};
+    use crate::internal_macros::{hex_hash, hex_script, hex_decode};
     extern crate serde_json;
 
     use crate::{Script, Transaction, TxIn, TxOut};
@@ -1146,7 +1148,7 @@ mod tests {
                 hash_ty
             ).unwrap();
 
-            let msg = secp256k1::Message::from_slice(&sighash).unwrap();
+            let msg = secp256k1::Message::from(sighash);
             let key_spend_sig = secp.sign_schnorr_with_aux_rand(&msg, &tweaked_keypair, &[0u8; 32]);
 
             assert_eq!(expected_internal_pk, internal_key);
