@@ -36,7 +36,7 @@ then
     cargo clippy --all-features --all-targets -- -D warnings
     cargo clippy --example bip32 -- -D warnings
     cargo clippy --example handshake -- -D warnings
-    cargo clippy --example ecdsa-psbt --features=bitcoinconsensus -- -D warnings
+    cargo clippy --example ecdsa-psbt --features=groestlcoinconsensus -- -D warnings
 fi
 
 echo "********* Testing std *************"
