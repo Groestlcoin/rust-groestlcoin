@@ -521,9 +521,9 @@ mod test {
             NetworkMessage::AddrV2(vec![AddrV2Message{ addr: AddrV2::Ipv4(Ipv4Addr::new(127, 0, 0, 1)), port: 0, services: ServiceFlags::NONE, time: 0 }]),
             NetworkMessage::SendAddrV2,
             NetworkMessage::CmpctBlock(cmptblock),
-            NetworkMessage::GetBlockTxn(GetBlockTxn { txs_request: BlockTransactionsRequest { block_hash: hash([11u8; 32]).into(), indexes: vec![0, 1, 2, 3, 10, 3002] } }),
+            NetworkMessage::GetBlockTxn(GetBlockTxn { txs_request: BlockTransactionsRequest { block_hash: groestl_hash([11u8; 32]).into(), indexes: vec![0, 1, 2, 3, 10, 3002] } }),
             NetworkMessage::BlockTxn(blocktxn),
-            NetworkMessage::SendCmpct(SendCmpct{send_compact: true, version: 8333}),
+            NetworkMessage::SendCmpct(SendCmpct{send_compact: true, version: 1331}),
         ];
 
         for msg in msgs {
