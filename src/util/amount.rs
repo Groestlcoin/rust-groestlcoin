@@ -333,7 +333,7 @@ fn dec_width(mut num: u64) -> usize {
     width
 }
 
-// NIH due to MSRV, impl copied from `core`
+// NIH due to MSRV, impl copied from `core::i8::unsigned_abs` (introduced in Rust 1.51.1).
 fn unsigned_abs(x: i8) -> u8 {
     x.wrapping_abs() as u8
 }
@@ -2030,10 +2030,10 @@ mod tests {
 
         let json = "{\"amt\": 21000000.00000001, \
                     \"samt\": -21000000.00000001}";
-        let t: T = serde_json::from_str(&json).unwrap();
+        let t: T = serde_json::from_str(json).unwrap();
         assert_eq!(t, orig);
 
-        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let value: serde_json::Value = serde_json::from_str(json).unwrap();
         assert_eq!(t, serde_json::from_value(value).unwrap());
 
         // errors

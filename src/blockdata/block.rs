@@ -37,7 +37,7 @@ use crate::internal_macros::impl_consensus_encoding;
 /// ### Groestlcoin Core References
 ///
 /// * [CBlockHeader definition](https://github.com/Groestlcoin/groestlcoin/blob/6bc186e7f3ca1c7c80f14cf58b777ab9f69d7049/src/primitives/block.h#L20)
-#[derive(Copy, PartialEq, Eq, Clone, Debug)]
+#[derive(Copy, PartialEq, Eq, Clone, Debug, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "actual_serde"))]
 pub struct BlockHeader {

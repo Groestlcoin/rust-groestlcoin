@@ -3,7 +3,7 @@
 :+1::tada: First off, thanks for taking the time to contribute! :tada::+1:
 
 The following is a set of guidelines for contributing to Rust Groestlcoin
-implementation and other Rust Bitcoin-related projects, which are hosted in the
+implementation and other Rust Groestlcoin-related projects, which are hosted in the
 [Rust Groestlcoin Community](https://github.com/Groestlcoin) on GitHub. These are
 mostly guidelines, not rules. Use your best judgment, and feel free to propose
 changes to this document in a pull request.
@@ -123,9 +123,9 @@ PR authors may also find it useful to run the following script locally in order
 to check that each of the commits within the PR satisfies the requirements
 above, before submitting the PR to review:
 ```shell script
-BITCOIN_MSRV=1.41.0 ./contrib/test.sh
+RUSTUP_TOOLCHAIN=1.41.1 ./contrib/test.sh
 ```
-Please replace the value in `BITCOIN_MSRV=1.41.0` with the current MSRV from
+Please replace the value in `RUSTUP_TOOLCHAIN=1.41.1` with the current MSRV from
 [README.md].
 
 NB: Please keep in mind that the script above replaces `Cargo.lock` file, which
@@ -166,22 +166,13 @@ any existing code for maintaining diff size small, keeping `git blame` intact an
 reduce review time. Repository maintainers may not review PRs introducing large
 blocks of re-formatted code.
 
-You may check the [discussion on the formatting](https://github.com/rust-bitcoin/rust-bitcoin/issues/172)
-and [how it is planned to coordinate it with crate refactoring](https://github.com/rust-bitcoin/rust-bitcoin/pull/525)
-
 For the new code it is recommended to follow style of the existing codebase and
 avoid any end-line space characters.
-
-### MSRV
-
-The Minimal Supported Rust Version (MSRV) is 1.41; it is enforced by our CI.
-Later we plan to increase MSRV to support Rust 2018 and you are welcome to check
-the [tracking issue](https://github.com/rust-bitcoin/rust-bitcoin/issues/510).
 
 ### Naming conventions
 
 Naming of data structures/enums and their fields/variants must follow names used
-in Bitcoin Core, with the following exceptions:
+in Groestlcoin Core, with the following exceptions:
 - the case should follow Rust standards (i.e. PascalCase for types and
   snake_case for fields and variants);
 - omit `C`-prefixes.
@@ -215,14 +206,3 @@ Fuzzing is heavily encouraged: feel free to add related material under `fuzz/`
 
 Mutation testing is planned; any contributions helping with that are highly
 welcome!
-
-
-## Going further
-
-You may be interested in the guide by Jon Atack on
-[How to review Bitcoin Core PRs](https://github.com/jonatack/bitcoin-development/blob/master/how-to-review-bitcoin-core-prs.md)
-and [How to make Bitcoin Core PRs](https://github.com/jonatack/bitcoin-development/blob/master/how-to-make-bitcoin-core-prs.md).
-While there are differences between the projects in terms of context and
-maturity, many of the suggestions offered apply to this project.
-
-Overall, have fun :)
