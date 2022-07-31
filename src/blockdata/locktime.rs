@@ -57,7 +57,7 @@ pub const LOCK_TIME_THRESHOLD: u32 = 500_000_000;
 ///
 /// # Examples
 /// ```
-/// # use bitcoin::{Amount, PackedLockTime, LockTime};
+/// # use groestlcoin::{Amount, PackedLockTime, LockTime};
 /// #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 /// struct S {
 ///     lock_time: PackedLockTime,
@@ -162,7 +162,7 @@ impl fmt::UpperHex for PackedLockTime {
 ///
 /// # Examples
 /// ```
-/// # use bitcoin::{LockTime, LockTime::*};
+/// # use groestlcoin::{LockTime, LockTime::*};
 /// # let n = LockTime::from_consensus(100);          // n OP_CHECKLOCKTIMEVERIFY
 /// # let lock_time = LockTime::from_consensus(100);  // nLockTime
 /// // To compare lock times there are various `is_satisfied_*` methods, you may also use:
@@ -181,7 +181,7 @@ pub enum LockTime {
     ///
     /// # Examples
     /// ```rust
-    /// use bitcoin::LockTime;
+    /// use groestlcoin::LockTime;
     ///
     /// let block: u32 = 741521;
     /// let n = LockTime::from_height(block).expect("valid height");
@@ -193,7 +193,7 @@ pub enum LockTime {
     ///
     /// # Examples
     /// ```rust
-    /// use bitcoin::LockTime;
+    /// use groestlcoin::LockTime;
     ///
     /// let seconds: u32 = 1653195600; // May 22nd, 5am UTC.
     /// let n = LockTime::from_time(seconds).expect("valid time");
@@ -213,7 +213,7 @@ impl LockTime {
     /// # Examples
     ///
     /// ```rust
-    /// # use bitcoin::LockTime;
+    /// # use groestlcoin::LockTime;
     /// # let n = LockTime::from_consensus(741521); // n OP_CHECKLOCKTIMEVERIFY
     ///
     /// // `from_consensus` roundtrips as expected with `to_consensus_u32`.
@@ -235,7 +235,7 @@ impl LockTime {
     ///
     /// # Examples
     /// ```rust
-    /// # use bitcoin::LockTime;
+    /// # use groestlcoin::LockTime;
     /// assert!(LockTime::from_height(741521).is_ok());
     /// assert!(LockTime::from_height(1653195600).is_err());
     /// ```
@@ -251,7 +251,7 @@ impl LockTime {
     ///
     /// # Examples
     /// ```rust
-    /// # use bitcoin::LockTime;
+    /// # use groestlcoin::LockTime;
     /// assert!(LockTime::from_time(1653195600).is_ok());
     /// assert!(LockTime::from_time(741521).is_err());
     /// ```
@@ -293,7 +293,7 @@ impl LockTime {
     ///
     /// # Examples
     /// ```no_run
-    /// # use bitcoin::blockdata::locktime::{LockTime, Height, Time};
+    /// # use groestlcoin::blockdata::locktime::{LockTime, Height, Time};
     /// // Can be implemented if block chain data is available.
     /// fn get_height() -> Height { todo!("return the current block height") }
     /// fn get_time() -> Time { todo!("return the current block time") }
@@ -324,7 +324,7 @@ impl LockTime {
     /// # Examples
     ///
     /// ```rust
-    /// # use bitcoin::{LockTime, LockTime::*};
+    /// # use groestlcoin::{LockTime, LockTime::*};
     /// # let n = LockTime::from_consensus(100);          // n OP_CHECKLOCKTIMEVERIFY
     /// # let lock_time = LockTime::from_consensus(100);  // nLockTime
     ///
@@ -420,7 +420,7 @@ impl Height {
     ///
     /// # Examples
     /// ```rust
-    /// use bitcoin::blockdata::locktime::Height;
+    /// use groestlcoin::blockdata::locktime::Height;
     ///
     /// let h: u32 = 741521;
     /// let height = Height::from_consensus(h).expect("invalid height value");
@@ -439,7 +439,7 @@ impl Height {
     ///
     /// # Examples
     /// ```rust
-    /// use bitcoin::LockTime;
+    /// use groestlcoin::LockTime;
     ///
     /// let n_lock_time: u32 = 741521;
     /// let lock_time = LockTime::from_consensus(n_lock_time);
@@ -503,7 +503,7 @@ impl Time {
     ///
     /// # Examples
     /// ```rust
-    /// use bitcoin::blockdata::locktime::Time;
+    /// use groestlcoin::blockdata::locktime::Time;
     ///
     /// let t: u32 = 1653195600; // May 22nd, 5am UTC.
     /// let time = Time::from_consensus(t).expect("invalid time value");
@@ -522,7 +522,7 @@ impl Time {
     ///
     /// # Examples
     /// ```rust
-    /// use bitcoin::LockTime;
+    /// use groestlcoin::LockTime;
     ///
     /// let n_lock_time: u32 = 1653195600; // May 22nd, 5am UTC.
     /// let lock_time = LockTime::from_consensus(n_lock_time);
