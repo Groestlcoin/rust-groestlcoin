@@ -335,6 +335,7 @@ impl Decodable for PartiallySignedTransaction {
 mod tests {
     use super::*;
 
+    use crate::blockdata::locktime::PackedLockTime;
     use crate::hashes::hex::FromHex;
     use crate::hashes::{sha256, hash160, Hash, ripemd160};
     use crate::hash_types::Txid;
@@ -358,7 +359,7 @@ mod tests {
         let psbt = PartiallySignedTransaction {
             unsigned_tx: Transaction {
                 version: 2,
-                lock_time: 0,
+                lock_time: PackedLockTime::ZERO,
                 input: vec![],
                 output: vec![],
             },
@@ -428,7 +429,7 @@ mod tests {
         let expected = PartiallySignedTransaction {
             unsigned_tx: Transaction {
                 version: 2,
-                lock_time: 1257139,
+                lock_time: PackedLockTime(1257139),
                 input: vec![TxIn {
                     previous_output: OutPoint {
                         txid: Txid::from_hex(
@@ -502,7 +503,7 @@ mod tests {
         // create some values to use in the PSBT
         let tx = Transaction {
             version: 1,
-            lock_time: 0,
+            lock_time: PackedLockTime::ZERO,
             input: vec![TxIn {
                 previous_output: OutPoint {
                     txid: Txid::from_hex("e567952fb6cc33857f392efa3a46c995a28f69cca4bb1b37e0204dab1ec7a389").unwrap(),
@@ -600,6 +601,7 @@ mod tests {
         use crate::blockdata::script::Script;
         use crate::blockdata::transaction::{EcdsaSighashType, Transaction, TxIn, TxOut, OutPoint, Sequence};
         use crate::consensus::encode::serialize_hex;
+        use crate::blockdata::locktime::PackedLockTime;
         use crate::util::psbt::map::{Map, Input, Output};
         use crate::util::psbt::raw;
         use crate::util::psbt::{PartiallySignedTransaction, Error};
@@ -688,7 +690,7 @@ mod tests {
             let unserialized = PartiallySignedTransaction {
                 unsigned_tx: Transaction {
                     version: 2,
-                    lock_time: 1257139,
+                    lock_time: PackedLockTime(1257139),
                     input: vec![TxIn {
                         previous_output: OutPoint {
                             txid: Txid::from_hex(
@@ -719,7 +721,7 @@ mod tests {
                 inputs: vec![Input {
                     non_witness_utxo: Some(Transaction {
                         version: 1,
-                        lock_time: 0,
+                        lock_time: PackedLockTime::ZERO,
                         input: vec![TxIn {
                             previous_output: OutPoint {
                                 txid: Txid::from_hex(
@@ -1000,7 +1002,7 @@ mod tests {
         let mut unserialized = PartiallySignedTransaction {
             unsigned_tx: Transaction {
                 version: 2,
-                lock_time: 1257139,
+                lock_time: PackedLockTime(1257139),
                 input: vec![TxIn {
                     previous_output: OutPoint {
                         txid: Txid::from_hex(
@@ -1031,7 +1033,7 @@ mod tests {
             inputs: vec![Input {
                 non_witness_utxo: Some(Transaction {
                     version: 1,
-                    lock_time: 0,
+                    lock_time: PackedLockTime::ZERO,
                     input: vec![TxIn {
                         previous_output: OutPoint {
                             txid: Txid::from_hex(

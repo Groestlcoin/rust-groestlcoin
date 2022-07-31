@@ -78,11 +78,13 @@ mod test_macros;
 mod internal_macros;
 #[cfg(feature = "serde")]
 mod serde_utils;
+mod parse;
 
 #[macro_use]
 pub mod network;
 pub mod blockdata;
 pub mod consensus;
+pub mod error;
 pub mod hash_types;
 pub mod policy;
 pub mod util;
@@ -94,6 +96,7 @@ use std::io;
 use core2::io;
 
 pub use crate::blockdata::block::{Block, BlockHeader};
+pub use crate::blockdata::locktime::{self, LockTime, PackedLockTime};
 pub use crate::blockdata::script::Script;
 #[allow(deprecated)]
 pub use crate::blockdata::transaction::SigHashType;
