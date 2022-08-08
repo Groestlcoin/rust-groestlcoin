@@ -1,3 +1,7 @@
+# 0.29 - 2022-08-08
+
+- Update to rust-bitcoin 0.29.0
+
 # 0.28 - 2022-04-22
 
 - Update to rust-bitcoin 0.28.0
