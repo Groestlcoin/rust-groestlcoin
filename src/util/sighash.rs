@@ -1401,7 +1401,7 @@ mod tests {
 
         let cache = cache.segwit_cache();
         assert_eq!(cache.prevouts, hex_hash!(
-            Hash, "c771f7ed8ee6224d08700833d1c6d31e7a1f6b7a3840c4e186c22136e8c9a6ed"
+            Hash, "96b827c8483d4e9b96712b6713a7b68d6e8003a781feba36c31143470b4efd37"
         ));
         assert_eq!(cache.sequences, hex_hash!(
             Hash, "b258c7ef98e1770484c86e4023c5b7361eb8e02e56b6fb7233af17ebe9eb017e"
@@ -1432,7 +1432,7 @@ mod tests {
 
         let cache = cache.segwit_cache();
         assert_eq!(cache.prevouts, hex_hash!(
-            Hash, "cddf06e3e7cc7c2b515aa8960e7ee526ffe975f30a421ca092075ade5cf47533"
+            Hash, "b0287b4a252ac05af83d2dcef00ba313af78a3e9c329afa216eb3aa2a7b4613a"
         ));
         assert_eq!(cache.sequences, hex_hash!(
             Hash, "b4248c210a2905b94345e1a8414d0e12efcfb2f4f0f2397159a71283397a0ccd"
@@ -1469,7 +1469,7 @@ mod tests {
 
         let cache = cache.segwit_cache();
         assert_eq!(cache.prevouts, hex_hash!(
-            Hash, "1f1f6dc580200b32c0579c35acc3f5e54045e46fe1b6e6d3dbe75e3ad9e5125d"
+            Hash, "74afdc312af5183c4198a40ca3c1a275b485496dd3929bca388c4b5e31f7aaa0"
         ));
         assert_eq!(cache.sequences, hex_hash!(
             Hash, "ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e"
