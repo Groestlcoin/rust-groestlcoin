@@ -1407,7 +1407,7 @@ mod tests {
             Hash, "52b0a642eea2fb7ae638c36f6252b6750293dbe574a806984b8e4d8548339a3b"
         ));
         assert_eq!(cache.outputs, hex_hash!(
-            Hash, "48f88af72cd8cc9af8cbeb53b6c60b20b4a074dcd5be578cbc279311c7d72ea9"
+            Hash, "863ef3e1a92afbfdb97f31ad0fc7683ee943e9abcf2501590ff8f6551f47e5e5"
         ));
     }
 
@@ -1438,7 +1438,7 @@ mod tests {
             Hash, "18606b350cd8bf565266bc352f0caddcf01e8fa789dd8a15386327cf8cabe198"
         ));
         assert_eq!(cache.outputs, hex_hash!(
-            Hash, "324d2443ed14b2ca1e7af61aba2d7fa517c5b8feb6433106b67a653a98b5c1a1"
+            Hash, "de984f44532e2173ca0d64314fcefe6d30da6f8cf27bafa706da61df8a226c83"
         ));
     }
 
@@ -1475,7 +1475,7 @@ mod tests {
             Hash, "3bb13029ce7b1f559ef5e747fcac439f1455a2ec7c5f09b72290795e70665044"
         ));
         assert_eq!(cache.outputs, hex_hash!(
-            Hash, "691738022230671f6f97f0f6343ac62568f82a3e02bfb20dba155d509480c523"
+            Hash, "bc4d309071414bed932f98832b27b4d76dad7e6c1346f487a8fdbb8eb90307cc"
         ));
     }
 }
