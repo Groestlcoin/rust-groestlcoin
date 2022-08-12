@@ -1396,7 +1396,7 @@ mod tests {
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.segwit_signature_hash(1, &witness_script, value, EcdsaSighashType::All).unwrap(),
-            hex_hash!(Sighash, "78d30165e9873c05d3e3eea458d41559dbb42ad5bb79db4e5be4827a05ed62b4")
+            hex_hash!(Sighash, "c304d56804b24a6801a77803281a497f5526e20f14e65df1006887fc57f0ee39")
         );
 
         let cache = cache.segwit_cache();
@@ -1427,7 +1427,7 @@ mod tests {
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.segwit_signature_hash(0, &witness_script, value, EcdsaSighashType::All).unwrap(),
-            hex_hash!(Sighash, "12885c3df56d146075151c6dbf2afe9506333d4f3e6cea38f58ca8520805a30f")
+            hex_hash!(Sighash, "bc1c830fde767c143e007f9de485d6d291f5f87169a419f426ed9db97167cf31")
         );
 
         let cache = cache.segwit_cache();
@@ -1464,7 +1464,7 @@ mod tests {
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.segwit_signature_hash(0, &witness_script, value, EcdsaSighashType::All).unwrap(),
-            hex_hash!(Sighash, "f49b945ea2188fbb44771c80c51e3b5185e90748b4600dd45c3e6268f634fa8a")
+            hex_hash!(Sighash, "7f38d84960e8fbb4635d0fd291162edd3b5b1a60ed6c40ae19888716295cae48")
         );
 
         let cache = cache.segwit_cache();
