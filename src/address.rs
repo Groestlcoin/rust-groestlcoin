@@ -9,7 +9,7 @@
 //!
 //! ```rust
 //! use groestlcoin::network::constants::Network;
-//! use groestlcoin::util::address::Address;
+//! use groestlcoin::address::Address;
 //! use groestlcoin::PublicKey;
 //! use groestlcoin::secp256k1::Secp256k1;
 //! use groestlcoin::secp256k1::rand::thread_rng;
@@ -22,26 +22,29 @@
 //! let address = Address::p2pkh(&public_key, Network::Groestlcoin);
 //! ```
 
-use crate::prelude::*;
-
 use core::convert::TryFrom;
 use core::fmt;
-use crate::error::ParseIntError;
 use core::str::FromStr;
 
-use secp256k1::{Secp256k1, Verification, XOnlyPublicKey};
 use bech32;
-use crate::hashes::{sha256, Hash, HashEngine};
-use crate::hash_types::{PubkeyHash, ScriptHash};
-use crate::blockdata::{script, opcodes};
-use crate::blockdata::constants::{PUBKEY_ADDRESS_PREFIX_MAIN, SCRIPT_ADDRESS_PREFIX_MAIN, PUBKEY_ADDRESS_PREFIX_TEST, SCRIPT_ADDRESS_PREFIX_TEST, MAX_SCRIPT_ELEMENT_SIZE};
-use crate::network::constants::Network;
-use crate::util::base58;
-use crate::util::taproot::TapBranchHash;
-use crate::util::key::PublicKey;
+use secp256k1::{Secp256k1, Verification, XOnlyPublicKey};
+
+use crate::blockdata::constants::{
+    MAX_SCRIPT_ELEMENT_SIZE, PUBKEY_ADDRESS_PREFIX_MAIN, PUBKEY_ADDRESS_PREFIX_TEST,
+    SCRIPT_ADDRESS_PREFIX_MAIN, SCRIPT_ADDRESS_PREFIX_TEST,
+};
 use crate::blockdata::script::Instruction;
-use crate::util::schnorr::{TapTweak, UntweakedPublicKey, TweakedPublicKey};
+use crate::blockdata::{opcodes, script};
+use crate::error::ParseIntError;
+use crate::hash_types::{PubkeyHash, ScriptHash};
+use crate::hashes::{sha256, Hash, HashEngine};
 use crate::internal_macros::{serde_string_impl, write_err};
+use crate::network::constants::Network;
+use crate::prelude::*;
+use crate::util::base58;
+use crate::util::key::PublicKey;
+use crate::util::schnorr::{TapTweak, TweakedPublicKey, UntweakedPublicKey};
+use crate::util::taproot::TapBranchHash;
 
 /// Address error.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -58,13 +61,13 @@ pub enum Error {
         /// Bech32 variant that is required by the used Witness version.
         expected: bech32::Variant,
         /// The actual Bech32 variant encoded in the address representation.
-        found: bech32::Variant
+        found: bech32::Variant,
     },
     /// Script version must be 0 to 16 inclusive.
     InvalidWitnessVersion(u8),
     /// Unable to parse witness version from string.
     UnparsableWitnessVersion(ParseIntError),
-    /// Bitcoin script opcode does not match any known witness version, the script is malformed.
+    /// Groestlcoin script opcode does not match any known witness version, the script is malformed.
     MalformedWitnessVersion,
     /// The witness program must be between 2 and 40 bytes in length.
     InvalidWitnessProgramLength(usize),
@@ -76,7 +79,7 @@ pub enum Error {
     ExcessiveScriptSize,
     /// Script is not a p2pkh, p2sh or witness program.
     UnrecognizedScript,
-    /// Address type is either invalid or not supported in rust-bitcoin.
+    /// Address type is either invalid or not supported in rust-groestlcoin.
     UnknownAddressType(String),
 }
 
@@ -95,7 +98,7 @@ impl fmt::Display for Error {
             Error::UncompressedPubkey => write!(f, "an uncompressed pubkey was used where it is not allowed"),
             Error::ExcessiveScriptSize => write!(f, "script size exceed 520 bytes"),
             Error::UnrecognizedScript => write!(f, "script is not a p2pkh, p2sh or witness program"),
-            Error::UnknownAddressType(ref s) => write!(f, "unknown address type: '{}' is either invalid or not supported in rust-bitcoin", s),
+            Error::UnknownAddressType(ref s) => write!(f, "unknown address type: '{}' is either invalid or not supported in rust-groestlcoin", s),
         }
     }
 }
@@ -126,16 +129,12 @@ impl std::error::Error for Error {
 
 #[doc(hidden)]
 impl From<base58::Error> for Error {
-    fn from(e: base58::Error) -> Error {
-        Error::Base58(e)
-    }
+    fn from(e: base58::Error) -> Error { Error::Base58(e) }
 }
 
 #[doc(hidden)]
 impl From<bech32::Error> for Error {
-    fn from(e: bech32::Error) -> Error {
-        Error::Bech32(e)
-    }
+    fn from(e: bech32::Error) -> Error { Error::Bech32(e) }
 }
 
 /// The different types of addresses.
@@ -229,11 +228,8 @@ pub enum WitnessVersion {
 /// Prints [`WitnessVersion`] number (from 0 to 16) as integer, without
 /// any prefix or suffix.
 impl fmt::Display for WitnessVersion {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", *self as u8)
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{}", *self as u8) }
 }
-
 
 impl FromStr for WitnessVersion {
     type Err = Error;
@@ -255,9 +251,7 @@ impl WitnessVersion {
     /// If the integer does not correspond to any witness version, errors with
     /// [`Error::InvalidWitnessVersion`].
     #[deprecated(since = "0.29.0", note = "use try_from instead")]
-    pub fn from_u5(value: bech32::u5) -> Result<Self, Error> {
-        Self::try_from(value)
-    }
+    pub fn from_u5(value: bech32::u5) -> Result<Self, Error> { Self::try_from(value) }
 
     /// Converts an 8-bit unsigned integer value into [`WitnessVersion`] variant.
     ///
@@ -268,11 +262,9 @@ impl WitnessVersion {
     /// If the integer does not correspond to any witness version, errors with
     /// [`Error::InvalidWitnessVersion`].
     #[deprecated(since = "0.29.0", note = "use try_from instead")]
-    pub fn from_num(no: u8) -> Result<Self, Error> {
-        Self::try_from(no)
-    }
+    pub fn from_num(no: u8) -> Result<Self, Error> { Self::try_from(no) }
 
-    /// Converts bitcoin script opcode into [`WitnessVersion`] variant.
+    /// Converts groestlcoin script opcode into [`WitnessVersion`] variant.
     ///
     /// # Returns
     /// Version of the Witness program (for opcodes in range of `OP_0`..`OP_16`).
@@ -281,11 +273,9 @@ impl WitnessVersion {
     /// If the opcode does not correspond to any witness version, errors with
     /// [`Error::MalformedWitnessVersion`].
     #[deprecated(since = "0.29.0", note = "use try_from instead")]
-    pub fn from_opcode(opcode: opcodes::All) -> Result<Self, Error> {
-        Self::try_from(opcode)
-    }
+    pub fn from_opcode(opcode: opcodes::All) -> Result<Self, Error> { Self::try_from(opcode) }
 
-    /// Converts bitcoin script [`Instruction`] (parsed opcode) into [`WitnessVersion`] variant.
+    /// Converts groestlcoin script [`Instruction`] (parsed opcode) into [`WitnessVersion`] variant.
     ///
     /// # Returns
     /// Version of the Witness program for [`Instruction::Op`] and [`Instruction::PushBytes`] with
@@ -302,21 +292,17 @@ impl WitnessVersion {
     /// Returns integer version number representation for a given [`WitnessVersion`] value.
     ///
     /// NB: this is not the same as an integer representation of the opcode signifying witness
-    /// version in bitcoin script. Thus, there is no function to directly convert witness version
-    /// into a byte since the conversion requires context (bitcoin script or just a version number).
+    /// version in groestlcoin script. Thus, there is no function to directly convert witness version
+    /// into a byte since the conversion requires context (groestlcoin script or just a version number).
     #[deprecated(since = "0.29.0", note = "use to_num instead")]
-    pub fn into_num(self) -> u8 {
-        self.to_num()
-    }
+    pub fn into_num(self) -> u8 { self.to_num() }
 
     /// Returns integer version number representation for a given [`WitnessVersion`] value.
     ///
     /// NB: this is not the same as an integer representation of the opcode signifying witness
-    /// version in bitcoin script. Thus, there is no function to directly convert witness version
-    /// into a byte since the conversion requires context (bitcoin script or just a version number).
-    pub fn to_num(self) -> u8 {
-        self as u8
-    }
+    /// version in groestlcoin script. Thus, there is no function to directly convert witness version
+    /// into a byte since the conversion requires context (groestlcoin script or just a version number).
+    pub fn to_num(self) -> u8 { self as u8 }
 
     /// Determines the checksum variant. See BIP-0350 for specification.
     pub fn bech32_variant(&self) -> bech32::Variant {
@@ -339,9 +325,7 @@ impl TryFrom<bech32::u5> for WitnessVersion {
     /// # Errors
     /// If the integer does not correspond to any witness version, errors with
     /// [`Error::InvalidWitnessVersion`].
-    fn try_from(value: bech32::u5) -> Result<Self, Self::Error> {
-        Self::try_from(value.to_u8())
-    }
+    fn try_from(value: bech32::u5) -> Result<Self, Self::Error> { Self::try_from(value.to_u8()) }
 }
 
 impl TryFrom<u8> for WitnessVersion {
@@ -384,7 +368,7 @@ impl TryFrom<u8> for WitnessVersion {
 impl TryFrom<opcodes::All> for WitnessVersion {
     type Error = Error;
 
-    /// Converts bitcoin script opcode into [`WitnessVersion`] variant.
+    /// Converts groestlcoin script opcode into [`WitnessVersion`] variant.
     ///
     /// # Returns
     /// Version of the Witness program (for opcodes in range of `OP_0`..`OP_16`).
@@ -395,9 +379,11 @@ impl TryFrom<opcodes::All> for WitnessVersion {
     fn try_from(opcode: opcodes::All) -> Result<Self, Self::Error> {
         match opcode.to_u8() {
             0 => Ok(WitnessVersion::V0),
-            version if version >= opcodes::all::OP_PUSHNUM_1.to_u8() && version <= opcodes::all::OP_PUSHNUM_16.to_u8() =>
+            version
+                if version >= opcodes::all::OP_PUSHNUM_1.to_u8()
+                    && version <= opcodes::all::OP_PUSHNUM_16.to_u8() =>
                 WitnessVersion::try_from(version - opcodes::all::OP_PUSHNUM_1.to_u8() + 1),
-            _ => Err(Error::MalformedWitnessVersion)
+            _ => Err(Error::MalformedWitnessVersion),
         }
     }
 }
@@ -405,7 +391,7 @@ impl TryFrom<opcodes::All> for WitnessVersion {
 impl<'a> TryFrom<Instruction<'a>> for WitnessVersion {
     type Error = Error;
 
-    /// Converts bitcoin script [`Instruction`] (parsed opcode) into [`WitnessVersion`] variant.
+    /// Converts groestlcoin script [`Instruction`] (parsed opcode) into [`WitnessVersion`] variant.
     ///
     /// # Returns
     /// Version of the Witness program for [`Instruction::Op`] and [`Instruction::PushBytes`] with
@@ -431,11 +417,11 @@ impl From<WitnessVersion> for bech32::u5 {
 }
 
 impl From<WitnessVersion> for opcodes::All {
-    /// Converts [`WitnessVersion`] instance into corresponding Bitcoin scriptopcode (`OP_0`..`OP_16`).
+    /// Converts [`WitnessVersion`] instance into corresponding Groestlcoin scriptopcode (`OP_0`..`OP_16`).
     fn from(version: WitnessVersion) -> opcodes::All {
         match version {
             WitnessVersion::V0 => opcodes::all::OP_PUSHBYTES_0,
-            no => opcodes::All::from(opcodes::all::OP_PUSHNUM_1.to_u8() + no.to_num() - 1)
+            no => opcodes::All::from(opcodes::all::OP_PUSHNUM_1.to_u8() + no.to_num() - 1),
         }
     }
 }
@@ -468,7 +454,9 @@ impl Payload {
             hash_inner.copy_from_slice(&script.as_bytes()[2..22]);
             Payload::ScriptHash(ScriptHash::from_inner(hash_inner))
         } else if script.is_witness_program() {
-            if script.witness_version() == Some(WitnessVersion::V0) && !(script.is_v0_p2wpkh() || script.is_v0_p2wsh()) {
+            if script.witness_version() == Some(WitnessVersion::V0)
+                && !(script.is_v0_p2wpkh() || script.is_v0_p2wsh())
+            {
                 return Err(Error::InvalidSegwitV0ProgramLength(script.len() - 2));
             }
 
@@ -486,17 +474,14 @@ impl Payload {
         match *self {
             Payload::PubkeyHash(ref hash) => script::Script::new_p2pkh(hash),
             Payload::ScriptHash(ref hash) => script::Script::new_p2sh(hash),
-            Payload::WitnessProgram { version, program: ref prog } => {
-                script::Script::new_witness_program(version, prog)
-            }
+            Payload::WitnessProgram { version, program: ref prog } =>
+                script::Script::new_witness_program(version, prog),
         }
     }
 
     /// Creates a pay to (compressed) public key hash payload from a public key
     #[inline]
-    pub fn p2pkh(pk: &PublicKey) -> Payload {
-        Payload::PubkeyHash(pk.pubkey_hash())
-    }
+    pub fn p2pkh(pk: &PublicKey) -> Payload { Payload::PubkeyHash(pk.pubkey_hash()) }
 
     /// Creates a pay to script hash P2SH payload from a script
     #[inline]
@@ -534,10 +519,8 @@ impl Payload {
 
     /// Create a pay to script payload that embeds a witness pay to script hash address
     pub fn p2shwsh(script: &script::Script) -> Payload {
-        let ws = script::Builder::new()
-            .push_int(0)
-            .push_slice(&script.wscript_hash())
-            .into_script();
+        let ws =
+            script::Builder::new().push_int(0).push_slice(&script.wscript_hash()).into_script();
 
         Payload::ScriptHash(ws.script_hash())
     }
@@ -603,10 +586,7 @@ impl<'a> fmt::Display for AddressEncoding<'a> {
                 prefixed[1..].copy_from_slice(&hash[..]);
                 base58::check_encode_slice_to_fmt(fmt, &prefixed[..])
             }
-            Payload::WitnessProgram {
-                version,
-                program: prog,
-            } => {
+            Payload::WitnessProgram { version, program: prog } => {
                 let mut upper_writer;
                 let writer = if fmt.alternate() {
                     upper_writer = UpperWriter(fmt);
@@ -648,10 +628,7 @@ impl Address {
     /// This is the preferred non-witness type address.
     #[inline]
     pub fn p2pkh(pk: &PublicKey, network: Network) -> Address {
-        Address {
-            network,
-            payload: Payload::p2pkh(pk),
-        }
+        Address { network, payload: Payload::p2pkh(pk) }
     }
 
     /// Creates a pay to script hash P2SH address from a script.
@@ -660,10 +637,7 @@ impl Address {
     /// these days.
     #[inline]
     pub fn p2sh(script: &script::Script, network: Network) -> Result<Address, Error> {
-        Ok(Address {
-            network,
-            payload: Payload::p2sh(script)?,
-        })
+        Ok(Address { network, payload: Payload::p2sh(script)? })
     }
 
     /// Creates a witness pay to public key address from a public key.
@@ -673,10 +647,7 @@ impl Address {
     /// # Errors
     /// Will only return an error if an uncompressed public key is provided.
     pub fn p2wpkh(pk: &PublicKey, network: Network) -> Result<Address, Error> {
-        Ok(Address {
-            network,
-            payload: Payload::p2wpkh(pk)?,
-        })
+        Ok(Address { network, payload: Payload::p2wpkh(pk)? })
     }
 
     /// Creates a pay to script address that embeds a witness pay to public key.
@@ -686,28 +657,19 @@ impl Address {
     /// # Errors
     /// Will only return an Error if an uncompressed public key is provided.
     pub fn p2shwpkh(pk: &PublicKey, network: Network) -> Result<Address, Error> {
-        Ok(Address {
-            network,
-            payload: Payload::p2shwpkh(pk)?,
-        })
+        Ok(Address { network, payload: Payload::p2shwpkh(pk)? })
     }
 
     /// Creates a witness pay to script hash address.
     pub fn p2wsh(script: &script::Script, network: Network) -> Address {
-        Address {
-            network,
-            payload: Payload::p2wsh(script),
-        }
+        Address { network, payload: Payload::p2wsh(script) }
     }
 
     /// Creates a pay to script address that embeds a witness pay to script hash address.
     ///
     /// This is a segwit address type that looks familiar (as p2sh) to legacy clients.
     pub fn p2shwsh(script: &script::Script, network: Network) -> Address {
-        Address {
-            network,
-            payload: Payload::p2shwsh(script),
-        }
+        Address { network, payload: Payload::p2shwsh(script) }
     }
 
     /// Creates a pay to taproot address from an untweaked key.
@@ -715,22 +677,16 @@ impl Address {
         secp: &Secp256k1<C>,
         internal_key: UntweakedPublicKey,
         merkle_root: Option<TapBranchHash>,
-        network: Network
+        network: Network,
     ) -> Address {
-        Address {
-            network,
-            payload: Payload::p2tr(secp, internal_key, merkle_root),
-        }
+        Address { network, payload: Payload::p2tr(secp, internal_key, merkle_root) }
     }
 
     /// Creates a pay to taproot address from a pre-tweaked output key.
     ///
     /// This method is not recommended for use, [`Address::p2tr()`] should be used where possible.
     pub fn p2tr_tweaked(output_key: TweakedPublicKey, network: Network) -> Address {
-        Address {
-            network,
-            payload: Payload::p2tr_tweaked(output_key),
-        }
+        Address { network, payload: Payload::p2tr_tweaked(output_key) }
     }
 
     /// Gets the address type of the address.
@@ -741,10 +697,7 @@ impl Address {
         match self.payload {
             Payload::PubkeyHash(_) => Some(AddressType::P2pkh),
             Payload::ScriptHash(_) => Some(AddressType::P2sh),
-            Payload::WitnessProgram {
-                version,
-                program: ref prog,
-            } => {
+            Payload::WitnessProgram { version, program: ref prog } => {
                 // BIP-141 p2wpkh or p2wsh addresses.
                 match version {
                     WitnessVersion::V0 => match prog.len() {
@@ -763,22 +716,15 @@ impl Address {
     ///
     /// SegWit addresses with unassigned witness versions or non-standard program sizes are
     /// considered non-standard.
-    pub fn is_standard(&self) -> bool {
-        self.address_type().is_some()
-    }
+    pub fn is_standard(&self) -> bool { self.address_type().is_some() }
 
     /// Constructs an [`Address`] from an output script (`scriptPubkey`).
     pub fn from_script(script: &script::Script, network: Network) -> Result<Address, Error> {
-        Ok(Address {
-            payload: Payload::from_script(script)?,
-            network,
-        })
+        Ok(Address { payload: Payload::from_script(script)?, network })
     }
 
     /// Generates a script pubkey spending to this address.
-    pub fn script_pubkey(&self) -> script::Script {
-        self.payload.script_pubkey()
-    }
+    pub fn script_pubkey(&self) -> script::Script { self.payload.script_pubkey() }
 
     /// Creates a URI string *groestlcoin:address* optimized to be encoded in QR codes.
     ///
@@ -818,14 +764,14 @@ impl Address {
     pub fn is_valid_for_network(&self, network: Network) -> bool {
         let is_legacy = match self.address_type() {
             Some(AddressType::P2pkh) | Some(AddressType::P2sh) => true,
-            _ => false
+            _ => false,
         };
 
         match (self.network, network) {
             (a, b) if a == b => true,
             (Network::Groestlcoin, _) | (_, Network::Groestlcoin) => false,
             (Network::Regtest, _) | (_, Network::Regtest) if !is_legacy => false,
-            (Network::Testnet, _) | (Network::Regtest, _) | (Network::Signet, _) => true
+            (Network::Testnet, _) | (Network::Regtest, _) | (Network::Signet, _) => true,
         }
     }
 
@@ -839,7 +785,9 @@ impl Address {
         let payload = self.payload.as_bytes();
         let xonly_pubkey = XOnlyPublicKey::from(pubkey.inner);
 
-        (*pubkey_hash == *payload) || (xonly_pubkey.serialize() == *payload) || (*segwit_redeem_hash(&pubkey_hash) == *payload)
+        (*pubkey_hash == *payload)
+            || (xonly_pubkey.serialize() == *payload)
+            || (*segwit_redeem_hash(&pubkey_hash) == *payload)
     }
 
     /// Returns true if the supplied xonly public key can be used to derive the address.
@@ -869,12 +817,8 @@ impl fmt::Display for Address {
             Network::Testnet | Network::Signet => "tgrs",
             Network::Regtest => "grsrt",
         };
-        let encoding = AddressEncoding {
-            payload: &self.payload,
-            p2pkh_prefix,
-            p2sh_prefix,
-            bech32_hrp,
-        };
+        let encoding =
+            AddressEncoding { payload: &self.payload, p2pkh_prefix, p2sh_prefix, bech32_hrp };
         encoding.fmt(fmt)
     }
 }
@@ -942,13 +886,7 @@ impl FromStr for Address {
                 return Err(Error::InvalidBech32Variant { expected, found: variant });
             }
 
-            return Ok(Address {
-                payload: Payload::WitnessProgram {
-                    version,
-                    program,
-                },
-                network,
-            });
+            return Ok(Address { payload: Payload::WitnessProgram { version, program }, network });
         }
 
         // Base58
@@ -961,36 +899,23 @@ impl FromStr for Address {
         }
 
         let (network, payload) = match data[0] {
-            PUBKEY_ADDRESS_PREFIX_MAIN => (
-                Network::Groestlcoin,
-                Payload::PubkeyHash(PubkeyHash::from_slice(&data[1..]).unwrap()),
-            ),
-            SCRIPT_ADDRESS_PREFIX_MAIN => (
-                Network::Groestlcoin,
-                Payload::ScriptHash(ScriptHash::from_slice(&data[1..]).unwrap()),
-            ),
-            PUBKEY_ADDRESS_PREFIX_TEST => (
-                Network::Testnet,
-                Payload::PubkeyHash(PubkeyHash::from_slice(&data[1..]).unwrap()),
-            ),
-            SCRIPT_ADDRESS_PREFIX_TEST => (
-                Network::Testnet,
-                Payload::ScriptHash(ScriptHash::from_slice(&data[1..]).unwrap()),
-            ),
+            PUBKEY_ADDRESS_PREFIX_MAIN =>
+                (Network::Groestlcoin, Payload::PubkeyHash(PubkeyHash::from_slice(&data[1..]).unwrap())),
+            SCRIPT_ADDRESS_PREFIX_MAIN =>
+                (Network::Groestlcoin, Payload::ScriptHash(ScriptHash::from_slice(&data[1..]).unwrap())),
+            PUBKEY_ADDRESS_PREFIX_TEST =>
+                (Network::Testnet, Payload::PubkeyHash(PubkeyHash::from_slice(&data[1..]).unwrap())),
+            SCRIPT_ADDRESS_PREFIX_TEST =>
+                (Network::Testnet, Payload::ScriptHash(ScriptHash::from_slice(&data[1..]).unwrap())),
             x => return Err(Error::Base58(base58::Error::InvalidAddressVersion(x))),
         };
 
-        Ok(Address {
-            network,
-            payload,
-        })
+        Ok(Address { network, payload })
     }
 }
 
 impl fmt::Debug for Address {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(self, f)
-    }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { fmt::Display::fmt(self, f) }
 }
 
 /// Convert a byte array of a pubkey hash into a segwit redeem hash
@@ -1005,14 +930,13 @@ fn segwit_redeem_hash(pubkey_hash: &[u8]) -> crate::hashes::hash160::Hash {
 mod tests {
     use core::str::FromStr;
 
-    use crate::hashes::hex::{FromHex, ToHex};
-
-    use crate::blockdata::script::Script;
-    use crate::network::constants::Network::{Groestlcoin, Testnet};
-    use crate::util::key::PublicKey;
     use secp256k1::XOnlyPublicKey;
 
     use super::*;
+    use crate::blockdata::script::Script;
+    use crate::hashes::hex::{FromHex, ToHex};
+    use crate::network::constants::Network::{Groestlcoin, Testnet};
+    use crate::util::key::PublicKey;
 
     macro_rules! hex (($hex:literal) => (Vec::from_hex($hex).unwrap()));
     macro_rules! hex_key (($hex:literal) => (PublicKey::from_slice(&hex!($hex)).unwrap()));
@@ -1040,7 +964,9 @@ mod tests {
     fn test_p2pkh_address_58() {
         let addr = Address {
             network: Groestlcoin,
-            payload: Payload::PubkeyHash(hex_pubkeyhash!("162c5ea71c0b23f5b9022ef047c4a86470a5b070")),
+            payload: Payload::PubkeyHash(hex_pubkeyhash!(
+                "162c5ea71c0b23f5b9022ef047c4a86470a5b070"
+            )),
         };
 
         assert_eq!(
@@ -1069,7 +995,9 @@ mod tests {
     fn test_p2sh_address_58() {
         let addr = Address {
             network: Groestlcoin,
-            payload: Payload::ScriptHash(hex_scripthash!("162c5ea71c0b23f5b9022ef047c4a86470a5b070")),
+            payload: Payload::ScriptHash(hex_scripthash!(
+                "162c5ea71c0b23f5b9022ef047c4a86470a5b070"
+            )),
         };
 
         assert_eq!(
@@ -1091,7 +1019,7 @@ mod tests {
     }
 
     #[test]
-    fn test_p2sh_parse_for_large_script(){
+    fn test_p2sh_parse_for_large_script() {
         let script = hex_script!("552103a765fc35b3f210b95223846b36ef62a4e53e34e2925270c2c7906b92c9f718eb2103c327511374246759ec8d0b89fa6c6b23b33e11f92c5bc155409d86de0c79180121038cae7406af1f12f4786d820a1466eec7bc5785a1b5e4a387eca6d797753ef6db2103252bfb9dcaab0cd00353f2ac328954d791270203d66c2be8b430f115f451b8a12103e79412d42372c55dd336f2eb6eb639ef9d74a22041ba79382c74da2338fe58ad21035049459a4ebc00e876a9eef02e72a3e70202d3d1f591fc0dd542f93f642021f82102016f682920d9723c61b27f562eb530c926c00106004798b6471e8c52c60ee02057ae12123122313123123ac1231231231231313123131231231231313212313213123123552103a765fc35b3f210b95223846b36ef62a4e53e34e2925270c2c7906b92c9f718eb2103c327511374246759ec8d0b89fa6c6b23b33e11f92c5bc155409d86de0c79180121038cae7406af1f12f4786d820a1466eec7bc5785a1b5e4a387eca6d797753ef6db2103252bfb9dcaab0cd00353f2ac328954d791270203d66c2be8b430f115f451b8a12103e79412d42372c55dd336f2eb6eb639ef9d74a22041ba79382c74da2338fe58ad21035049459a4ebc00e876a9eef02e72a3e70202d3d1f591fc0dd542f93f642021f82102016f682920d9723c61b27f562eb530c926c00106004798b6471e8c52c60ee02057ae12123122313123123ac1231231231231313123131231231231313212313213123123552103a765fc35b3f210b95223846b36ef62a4e53e34e2925270c2c7906b92c9f718eb2103c327511374246759ec8d0b89fa6c6b23b33e11f92c5bc155409d86de0c79180121038cae7406af1f12f4786d820a1466eec7bc5785a1b5e4a387eca6d797753ef6db2103252bfb9dcaab0cd00353f2ac328954d791270203d66c2be8b430f115f451b8a12103e79412d42372c55dd336f2eb6eb639ef9d74a22041ba79382c74da2338fe58ad21035049459a4ebc00e876a9eef02e72a3e70202d3d1f591fc0dd542f93f642021f82102016f682920d9723c61b27f562eb530c926c00106004798b6471e8c52c60ee02057ae12123122313123123ac1231231231231313123131231231231313212313213123123");
         assert_eq!(Address::p2sh(&script, Testnet), Err(Error::ExcessiveScriptSize));
     }
@@ -1099,7 +1027,8 @@ mod tests {
     #[test]
     fn test_p2wpkh() {
         // stolen from Groestlcoin transaction: b3c8c2b6cfc335abbcb2c7823a8453f55d64b2b5125a9a61e8737230cdb8ce20
-        let mut key = hex_key!("033bc8c83c52df5712229a2f72206d90192366c36428cb0c12b6af98324d97bfbc");
+        let mut key =
+            hex_key!("033bc8c83c52df5712229a2f72206d90192366c36428cb0c12b6af98324d97bfbc");
         let addr = Address::p2wpkh(&key, Groestlcoin).unwrap();
         assert_eq!(&addr.to_string(), "grs1qvzvkjn4q3nszqxrv3nraga2r822xjty3e8sh90");
         assert_eq!(addr.address_type(), Some(AddressType::P2wpkh));
@@ -1125,8 +1054,9 @@ mod tests {
 
     #[test]
     fn test_p2shwpkh() {
-        // stolen from Bitcoin transaction: ad3fd9c6b52e752ba21425435ff3dd361d6ac271531fc1d2144843a9f550ad01
-        let mut key = hex_key!("026c468be64d22761c30cd2f12cbc7de255d592d7904b1bab07236897cc4c2e766");
+        // stolen from Groestlcoin transaction: ad3fd9c6b52e752ba21425435ff3dd361d6ac271531fc1d2144843a9f550ad01
+        let mut key =
+            hex_key!("026c468be64d22761c30cd2f12cbc7de255d592d7904b1bab07236897cc4c2e766");
         let addr = Address::p2shwpkh(&key, Groestlcoin).unwrap();
         assert_eq!(&addr.to_string(), "3QBRmWNqqBGme9er7fMkGqtZtp4gn5WwDf");
         assert_eq!(addr.address_type(), Some(AddressType::P2sh));
@@ -1154,10 +1084,7 @@ mod tests {
             "654f6ea368e0acdfd92976b7c2103a1b26313f430654f6ea368e0acdfd92976b7c2103a1b26313f4"
         );
         let addr = Address {
-            payload: Payload::WitnessProgram {
-                version: WitnessVersion::V13,
-                program,
-            },
+            payload: Payload::WitnessProgram { version: WitnessVersion::V13, program },
             network: Network::Groestlcoin,
         };
         roundtrips(&addr);
@@ -1169,8 +1096,14 @@ mod tests {
             ("FtUCfuND9WBN2pLEnKeSx3mURaJ4iQdado", Some(AddressType::P2pkh)),
             ("33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32", Some(AddressType::P2sh)),
             ("grs1qvzvkjn4q3nszqxrv3nraga2r822xjty3e8sh90", Some(AddressType::P2wpkh)),
-            ("grs1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxsphnwkk", Some(AddressType::P2wsh)),
-            ("grs1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqezj0h8", Some(AddressType::P2tr)),
+            (
+                "grs1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxsphnwkk",
+                Some(AddressType::P2wsh),
+            ),
+            (
+                "grs1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqezj0h8",
+                Some(AddressType::P2tr),
+            ),
             // Related to future extensions, addresses are valid but have no type
             // segwit v1 and len != 32
             // ("grs1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kt5nd6y", None),
@@ -1230,7 +1163,6 @@ mod tests {
             "tgrs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vpggkg4j",
             // Empty data section
             "grs1gmk9yu",
-
             // 2. BIP-173 test vectors
             // Invalid human-readable part
             "frs1qw508d6qejxtdg4y5r3zarvary0c5xw7kg3g4ty",
@@ -1326,14 +1258,21 @@ mod tests {
 
     #[test]
     fn test_qr_string() {
-        for el in  ["FXBxTzaqSQsBFkL7DSAkqbaEvhN4HxNsAr", "33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32"].iter() {
+        for el in
+            ["FXBxTzaqSQsBFkL7DSAkqbaEvhN4HxNsAr", "33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32"].iter()
+        {
             let addr = Address::from_str(el).unwrap();
             assert_eq!(addr.to_qr_uri(), format!("groestlcoin:{}", el));
         }
 
-        for el in ["grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h", "grs1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxsphnwkk"].iter() {
+        for el in [
+            "grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h",
+            "grs1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxsphnwkk",
+        ]
+        .iter()
+        {
             let addr = Address::from_str(el).unwrap();
-            assert_eq!(addr.to_qr_uri(), format!("GROESTLCOIN:{}", el.to_ascii_uppercase()) );
+            assert_eq!(addr.to_qr_uri(), format!("GROESTLCOIN:{}", el.to_ascii_uppercase()));
         }
     }
 
@@ -1341,47 +1280,38 @@ mod tests {
     fn test_valid_networks() {
         let legacy_payload = &[
             Payload::PubkeyHash(PubkeyHash::all_zeros()),
-            Payload::ScriptHash(ScriptHash::all_zeros())
+            Payload::ScriptHash(ScriptHash::all_zeros()),
         ];
-        let segwit_payload = (0..=16).map(|version| {
-            Payload::WitnessProgram {
+        let segwit_payload = (0..=16)
+            .map(|version| Payload::WitnessProgram {
                 version: WitnessVersion::try_from(version).unwrap(),
-                program: vec![]
-            }
-        }).collect::<Vec<_>>();
+                program: vec![],
+            })
+            .collect::<Vec<_>>();
 
-        const LEGACY_EQUIVALENCE_CLASSES: &[&[Network]] = &[
-            &[Network::Groestlcoin],
-            &[Network::Testnet, Network::Regtest, Network::Signet],
-        ];
-        const SEGWIT_EQUIVALENCE_CLASSES: &[&[Network]] = &[
-            &[Network::Groestlcoin],
-            &[Network::Regtest],
-            &[Network::Testnet, Network::Signet],
-        ];
+        const LEGACY_EQUIVALENCE_CLASSES: &[&[Network]] =
+            &[&[Network::Groestlcoin], &[Network::Testnet, Network::Regtest, Network::Signet]];
+        const SEGWIT_EQUIVALENCE_CLASSES: &[&[Network]] =
+            &[&[Network::Groestlcoin], &[Network::Regtest], &[Network::Testnet, Network::Signet]];
 
         fn test_addr_type(payloads: &[Payload], equivalence_classes: &[&[Network]]) {
             for pl in payloads {
                 for addr_net in equivalence_classes.iter().flat_map(|ec| ec.iter()) {
-                    for valid_net in equivalence_classes.iter()
+                    for valid_net in equivalence_classes
+                        .iter()
                         .filter(|ec| ec.contains(addr_net))
                         .flat_map(|ec| ec.iter())
                     {
-                        let addr = Address {
-                            payload: pl.clone(),
-                            network: *addr_net
-                        };
+                        let addr = Address { payload: pl.clone(), network: *addr_net };
                         assert!(addr.is_valid_for_network(*valid_net));
                     }
 
-                    for invalid_net in equivalence_classes.iter()
+                    for invalid_net in equivalence_classes
+                        .iter()
                         .filter(|ec| !ec.contains(addr_net))
                         .flat_map(|ec| ec.iter())
                     {
-                        let addr = Address {
-                            payload: pl.clone(),
-                            network: *addr_net
-                        };
+                        let addr = Address { payload: pl.clone(), network: *addr_net };
                         assert!(!addr.is_valid_for_network(*invalid_net));
                     }
                 }
@@ -1395,10 +1325,16 @@ mod tests {
     #[test]
     fn p2tr_from_untweaked() {
         //Test case from BIP-086
-        let internal_key = XOnlyPublicKey::from_str("cc8a4bc64d897bddc5fbc2f670f7a8ba0b386779106cf1223c6fc5d7cd6fc115").unwrap();
+        let internal_key = XOnlyPublicKey::from_str(
+            "cc8a4bc64d897bddc5fbc2f670f7a8ba0b386779106cf1223c6fc5d7cd6fc115",
+        )
+        .unwrap();
         let secp = Secp256k1::verification_only();
         let address = Address::p2tr(&secp, internal_key, None, Network::Groestlcoin);
-        assert_eq!(address.to_string(), "grs1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqezj0h8");
+        assert_eq!(
+            address.to_string(),
+            "grs1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqezj0h8"
+        );
         assert_eq!(address.address_type(), Some(AddressType::P2tr));
         roundtrips(&address);
     }
@@ -1414,7 +1350,10 @@ mod tests {
         let result = address.is_related_to_pubkey(&pubkey);
         assert!(result);
 
-        let unused_pubkey = PublicKey::from_str("02ba604e6ad9d3864eda8dc41c62668514ef7d5417d3b6db46e45cc4533bff001c").expect("pubkey");
+        let unused_pubkey = PublicKey::from_str(
+            "02ba604e6ad9d3864eda8dc41c62668514ef7d5417d3b6db46e45cc4533bff001c",
+        )
+        .expect("pubkey");
         assert!(!address.is_related_to_pubkey(&unused_pubkey))
     }
 
@@ -1429,7 +1368,10 @@ mod tests {
         let result = address.is_related_to_pubkey(&pubkey);
         assert!(result);
 
-        let unused_pubkey = PublicKey::from_str("02ba604e6ad9d3864eda8dc41c62668514ef7d5417d3b6db46e45cc4533bff001c").expect("pubkey");
+        let unused_pubkey = PublicKey::from_str(
+            "02ba604e6ad9d3864eda8dc41c62668514ef7d5417d3b6db46e45cc4533bff001c",
+        )
+        .expect("pubkey");
         assert!(!address.is_related_to_pubkey(&unused_pubkey))
     }
 
@@ -1444,7 +1386,10 @@ mod tests {
         let result = address.is_related_to_pubkey(&pubkey);
         assert!(result);
 
-        let unused_pubkey = PublicKey::from_str("02ba604e6ad9d3864eda8dc41c62668514ef7d5417d3b6db46e45cc4533bff001c").expect("pubkey");
+        let unused_pubkey = PublicKey::from_str(
+            "02ba604e6ad9d3864eda8dc41c62668514ef7d5417d3b6db46e45cc4533bff001c",
+        )
+        .expect("pubkey");
         assert!(!address.is_related_to_pubkey(&unused_pubkey))
     }
 
@@ -1459,36 +1404,50 @@ mod tests {
         let result = address.is_related_to_pubkey(&pubkey);
         assert!(result);
 
-        let unused_pubkey = PublicKey::from_str("02ba604e6ad9d3864eda8dc41c62668514ef7d5417d3b6db46e45cc4533bff001c").expect("pubkey");
+        let unused_pubkey = PublicKey::from_str(
+            "02ba604e6ad9d3864eda8dc41c62668514ef7d5417d3b6db46e45cc4533bff001c",
+        )
+        .expect("pubkey");
         assert!(!address.is_related_to_pubkey(&unused_pubkey))
     }
 
     #[test]
-    fn test_is_related_to_pubkey_p2tr(){
+    fn test_is_related_to_pubkey_p2tr() {
         let pubkey_string = "0347ff3dacd07a1f43805ec6808e801505a6e18245178609972a68afbc2777ff2b";
         let pubkey = PublicKey::from_str(pubkey_string).expect("pubkey");
         let xonly_pubkey = XOnlyPublicKey::from(pubkey.inner);
         let tweaked_pubkey = TweakedPublicKey::dangerous_assume_tweaked(xonly_pubkey);
         let address = Address::p2tr_tweaked(tweaked_pubkey, Network::Groestlcoin);
 
-        assert_eq!(address, Address::from_str("grs1pgllnmtxs0g058qz7c6qgaqq4qknwrqj9z7rqn9e2dzhmcfmhlu4sxxj9ma").expect("address"));
+        assert_eq!(
+            address,
+            Address::from_str("grs1pgllnmtxs0g058qz7c6qgaqq4qknwrqj9z7rqn9e2dzhmcfmhlu4sxxj9ma")
+                .expect("address")
+        );
 
         let result = address.is_related_to_pubkey(&pubkey);
         assert!(result);
 
-        let unused_pubkey = PublicKey::from_str("02ba604e6ad9d3864eda8dc41c62668514ef7d5417d3b6db46e45cc4533bff001c").expect("pubkey");
+        let unused_pubkey = PublicKey::from_str(
+            "02ba604e6ad9d3864eda8dc41c62668514ef7d5417d3b6db46e45cc4533bff001c",
+        )
+        .expect("pubkey");
         assert!(!address.is_related_to_pubkey(&unused_pubkey));
     }
 
     #[test]
-    fn test_is_related_to_xonly_pubkey(){
+    fn test_is_related_to_xonly_pubkey() {
         let pubkey_string = "0347ff3dacd07a1f43805ec6808e801505a6e18245178609972a68afbc2777ff2b";
         let pubkey = PublicKey::from_str(pubkey_string).expect("pubkey");
         let xonly_pubkey = XOnlyPublicKey::from(pubkey.inner);
         let tweaked_pubkey = TweakedPublicKey::dangerous_assume_tweaked(xonly_pubkey);
         let address = Address::p2tr_tweaked(tweaked_pubkey, Network::Groestlcoin);
 
-        assert_eq!(address, Address::from_str("grs1pgllnmtxs0g058qz7c6qgaqq4qknwrqj9z7rqn9e2dzhmcfmhlu4sxxj9ma").expect("address"));
+        assert_eq!(
+            address,
+            Address::from_str("grs1pgllnmtxs0g058qz7c6qgaqq4qknwrqj9z7rqn9e2dzhmcfmhlu4sxxj9ma")
+                .expect("address")
+        );
 
         let result = address.is_related_to_xonly_pubkey(&xonly_pubkey);
         assert!(result);
@@ -1497,13 +1456,17 @@ mod tests {
     #[test]
     fn test_fail_address_from_script() {
         let bad_p2wpkh = hex_script!("0014dbc5b0a8f9d4353b4b54c3db48846bb15abfec");
-        let bad_p2wsh = hex_script!("00202d4fa2eb233d008cc83206fa2f4f2e60199000f5b857a835e3172323385623");
+        let bad_p2wsh =
+            hex_script!("00202d4fa2eb233d008cc83206fa2f4f2e60199000f5b857a835e3172323385623");
         let invalid_segwitv0_script = hex_script!("001161458e330389cd0437ee9fe3641d70cc18");
         let expected = Err(Error::UnrecognizedScript);
 
         assert_eq!(Address::from_script(&bad_p2wpkh, Network::Groestlcoin), expected);
         assert_eq!(Address::from_script(&bad_p2wsh, Network::Groestlcoin), expected);
-        assert_eq!(Address::from_script(&invalid_segwitv0_script, Network::Groestlcoin), Err(Error::InvalidSegwitV0ProgramLength(17)));
+        assert_eq!(
+            Address::from_script(&invalid_segwitv0_script, Network::Groestlcoin),
+            Err(Error::InvalidSegwitV0ProgramLength(17))
+        );
     }
 
     #[test]

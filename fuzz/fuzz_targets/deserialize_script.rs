@@ -1,6 +1,6 @@
 extern crate groestlcoin;
 
-use groestlcoin::util::address::Address;
+use groestlcoin::address::Address;
 use groestlcoin::network::constants::Network;
 use groestlcoin::blockdata::script;
 use groestlcoin::consensus::encode;

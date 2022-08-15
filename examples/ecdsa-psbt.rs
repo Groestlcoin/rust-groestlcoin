@@ -35,7 +35,6 @@ use std::str::FromStr;
 use groestlcoin::consensus::encode;
 use groestlcoin::hashes::hex::{self, FromHex};
 use groestlcoin::secp256k1::{Secp256k1, Signing, Verification};
-use groestlcoin::util::address;
 use groestlcoin::util::amount::ParseAmountError;
 use groestlcoin::util::bip32::{
     self, ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
@@ -43,8 +42,8 @@ use groestlcoin::util::bip32::{
 };
 use groestlcoin::util::psbt::{self, Input, Psbt, PsbtSighashType};
 use groestlcoin::{
-    Address, Amount, Network, OutPoint, PackedLockTime, PrivateKey, PublicKey, Script, Sequence,
-    Transaction, TxIn, TxOut, Txid, Witness,
+    address, Address, Amount, Network, OutPoint, PackedLockTime, PrivateKey, PublicKey, Script,
+    Sequence, Transaction, TxIn, TxOut, Txid, Witness,
 };
 
 use self::psbt_sign::*;
