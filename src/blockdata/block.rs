@@ -81,7 +81,7 @@ impl BlockHeader {
     /// [`Uint256`]: ../../util/uint/struct.Uint256.html
     ///
     /// ```
-    /// use groestlcoin::blockdata::block::BlockHeader;
+    /// use groestlcoin::block::BlockHeader;
     ///
     /// assert_eq!(0x1d00ffff,
     ///     BlockHeader::compact_target_from_u256(

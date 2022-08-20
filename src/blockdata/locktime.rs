@@ -1,15 +1,5 @@
-// Rust Bitcoin Library
-// Written in 2022 by
-//     Tobin C. Harding <me@tobin.cc>
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
-//
-// You should have received a copy of the CC0 Public Domain Dedication
-// along with this software.
-// If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-//
+// Rust Bitcoin Library - Written by the rust-bitcoin developers.
+// SPDX-License-Identifier: CC0-1.0
 
 //! Provides type [`LockTime`] that implements the logic around nLockTime/OP_CHECKLOCKTIMEVERIFY.
 //!
@@ -293,7 +283,7 @@ impl LockTime {
     ///
     /// # Examples
     /// ```no_run
-    /// # use groestlcoin::blockdata::locktime::{LockTime, Height, Time};
+    /// # use groestlcoin::locktime::{LockTime, Height, Time};
     /// // Can be implemented if block chain data is available.
     /// fn get_height() -> Height { todo!("return the current block height") }
     /// fn get_time() -> Time { todo!("return the current block time") }
@@ -420,7 +410,7 @@ impl Height {
     ///
     /// # Examples
     /// ```rust
-    /// use groestlcoin::blockdata::locktime::Height;
+    /// use groestlcoin::locktime::Height;
     ///
     /// let h: u32 = 741521;
     /// let height = Height::from_consensus(h).expect("invalid height value");
@@ -503,7 +493,7 @@ impl Time {
     ///
     /// # Examples
     /// ```rust
-    /// use groestlcoin::blockdata::locktime::Time;
+    /// use groestlcoin::locktime::Time;
     ///
     /// let t: u32 = 1653195600; // May 22nd, 5am UTC.
     /// let time = Time::from_consensus(t).expect("invalid time value");
