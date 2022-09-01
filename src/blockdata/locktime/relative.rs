@@ -39,8 +39,8 @@ impl LockTime {
     /// # Examples
     ///
     /// ```rust
-    /// # use bitcoin::Sequence;
-    /// # use bitcoin::locktime::relative::{LockTime, Height, Time};
+    /// # use groestlcoin::Sequence;
+    /// # use groestlcoin::locktime::relative::{LockTime, Height, Time};
     ///
     /// # let height = 100;       // 100 blocks.
     /// # let intervals = 70;     // Approx 10 hours.
@@ -71,8 +71,8 @@ impl LockTime {
     /// # Examples
     ///
     /// ```rust
-    /// # use bitcoin::Sequence;
-    /// # use bitcoin::locktime::relative::{LockTime, Height, Time};
+    /// # use groestlcoin::Sequence;
+    /// # use groestlcoin::locktime::relative::{LockTime, Height, Time};
     ///
     /// # let height = 100;       // 100 blocks.
     /// # let lock = Sequence::from_height(height).to_relative_lock_time().expect("valid height");
@@ -103,8 +103,8 @@ impl LockTime {
     /// # Examples
     ///
     /// ```rust
-    /// # use bitcoin::Sequence;
-    /// # use bitcoin::locktime::relative::{LockTime, Height, Time};
+    /// # use groestlcoin::Sequence;
+    /// # use groestlcoin::locktime::relative::{LockTime, Height, Time};
     ///
     /// let height: u16 = 100;
     /// let lock = Sequence::from_height(height).to_relative_lock_time().expect("valid height");
@@ -129,8 +129,8 @@ impl LockTime {
     /// # Examples
     ///
     /// ```rust
-    /// # use bitcoin::Sequence;
-    /// # use bitcoin::locktime::relative::{LockTime, Height, Time};
+    /// # use groestlcoin::Sequence;
+    /// # use groestlcoin::locktime::relative::{LockTime, Height, Time};
     ///
     /// let intervals: u16 = 70; // approx 10 hours;
     /// let lock = Sequence::from_512_second_intervals(intervals).to_relative_lock_time().expect("valid time");
@@ -219,7 +219,7 @@ pub struct Time(u16);
 impl Time {
     /// Create a [`Time`] using time intervals where each interval is equivalent to 512 seconds.
     ///
-    /// Encoding finer granularity of time for relative lock-times is not supported in Bitcoin.
+    /// Encoding finer granularity of time for relative lock-times is not supported in Groestlcoin.
     #[inline]
     pub fn from_512_second_intervals(intervals: u16) -> Self {
         Time(intervals)
