@@ -20,17 +20,17 @@ use crate::prelude::*;
 use crate::internal_macros::write_err;
 use crate::parse::impl_parse_str_through_int;
 
-/// The Threshold for deciding whether a lock time value is a height or a time (see [Bitcoin Core]).
+/// The Threshold for deciding whether a lock time value is a height or a time (see [Groestlcoin Core]).
 ///
 /// `LockTime` values _below_ the threshold are interpreted as block heights, values _above_ (or
 /// equal to) the threshold are interpreted as block times (UNIX timestamp, seconds since epoch).
 ///
-/// Bitcoin is able to safely use this value because a block height greater than 500,000,000 would
+/// Groestlcoin is able to safely use this value because a block height greater than 500,000,000 would
 /// never occur because it would represent a height in approximately 9500 years. Conversely, block
 /// times under 500,000,000 will never happen because they would represent times before 1986 which
-/// are, for obvious reasons, not useful within the Bitcoin network.
+/// are, for obvious reasons, not useful within the Groestlcoin network.
 ///
-/// [Bitcoin Core]: https://github.com/bitcoin/bitcoin/blob/9ccaee1d5e2e4b79b0a7c29aadb41b97e4741332/src/script/script.h#L39
+/// [Groestlcoin Core]: https://github.com/bitcoin/bitcoin/blob/9ccaee1d5e2e4b79b0a7c29aadb41b97e4741332/src/script/script.h#L39
 pub const LOCK_TIME_THRESHOLD: u32 = 500_000_000;
 
 /// Packed lock time wraps a [`LockTime`] consensus value i.e., the raw `u32` used by the network.
@@ -47,7 +47,8 @@ pub const LOCK_TIME_THRESHOLD: u32 = 500_000_000;
 ///
 /// # Examples
 /// ```
-/// # use groestlcoin::{Amount, PackedLockTime, LockTime};
+/// # use groestlcoin::Amount;
+/// # use groestlcoin::absolute::{PackedLockTime, LockTime};
 /// #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 /// struct S {
 ///     lock_time: PackedLockTime,
@@ -140,9 +141,10 @@ impl fmt::UpperHex for PackedLockTime {
     }
 }
 
-/// A lock time value, representing either a block height or a UNIX timestamp (seconds since epoch).
+/// An absolute lock time value, representing either a block height or a UNIX timestamp (seconds
+/// since epoch).
 ///
-/// Used for transaction lock time (`nLockTime` in Bitcoin Core and [`crate::Transaction::lock_time`]
+/// Used for transaction lock time (`nLockTime` in Groestlcoin Core and [`crate::Transaction::lock_time`]
 /// in this library) and also for the argument to opcode 'OP_CHECKLOCKTIMEVERIFY`.
 ///
 /// ### Relevant BIPs
@@ -152,10 +154,10 @@ impl fmt::UpperHex for PackedLockTime {
 ///
 /// # Examples
 /// ```
-/// # use groestlcoin::{LockTime, LockTime::*};
+/// # use groestlcoin::absolute::{LockTime, LockTime::*};
 /// # let n = LockTime::from_consensus(100);          // n OP_CHECKLOCKTIMEVERIFY
 /// # let lock_time = LockTime::from_consensus(100);  // nLockTime
-/// // To compare lock times there are various `is_satisfied_*` methods, you may also use:
+/// // To compare absolute lock times there are various `is_satisfied_*` methods, you may also use:
 /// let is_satisfied = match (n, lock_time) {
 ///     (Blocks(n), Blocks(lock_time)) => n <= lock_time,
 ///     (Seconds(n), Seconds(lock_time)) => n <= lock_time,
@@ -171,7 +173,7 @@ pub enum LockTime {
     ///
     /// # Examples
     /// ```rust
-    /// use groestlcoin::LockTime;
+    /// use groestlcoin::absolute::LockTime;
     ///
     /// let block: u32 = 741521;
     /// let n = LockTime::from_height(block).expect("valid height");
@@ -183,7 +185,7 @@ pub enum LockTime {
     ///
     /// # Examples
     /// ```rust
-    /// use groestlcoin::LockTime;
+    /// use groestlcoin::absolute::LockTime;
     ///
     /// let seconds: u32 = 1653195600; // May 22nd, 5am UTC.
     /// let n = LockTime::from_time(seconds).expect("valid time");
@@ -203,7 +205,7 @@ impl LockTime {
     /// # Examples
     ///
     /// ```rust
-    /// # use groestlcoin::LockTime;
+    /// # use groestlcoin::absolute::LockTime;
     /// # let n = LockTime::from_consensus(741521); // n OP_CHECKLOCKTIMEVERIFY
     ///
     /// // `from_consensus` roundtrips as expected with `to_consensus_u32`.
@@ -225,7 +227,7 @@ impl LockTime {
     ///
     /// # Examples
     /// ```rust
-    /// # use groestlcoin::LockTime;
+    /// # use groestlcoin::absolute::LockTime;
     /// assert!(LockTime::from_height(741521).is_ok());
     /// assert!(LockTime::from_height(1653195600).is_err());
     /// ```
@@ -241,7 +243,7 @@ impl LockTime {
     ///
     /// # Examples
     /// ```rust
-    /// # use groestlcoin::LockTime;
+    /// # use groestlcoin::absolute::LockTime;
     /// assert!(LockTime::from_time(1653195600).is_ok());
     /// assert!(LockTime::from_time(741521).is_err());
     /// ```
@@ -283,7 +285,7 @@ impl LockTime {
     ///
     /// # Examples
     /// ```no_run
-    /// # use groestlcoin::locktime::{LockTime, Height, Time};
+    /// # use groestlcoin::absolute::{LockTime, Height, Time};
     /// // Can be implemented if block chain data is available.
     /// fn get_height() -> Height { todo!("return the current block height") }
     /// fn get_time() -> Time { todo!("return the current block time") }
@@ -314,7 +316,7 @@ impl LockTime {
     /// # Examples
     ///
     /// ```rust
-    /// # use groestlcoin::{LockTime, LockTime::*};
+    /// # use groestlcoin::absolute::{LockTime, LockTime::*};
     /// # let n = LockTime::from_consensus(100);          // n OP_CHECKLOCKTIMEVERIFY
     /// # let lock_time = LockTime::from_consensus(100);  // nLockTime
     ///
@@ -410,7 +412,7 @@ impl Height {
     ///
     /// # Examples
     /// ```rust
-    /// use groestlcoin::locktime::Height;
+    /// use groestlcoin::locktime::absolute::Height;
     ///
     /// let h: u32 = 741521;
     /// let height = Height::from_consensus(h).expect("invalid height value");
@@ -429,7 +431,7 @@ impl Height {
     ///
     /// # Examples
     /// ```rust
-    /// use groestlcoin::LockTime;
+    /// use groestlcoin::absolute::LockTime;
     ///
     /// let n_lock_time: u32 = 741521;
     /// let lock_time = LockTime::from_consensus(n_lock_time);
@@ -493,7 +495,7 @@ impl Time {
     ///
     /// # Examples
     /// ```rust
-    /// use groestlcoin::locktime::Time;
+    /// use groestlcoin::locktime::absolute::Time;
     ///
     /// let t: u32 = 1653195600; // May 22nd, 5am UTC.
     /// let time = Time::from_consensus(t).expect("invalid time value");
@@ -512,7 +514,7 @@ impl Time {
     ///
     /// # Examples
     /// ```rust
-    /// use groestlcoin::LockTime;
+    /// use groestlcoin::absolute::LockTime;
     ///
     /// let n_lock_time: u32 = 1653195600; // May 22nd, 5am UTC.
     /// let lock_time = LockTime::from_consensus(n_lock_time);

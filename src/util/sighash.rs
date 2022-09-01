@@ -1035,9 +1035,9 @@ impl<R: DerefMut<Target=Transaction>> SighashCache<R> {
     ///
     /// This allows in-line signing such as
     /// ```
-    /// use groestlcoin::{EcdsaSighashType, PackedLockTime, Script, SighashCache, Transaction};
+    /// use groestlcoin::{absolute, EcdsaSighashType, SighashCache, Transaction, Script};
     ///
-    /// let mut tx_to_sign = Transaction { version: 2, lock_time: PackedLockTime::ZERO, input: Vec::new(), output: Vec::new() };
+    /// let mut tx_to_sign = Transaction { version: 2, lock_time: absolute::PackedLockTime::ZERO, input: Vec::new(), output: Vec::new() };
     /// let input_count = tx_to_sign.input.len();
     ///
     /// let mut sig_hasher = SighashCache::new(&mut tx_to_sign);
@@ -1099,12 +1099,12 @@ mod tests {
     use secp256k1::{self, SecretKey, XOnlyPublicKey};
 
     use crate::{Script, Transaction, TxIn, TxOut, EcdsaSighashType, Address};
-    use crate::blockdata::locktime::PackedLockTime;
+    use crate::blockdata::locktime::absolute;
     use crate::consensus::deserialize;
     use crate::hashes::hex::{FromHex, ToHex};
     use crate::hashes::{Hash, HashEngine};
     use crate::hash_types::Sighash;
-    use crate::internal_macros::{hex_hash, hex_script, hex_decode};
+    use crate::internal_macros::{hex_into, hex_script, hex_decode, hex_from_slice};
     use crate::network::constants::Network;
     use crate::util::key::PublicKey;
     use crate::util::sighash::{Annex, Error, Prevouts, ScriptPath, SighashCache};
@@ -1119,7 +1119,7 @@ mod tests {
         // We need a tx with more inputs than outputs.
         let tx = Transaction {
             version: 1,
-            lock_time: PackedLockTime::ZERO,
+            lock_time: absolute::PackedLockTime::ZERO,
             input: vec![TxIn::default(), TxIn::default()],
             output: vec![TxOut::default()],
         };
@@ -1300,7 +1300,7 @@ mod tests {
     fn test_sighash_errors() {
         let dumb_tx = Transaction {
             version: 0,
-            lock_time: PackedLockTime::ZERO,
+            lock_time: absolute::PackedLockTime::ZERO,
             input: vec![TxIn::default()],
             output: vec![],
         };
@@ -1447,19 +1447,19 @@ mod tests {
 
         for inp in key_path["inputSpending"].as_array().unwrap() {
             let tx_ind = inp["given"]["txinIndex"].as_u64().unwrap() as usize;
-            let internal_priv_key = hex_hash!(SecretKey, inp["given"]["internalPrivkey"].as_str().unwrap());
+            let internal_priv_key = hex_from_slice!(SecretKey, inp["given"]["internalPrivkey"].as_str().unwrap());
             let merkle_root = if inp["given"]["merkleRoot"].is_null() {
                 None
             } else {
-                Some(hex_hash!(TapBranchHash, inp["given"]["merkleRoot"].as_str().unwrap()))
+                Some(hex_into!(TapBranchHash, inp["given"]["merkleRoot"].as_str().unwrap()))
             };
             let hash_ty = SchnorrSighashType::from_consensus_u8(inp["given"]["hashType"].as_u64().unwrap() as u8).unwrap();
 
-            let expected_internal_pk = hex_hash!(XOnlyPublicKey, inp["intermediary"]["internalPubkey"].as_str().unwrap());
-            let expected_tweak = hex_hash!(TapTweakHash, inp["intermediary"]["tweak"].as_str().unwrap());
-            let expected_tweaked_priv_key = hex_hash!(SecretKey, inp["intermediary"]["tweakedPrivkey"].as_str().unwrap());
+            let expected_internal_pk = hex_from_slice!(XOnlyPublicKey, inp["intermediary"]["internalPubkey"].as_str().unwrap());
+            let expected_tweak = hex_into!(TapTweakHash, inp["intermediary"]["tweak"].as_str().unwrap());
+            let expected_tweaked_priv_key = hex_from_slice!(SecretKey, inp["intermediary"]["tweakedPrivkey"].as_str().unwrap());
             let expected_sig_msg = Vec::<u8>::from_hex(inp["intermediary"]["sigMsg"].as_str().unwrap()).unwrap();
-            let expected_sighash = hex_hash!(TapSighashHash, inp["intermediary"]["sigHash"].as_str().unwrap());
+            let expected_sighash = hex_into!(TapSighashHash, inp["intermediary"]["sigHash"].as_str().unwrap());
             let sig_str = inp["expected"]["witness"][0].as_str().unwrap();
             let (expected_key_spend_sig, expected_hash_ty) = if sig_str.len() == 128 {
                 (secp256k1::schnorr::Signature::from_str(sig_str).unwrap(), SchnorrSighashType::Default)
@@ -1567,18 +1567,18 @@ mod tests {
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.segwit_signature_hash(1, &witness_script, value, EcdsaSighashType::All).unwrap(),
-            hex_hash!(Sighash, "c304d56804b24a6801a77803281a497f5526e20f14e65df1006887fc57f0ee39")
+            hex_from_slice!(Sighash, "c304d56804b24a6801a77803281a497f5526e20f14e65df1006887fc57f0ee39")
         );
 
         let cache = cache.segwit_cache();
-        assert_eq!(cache.prevouts, hex_hash!(
-            Hash, "96b827c8483d4e9b96712b6713a7b68d6e8003a781feba36c31143470b4efd37"
+        assert_eq!(cache.prevouts, hex_from_slice!(
+            "96b827c8483d4e9b96712b6713a7b68d6e8003a781feba36c31143470b4efd37"
         ));
-        assert_eq!(cache.sequences, hex_hash!(
-            Hash, "52b0a642eea2fb7ae638c36f6252b6750293dbe574a806984b8e4d8548339a3b"
+        assert_eq!(cache.sequences, hex_from_slice!(
+            "52b0a642eea2fb7ae638c36f6252b6750293dbe574a806984b8e4d8548339a3b"
         ));
-        assert_eq!(cache.outputs, hex_hash!(
-            Hash, "863ef3e1a92afbfdb97f31ad0fc7683ee943e9abcf2501590ff8f6551f47e5e5"
+        assert_eq!(cache.outputs, hex_from_slice!(
+            "863ef3e1a92afbfdb97f31ad0fc7683ee943e9abcf2501590ff8f6551f47e5e5"
         ));
     }
 
@@ -1598,18 +1598,18 @@ mod tests {
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.segwit_signature_hash(0, &witness_script, value, EcdsaSighashType::All).unwrap(),
-            hex_hash!(Sighash, "bc1c830fde767c143e007f9de485d6d291f5f87169a419f426ed9db97167cf31")
+            hex_from_slice!(Sighash, "bc1c830fde767c143e007f9de485d6d291f5f87169a419f426ed9db97167cf31")
         );
 
         let cache = cache.segwit_cache();
-        assert_eq!(cache.prevouts, hex_hash!(
-            Hash, "b0287b4a252ac05af83d2dcef00ba313af78a3e9c329afa216eb3aa2a7b4613a"
+        assert_eq!(cache.prevouts, hex_from_slice!(
+            "b0287b4a252ac05af83d2dcef00ba313af78a3e9c329afa216eb3aa2a7b4613a"
         ));
-        assert_eq!(cache.sequences, hex_hash!(
-            Hash, "18606b350cd8bf565266bc352f0caddcf01e8fa789dd8a15386327cf8cabe198"
+        assert_eq!(cache.sequences, hex_from_slice!(
+            "18606b350cd8bf565266bc352f0caddcf01e8fa789dd8a15386327cf8cabe198"
         ));
-        assert_eq!(cache.outputs, hex_hash!(
-            Hash, "de984f44532e2173ca0d64314fcefe6d30da6f8cf27bafa706da61df8a226c83"
+        assert_eq!(cache.outputs, hex_from_slice!(
+            "de984f44532e2173ca0d64314fcefe6d30da6f8cf27bafa706da61df8a226c83"
         ));
     }
 
@@ -1635,18 +1635,18 @@ mod tests {
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.segwit_signature_hash(0, &witness_script, value, EcdsaSighashType::All).unwrap(),
-            hex_hash!(Sighash, "7f38d84960e8fbb4635d0fd291162edd3b5b1a60ed6c40ae19888716295cae48")
+            hex_from_slice!(Sighash, "7f38d84960e8fbb4635d0fd291162edd3b5b1a60ed6c40ae19888716295cae48")
         );
 
         let cache = cache.segwit_cache();
-        assert_eq!(cache.prevouts, hex_hash!(
-            Hash, "74afdc312af5183c4198a40ca3c1a275b485496dd3929bca388c4b5e31f7aaa0"
+        assert_eq!(cache.prevouts, hex_from_slice!(
+            "74afdc312af5183c4198a40ca3c1a275b485496dd3929bca388c4b5e31f7aaa0"
         ));
-        assert_eq!(cache.sequences, hex_hash!(
-            Hash, "3bb13029ce7b1f559ef5e747fcac439f1455a2ec7c5f09b72290795e70665044"
+        assert_eq!(cache.sequences, hex_from_slice!(
+            "3bb13029ce7b1f559ef5e747fcac439f1455a2ec7c5f09b72290795e70665044"
         ));
-        assert_eq!(cache.outputs, hex_hash!(
-            Hash, "bc4d309071414bed932f98832b27b4d76dad7e6c1346f487a8fdbb8eb90307cc"
+        assert_eq!(cache.outputs, hex_from_slice!(
+            "bc4d309071414bed932f98832b27b4d76dad7e6c1346f487a8fdbb8eb90307cc"
         ));
     }
 }

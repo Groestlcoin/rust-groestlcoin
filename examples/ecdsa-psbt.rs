@@ -34,6 +34,7 @@ use std::str::FromStr;
 
 use groestlcoin::consensus::encode;
 use groestlcoin::hashes::hex::{self, FromHex};
+use groestlcoin::locktime::absolute;
 use groestlcoin::secp256k1::{Secp256k1, Signing, Verification};
 use groestlcoin::util::amount::ParseAmountError;
 use groestlcoin::util::bip32::{
@@ -42,7 +43,7 @@ use groestlcoin::util::bip32::{
 };
 use groestlcoin::util::psbt::{self, Input, Psbt, PsbtSighashType};
 use groestlcoin::{
-    address, Address, Amount, Network, OutPoint, PackedLockTime, PrivateKey, PublicKey, Script,
+    address, Address, Amount, Network, OutPoint, PrivateKey, PublicKey, Script,
     Sequence, Transaction, TxIn, TxOut, Txid, Witness,
 };
 
@@ -206,7 +207,7 @@ impl WatchOnly {
 
         let tx = Transaction {
             version: 2,
-            lock_time: PackedLockTime::ZERO,
+            lock_time: absolute::PackedLockTime::ZERO,
             input: vec![TxIn {
                 previous_output: OutPoint {
                     txid: Txid::from_hex(INPUT_UTXO_TXID)?,
