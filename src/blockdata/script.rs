@@ -19,6 +19,8 @@ use core::convert::TryFrom;
 use core::{fmt, default::Default};
 use core::ops::Index;
 use crate::internal_macros::debug_from_display;
+#[cfg(feature = "groestlcoinconsensus")]
+use crate::internal_macros::write_err;
 
 #[cfg(feature = "serde")] use serde;
 
@@ -163,16 +165,15 @@ pub enum Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let str = match *self {
-            Error::NonMinimalPush => "non-minimal datapush",
-            Error::EarlyEndOfScript => "unexpected end of script",
-            Error::NumericOverflow => "numeric overflow (number on stack larger than 4 bytes)",
+        match *self {
+            Error::NonMinimalPush => f.write_str("non-minimal datapush"),
+            Error::EarlyEndOfScript => f.write_str("unexpected end of script"),
+            Error::NumericOverflow => f.write_str("numeric overflow (number on stack larger than 4 bytes)"),
             #[cfg(feature = "groestlcoinconsensus")]
-            Error::BitcoinConsensus(ref _n) => "groestlcoinconsensus verification failed",
-            Error::UnknownSpentOutput(ref _point) => "unknown spent output Transaction::verify()",
-            Error::Serialization => "can not serialize the spending transaction in Transaction::verify()",
-        };
-        f.write_str(str)
+            Error::BitcoinConsensus(ref e) => write_err!(f, "groestlcoinconsensus verification failed"; e),
+            Error::UnknownSpentOutput(ref point) => write!(f, "unknown spent output: {}", point),
+            Error::Serialization => f.write_str("can not serialize the spending transaction in Transaction::verify()"),
+        }
     }
 }
 
@@ -182,14 +183,14 @@ impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         use self::Error::*;
 
-        match self {
+        match *self {
             NonMinimalPush
             | EarlyEndOfScript
             | NumericOverflow
             | UnknownSpentOutput(_)
             | Serialization => None,
             #[cfg(feature = "groestlcoinconsensus")]
-            BitcoinConsensus(_) => None,
+            BitcoinConsensus(ref e) => Some(e),
         }
     }
 }
