@@ -1,12 +1,8 @@
-#!/bin/sh -ex
+#!/bin/sh
+
+set -ex
 
 FEATURES="base64 groestlcoinconsensus serde rand secp-recovery"
-
-# Use toolchain if explicitly specified
-if [ -n "$TOOLCHAIN" ]
-then
-    alias cargo="cargo +$TOOLCHAIN"
-fi
 
 if [ "$DO_COV" = true ]
 then
@@ -78,7 +74,7 @@ fi
 # Test each feature
 for feature in ${FEATURES}
 do
-    echo "********* Testing "$feature" *************"
+    echo "********* Testing $feature *************"
     cargo test --verbose --features="$feature"
 done
 

@@ -80,6 +80,7 @@ mod serde_utils;
 #[macro_use]
 pub mod network;
 pub mod address;
+pub mod bip158;
 pub mod blockdata;
 pub mod consensus;
 pub mod error;
@@ -94,7 +95,7 @@ use std::io;
 use core2::io;
 
 pub use crate::address::{Address, AddressType};
-pub use crate::blockdata::block::{self, Block, BlockHeader};
+pub use crate::blockdata::block::{self, Block, BlockHeader, BlockVersion};
 pub use crate::blockdata::locktime::{self, absolute, relative};
 pub use crate::blockdata::script::{self, Script};
 #[allow(deprecated)]

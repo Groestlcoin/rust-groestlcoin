@@ -18,7 +18,7 @@ use crate::blockdata::opcodes;
 use crate::blockdata::script;
 use crate::blockdata::locktime::absolute;
 use crate::blockdata::transaction::{OutPoint, Transaction, TxOut, TxIn, Sequence};
-use crate::blockdata::block::{Block, BlockHeader};
+use crate::blockdata::block::{Block, BlockHeader, BlockVersion};
 use crate::blockdata::witness::Witness;
 use crate::network::constants::Network;
 use crate::util::uint::Uint256;
@@ -115,7 +115,7 @@ pub fn genesis_block(network: Network) -> Block {
         Network::Groestlcoin => {
             Block {
                 header: BlockHeader {
-                    version: 112,
+                    version: BlockVersion(112),
                     prev_blockhash: Hash::all_zeros(),
                     merkle_root,
                     time: 1395342829,
@@ -128,7 +128,7 @@ pub fn genesis_block(network: Network) -> Block {
         Network::Testnet => {
             Block {
                 header: BlockHeader {
-                    version: 3,
+                    version: BlockVersion(3),
                     prev_blockhash: Hash::all_zeros(),
                     merkle_root,
                     time: 1440000002,
@@ -141,7 +141,7 @@ pub fn genesis_block(network: Network) -> Block {
         Network::Signet => {
             Block {
                 header: BlockHeader {
-                    version: 3,
+                    version: BlockVersion(3),
                     prev_blockhash: Hash::all_zeros(),
                     merkle_root,
                     time: 1606082400,
@@ -154,7 +154,7 @@ pub fn genesis_block(network: Network) -> Block {
         Network::Regtest => {
             Block {
                 header: BlockHeader {
-                    version: 3,
+                    version: BlockVersion(3),
                     prev_blockhash: Hash::all_zeros(),
                     merkle_root,
                     time: 1440000002,
@@ -227,7 +227,7 @@ mod test {
     fn bitcoin_genesis_full_block() {
         let gen = genesis_block(Network::Groestlcoin);
 
-        assert_eq!(gen.header.version, 112);
+        assert_eq!(gen.header.version, BlockVersion(112));
         assert_eq!(gen.header.prev_blockhash, Hash::all_zeros());
         assert_eq!(gen.header.merkle_root.to_hex(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
 
@@ -240,7 +240,7 @@ mod test {
     #[test]
     fn testnet_genesis_full_block() {
         let gen = genesis_block(Network::Testnet);
-        assert_eq!(gen.header.version, 3);
+        assert_eq!(gen.header.version, BlockVersion(3));
         assert_eq!(gen.header.prev_blockhash, Hash::all_zeros());
         assert_eq!(gen.header.merkle_root.to_hex(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
         assert_eq!(gen.header.time, 1440000002);
@@ -252,7 +252,7 @@ mod test {
     #[test]
     fn signet_genesis_full_block() {
         let gen = genesis_block(Network::Signet);
-        assert_eq!(gen.header.version, 3);
+        assert_eq!(gen.header.version, BlockVersion(3));
         assert_eq!(gen.header.prev_blockhash, Hash::all_zeros());
         assert_eq!(gen.header.merkle_root.to_hex(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
         assert_eq!(gen.header.time, 1606082400);
