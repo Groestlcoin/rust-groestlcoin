@@ -43,8 +43,8 @@ use groestlcoin::util::bip32::{
 };
 use groestlcoin::util::psbt::{self, Input, Psbt, PsbtSighashType};
 use groestlcoin::{
-    address, Address, Amount, Network, OutPoint, PrivateKey, PublicKey, Script,
-    Sequence, Transaction, TxIn, TxOut, Txid, Witness,
+    address, Address, Amount, Network, OutPoint, PrivateKey, PublicKey, Script, Sequence,
+    Transaction, TxIn, TxOut, Txid, Witness,
 };
 
 use self::psbt_sign::*;
