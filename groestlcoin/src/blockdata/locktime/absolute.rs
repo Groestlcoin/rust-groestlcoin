@@ -12,7 +12,7 @@ use core::cmp::{PartialOrd, Ordering};
 use core::convert::TryFrom;
 use core::str::FromStr;
 
-use bitcoin_internals::write_err;
+use groestlcoin_internals::write_err;
 
 use crate::consensus::encode::{self, Decodable, Encodable};
 use crate::error::ParseIntError;

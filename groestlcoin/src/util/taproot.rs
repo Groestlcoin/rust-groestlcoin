@@ -7,7 +7,7 @@
 
 use crate::prelude::*;
 use crate::io;
-use bitcoin_internals::write_err;
+use groestlcoin_internals::write_err;
 use secp256k1::{self, Secp256k1, Scalar};
 
 use core::convert::TryFrom;

@@ -42,7 +42,7 @@
 use core::cmp::{self, Ordering};
 use core::fmt::{self, Display, Formatter};
 
-use bitcoin_internals::write_err;
+use groestlcoin_internals::write_err;
 
 use crate::blockdata::block::Block;
 use crate::blockdata::script::Script;

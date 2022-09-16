@@ -1,9 +1,9 @@
 # Eventually this shoud be: ignore = []
 ignore = [
-       "bitcoin/src/blockdata",
-       "bitcoin/src/consensus",
-       "bitcoin/src/network",
-       "bitcoin/src/util",
+       "groestlcoin/src/blockdata",
+       "groestlcoin/src/consensus",
+       "groestlcoin/src/network",
+       "groestlcoin/src/util",
 ]
 
 hard_tabs = false

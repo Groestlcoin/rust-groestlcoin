@@ -1,11 +1,11 @@
 [package]
-name = "bitcoin-internals"
+name = "groestlcoin-internals"
 version = "0.1.0"
-authors = ["Andrew Poelstra <apoelstra@wpsoftware.net>", "The Rust Bitcoin developers"]
+authors = ["Groestlcoin Developers <groestlcoin@gmail.com>"]
 license = "CC0-1.0"
-repository = "https://github.com/rust-bitcoin/rust-bitcoin/"
-documentation = "https://docs.rs/bitcoin-internals"
-description = "Internal types and macros used by rust-bitcoin ecosystem"
+repository = "https://github.com/Groestlcoin/rust-groestlcoin/"
+documentation = "https://docs.rs/groestlcoin-internals"
+description = "Internal types and macros used by rust-groestlcoin ecosystem"
 categories = ["cryptography::cryptocurrencies"]
 keywords = ["internal"]
 readme = "README.md"

@@ -8,7 +8,7 @@
 use core::str::FromStr;
 use core::{fmt, iter};
 
-use bitcoin_internals::write_err;
+use groestlcoin_internals::write_err;
 use secp256k1;
 
 use crate::prelude::*;

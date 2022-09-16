@@ -27,7 +27,7 @@ use crate::prelude::*;
 use crate::io;
 use core::fmt;
 
-use bitcoin_internals::write_err;
+use groestlcoin_internals::write_err;
 
 use crate::consensus::encode;
 

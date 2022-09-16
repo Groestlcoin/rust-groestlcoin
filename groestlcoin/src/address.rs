@@ -27,7 +27,7 @@ use core::fmt;
 use core::str::FromStr;
 
 use bech32;
-use bitcoin_internals::write_err;
+use groestlcoin_internals::write_err;
 use secp256k1::{Secp256k1, Verification, XOnlyPublicKey};
 
 use crate::blockdata::constants::{

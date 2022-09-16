@@ -2,7 +2,7 @@
 
 set -ex
 
-FEATURES="base64 bitcoinconsensus serde rand secp-recovery"
+FEATURES="base64 groestlcoinconsensus serde rand secp-recovery"
 
 if [ "$DO_COV" = true ]
 then
@@ -19,7 +19,7 @@ if cargo --version | grep nightly; then
 fi
 
 # We should not have any duplicate dependencies. This catches mistakes made upgrading dependencies
-# in one crate and not in another (e.g. upgrade bitcoin_hashes in bitcoin but not in secp).
+# in one crate and not in another (e.g. upgrade groestlcoin_hashes in groestlcoin but not in secp).
 cargo update -p serde --precise 1.0.142
 cargo update -p serde_test --precise 1.0.142
 cargo update -p serde_derive --precise 1.0.142
@@ -35,7 +35,7 @@ then
     cargo clippy --all-features --all-targets -- -D warnings
     cargo clippy --example bip32 -- -D warnings
     cargo clippy --example handshake -- -D warnings
-    cargo clippy --example ecdsa-psbt --features=bitcoinconsensus -- -D warnings
+    cargo clippy --example ecdsa-psbt --features=groestlcoinconsensus -- -D warnings
 fi
 
 echo "********* Testing std *************"
@@ -78,46 +78,15 @@ do
     cargo test --verbose --features="$feature"
 done
 
-cargo run --example ecdsa-psbt --features=bitcoinconsensus
-
-# Build the docs if told to (this only works with the nightly toolchain)
-if [ "$DO_DOCS" = true ]; then
-    RUSTDOCFLAGS="--cfg docsrs" cargo +nightly rustdoc --features="$FEATURES" -- -D rustdoc::broken-intra-doc-links
-fi
-
-# Fuzz if told to
-if [ "$DO_FUZZ" = true ]
-then
-    (
-        cd fuzz
-        cargo test --verbose
-        ./travis-fuzz.sh
-    )
-fi
-
-# Bench if told to, only works with non-stable toolchain (nightly, beta).
-if [ "$DO_BENCH" = true ]
-then
-    if [ "$NIGHTLY" = false ]
-    then
-        if [ -n "$RUSTUP_TOOLCHAIN" ]
-        then
-            echo "RUSTUP_TOOLCHAIN is set to a non-nightly toolchain but DO_BENCH requires a nightly toolchain"
-        else
-            echo "DO_BENCH requires a nightly toolchain"
-        fi
-        exit 1
-    fi
-    RUSTFLAGS='--cfg=bench' cargo bench
-fi
+cargo run --example ecdsa-psbt --features=groestlcoinconsensus
 
 # Use as dependency if told to
 if [ "$AS_DEPENDENCY" = true ]
 then
     cargo new dep_test 2> /dev/null # Mute warning about workspace, fixed below.
     cd dep_test
-    echo 'bitcoin = { path = "..", features = ["serde"] }\n\n' >> Cargo.toml
-    # Adding an empty workspace section excludes this crate from the rust-bitcoin workspace.
+    echo 'groestlcoin = { path = "..", features = ["serde"] }\n\n' >> Cargo.toml
+    # Adding an empty workspace section excludes this crate from the rust-groestlcoin workspace.
     echo '[workspace]\n\n' >> Cargo.toml
 
     cargo update -p serde --precise 1.0.142
