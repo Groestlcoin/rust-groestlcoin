@@ -1310,6 +1310,7 @@ mod tests {
         }
     }
 
+    #[ignore]
     #[test]
     #[cfg(feature="groestlcoinconsensus")]
     fn test_transaction_verify () {
