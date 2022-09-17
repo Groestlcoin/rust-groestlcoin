@@ -107,6 +107,18 @@ impl TapLeafHash {
     }
 }
 
+impl From<ScriptLeaf> for TapLeafHash {
+    fn from(leaf: ScriptLeaf) -> TapLeafHash {
+        leaf.leaf_hash()
+    }
+}
+
+impl From<&ScriptLeaf> for TapLeafHash {
+    fn from(leaf: &ScriptLeaf) -> TapLeafHash {
+        leaf.leaf_hash()
+    }
+}
+
 impl TapBranchHash {
     /// Computes branch hash given two hashes of the nodes underneath it.
     pub fn from_node_hashes(a: sha256::Hash, b: sha256::Hash) -> TapBranchHash {
@@ -308,6 +320,18 @@ impl TaprootSpendInfo {
             leaf_version: script_ver.1,
             merkle_branch: smallest.clone(),
         })
+    }
+}
+
+impl From<TaprootSpendInfo> for TapTweakHash {
+    fn from(spend_info: TaprootSpendInfo) -> TapTweakHash {
+        spend_info.tap_tweak()
+    }
+}
+
+impl From<&TaprootSpendInfo> for TapTweakHash {
+    fn from(spend_info: &TaprootSpendInfo) -> TapTweakHash {
+        spend_info.tap_tweak()
     }
 }
 
@@ -715,16 +739,6 @@ impl TaprootMerkleBranch {
             self.0.push(h);
             Ok(())
         }
-    }
-
-    /// Creates a merkle proof from list of hashes.
-    ///
-    /// # Errors
-    ///
-    /// If inner proof length is more than [`TAPROOT_CONTROL_MAX_NODE_COUNT`] (128).
-    #[deprecated(since = "0.29.0", note = "use try_from instead")]
-    pub fn from_inner(inner: Vec<sha256::Hash>) -> Result<Self, TaprootError> {
-        Self::try_from(inner)
     }
 
     /// Returns the inner list of hashes.
