@@ -27,10 +27,13 @@
 //! ```
 
 use core::{fmt, ops, convert::From};
+use core::str::FromStr;
+
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::io;
 use crate::consensus::encode::{self, Encodable, Decodable};
-use crate::internal_macros::user_enum;
 
 /// Version of the protocol as appearing in network message headers
 /// This constant is used to signal to other peers which features you support.
@@ -49,19 +52,21 @@ use crate::internal_macros::user_enum;
 /// 60001 - Support `pong` message and nonce in `ping` message
 pub const PROTOCOL_VERSION: u32 = 70001;
 
-user_enum! {
-    /// The cryptocurrency to act on
-    #[derive(Copy, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Debug)]
-    pub enum Network {
-        /// Classic Groestlcoin
-        Groestlcoin <-> "groestlcoin",
-        /// Groestlcoin's testnet
-        Testnet <-> "testnet",
-        /// Groestlcoin's signet
-        Signet <-> "signet",
-        /// Groestlcoin's regtest
-        Regtest <-> "regtest"
-    }
+/// The cryptocurrency network to act on.
+#[derive(Copy, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(crate = "actual_serde"))]
+#[cfg_attr(feature = "serde", serde(rename_all = "lowercase"))]
+#[non_exhaustive]
+pub enum Network {
+    /// Mainnet Groestlcoin.
+    Groestlcoin,
+    /// Groestlcoin's testnet network.
+    Testnet,
+    /// Groestlcoin's signet network.
+    Signet,
+    /// Groestlcoin's regtest network.
+    Regtest,
 }
 
 impl Network {
@@ -105,6 +110,43 @@ impl Network {
             Network::Signet  => 0x8F2B896F,
             Network::Regtest => 0xDAB5BFFA,
         }
+    }
+}
+
+impl fmt::Display for Network {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        use Network::*;
+
+        let s = match *self {
+            Groestlcoin => "groestlcoin",
+            Testnet => "testnet",
+            Signet => "signet",
+            Regtest => "regtest",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for Network {
+    type Err = io::Error;
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use Network::*;
+
+        let network = match s {
+            "groestlcoin" => Groestlcoin,
+            "testnet" => Testnet,
+            "signet" => Signet,
+            "regtest" => Regtest,
+            _ => {
+                #[cfg(feature = "std")]
+                let message = format!("Unknown network (type {})", s);
+                #[cfg(not(feature = "std"))]
+                let message = "Unknown network";
+                return Err(io::Error::new(io::ErrorKind::InvalidInput, message));
+            }
+        };
+        Ok(network)
     }
 }
 
@@ -347,5 +389,23 @@ mod tests {
         assert_eq!("ServiceFlags(NETWORK|BLOOM|WITNESS)", flag.to_string());
         let flag = ServiceFlags::WITNESS | 0xf0.into();
         assert_eq!("ServiceFlags(WITNESS|COMPACT_FILTERS|0xb0)", flag.to_string());
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn serde_roundtrip() {
+        use Network::*;
+        let tests = vec![(Groestlcoin, "groestlcoin"), (Testnet, "testnet"), (Signet, "signet"), (Regtest, "regtest")];
+
+        for tc in tests {
+            let network = tc.0;
+
+            let want = format!("\"{}\"", tc.1);
+            let got = serde_json::to_string(&tc.0).expect("failed to serialize network");
+            assert_eq!(got, want);
+
+            let back: Network = serde_json::from_str(&got).expect("failed to deserialize network");
+            assert_eq!(back, network);
+        }
     }
 }
