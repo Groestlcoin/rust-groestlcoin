@@ -1,13 +1,13 @@
-extern crate bitcoin;
+extern crate groestlcoin;
 
 fn do_test(data: &[u8]) {
     // We already fuzz Transactions in `./deserialize_transaction.rs`.
-    let tx_result: Result<bitcoin::util::bip152::PrefilledTransaction, _> = bitcoin::consensus::encode::deserialize(data);
+    let tx_result: Result<groestlcoin::util::bip152::PrefilledTransaction, _> = groestlcoin::consensus::encode::deserialize(data);
 
     match tx_result {
         Err(_) => {},
         Ok(mut tx) => {
-            let ser = bitcoin::consensus::encode::serialize(&tx);
+            let ser = groestlcoin::consensus::encode::serialize(&tx);
             assert_eq!(&ser[..], data);
         }
     }
