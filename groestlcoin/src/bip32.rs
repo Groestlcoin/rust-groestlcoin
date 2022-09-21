@@ -1083,7 +1083,7 @@ mod tests {
                   "xpub661MyMwAqRbcEZVB4dScxMAdx6d4nFc9nvyvH3v4gJL378CSRZiYmhRoP7mBy6gSPSCYk6SzXPTf3ND1cZAceL7SfJ1Z3GC8vBgp2fS2497");
 
         // m/0h
-        test_path(&secp, groestlcoin, &seed, "m/0h".parse().unwrap(),
+        test_path(&secp, Groestlcoin, &seed, "m/0h".parse().unwrap(),
                   "xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WAEm9Q1g",
                   "xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih5Ns1Xi");
     }
