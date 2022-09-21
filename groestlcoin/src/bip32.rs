@@ -12,13 +12,7 @@ use core::fmt;
 use core::ops::Index;
 use core::str::FromStr;
 
-<<<<<<<< HEAD:groestlcoin/src/util/bip32.rs
 use groestlcoin_internals::write_err;
-use crate::hash_types::XpubIdentifier;
-use crate::hashes::{sha512, Hash, HashEngine, Hmac, HmacEngine, hex};
-========
-use bitcoin_internals::write_err;
->>>>>>>> upstream/master:groestlcoin/src/bip32.rs
 use secp256k1::{self, Secp256k1, XOnlyPublicKey};
 #[cfg(feature = "serde")]
 use serde;
@@ -622,19 +616,12 @@ impl ExtendedPrivKey {
     /// Extended private key binary encoding according to BIP 32
     pub fn encode(&self) -> [u8; 78] {
         let mut ret = [0; 78];
-<<<<<<<< HEAD:groestlcoin/src/util/bip32.rs
-        ret[0..4].copy_from_slice(&match self.network {
-            Network::Groestlcoin => [0x04, 0x88, 0xAD, 0xE4],
-            Network::Testnet | Network::Signet | Network::Regtest => [0x04, 0x35, 0x83, 0x94],
-        }[..]);
-========
         ret[0..4].copy_from_slice(
             &match self.network {
-                Network::Bitcoin => [0x04, 0x88, 0xAD, 0xE4],
+                Network::Groestlcoin => [0x04, 0x88, 0xAD, 0xE4],
                 Network::Testnet | Network::Signet | Network::Regtest => [0x04, 0x35, 0x83, 0x94],
             }[..],
         );
->>>>>>>> upstream/master:groestlcoin/src/bip32.rs
         ret[4] = self.depth as u8;
         ret[5..9].copy_from_slice(&self.parent_fingerprint[..]);
         ret[9..13].copy_from_slice(&endian::u32_to_array_be(u32::from(self.child_number)));
@@ -761,19 +748,12 @@ impl ExtendedPubKey {
     /// Extended public key binary encoding according to BIP 32
     pub fn encode(&self) -> [u8; 78] {
         let mut ret = [0; 78];
-<<<<<<<< HEAD:groestlcoin/src/util/bip32.rs
-        ret[0..4].copy_from_slice(&match self.network {
-            Network::Groestlcoin => [0x04u8, 0x88, 0xB2, 0x1E],
-            Network::Testnet | Network::Signet | Network::Regtest => [0x04u8, 0x35, 0x87, 0xCF],
-        }[..]);
-========
         ret[0..4].copy_from_slice(
             &match self.network {
-                Network::Bitcoin => [0x04u8, 0x88, 0xB2, 0x1E],
+                Network::Groestlcoin => [0x04u8, 0x88, 0xB2, 0x1E],
                 Network::Testnet | Network::Signet | Network::Regtest => [0x04u8, 0x35, 0x87, 0xCF],
             }[..],
         );
->>>>>>>> upstream/master:groestlcoin/src/bip32.rs
         ret[4] = self.depth as u8;
         ret[5..9].copy_from_slice(&self.parent_fingerprint[..]);
         ret[9..13].copy_from_slice(&endian::u32_to_array_be(u32::from(self.child_number)));
@@ -847,14 +827,10 @@ mod tests {
 
     use secp256k1::{self, Secp256k1};
 
-<<<<<<<< HEAD:groestlcoin/src/util/bip32.rs
-    use crate::network::constants::Network::{self, Groestlcoin};
-========
     use super::ChildNumber::{Hardened, Normal};
     use super::*;
     use crate::hashes::hex::FromHex;
-    use crate::network::constants::Network::{self, Bitcoin};
->>>>>>>> upstream/master:groestlcoin/src/bip32.rs
+    use crate::network::constants::Network::{self, Groestlcoin};
 
     #[test]
     fn test_parse_derivation_path() {
@@ -1107,16 +1083,9 @@ mod tests {
                   "xpub661MyMwAqRbcEZVB4dScxMAdx6d4nFc9nvyvH3v4gJL378CSRZiYmhRoP7mBy6gSPSCYk6SzXPTf3ND1cZAceL7SfJ1Z3GC8vBgp2fS2497");
 
         // m/0h
-<<<<<<<< HEAD:groestlcoin/src/util/bip32.rs
-        test_path(&secp, Groestlcoin, &seed, "m/0h".parse().unwrap(),
+        test_path(&secp, groestlcoin, &seed, "m/0h".parse().unwrap(),
                   "xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WAEm9Q1g",
                   "xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih5Ns1Xi");
-
-========
-        test_path(&secp, Bitcoin, &seed, "m/0h".parse().unwrap(),
-                  "xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L",
-                  "xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih19Zm4Y");
->>>>>>>> upstream/master:groestlcoin/src/bip32.rs
     }
 
     #[test]
