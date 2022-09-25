@@ -87,6 +87,7 @@ pub mod consensus;
 pub mod error;
 pub mod hash_types;
 pub mod policy;
+pub mod sign_message;
 pub mod util;
 
 #[cfg(feature = "std")]
@@ -110,11 +111,7 @@ pub use crate::util::ecdsa::{self, EcdsaSig, EcdsaSigError};
 pub use crate::util::key::{KeyPair, PrivateKey, PublicKey, XOnlyPublicKey};
 pub use crate::util::merkleblock::MerkleBlock;
 pub use crate::util::schnorr::{self, SchnorrSig, SchnorrSigError};
-pub use crate::util::sighash::{
-    EcdsaSighashType, NonStandardSighashType, SchnorrSighashType, SighashCache,
-    SighashTypeParseError,
-};
-pub use crate::util::{psbt, Error};
+pub use crate::util::{psbt, sighash, Error};
 
 #[cfg(not(feature = "std"))]
 mod io_extras {

@@ -382,12 +382,9 @@ mod psbt_sign {
     use std::ops::Deref;
 
     use groestlcoin::psbt::{Input, Prevouts, Psbt, PsbtSighashType};
-    use groestlcoin::util::sighash::{self, SighashCache};
+    use groestlcoin::sighash::{self, SighashCache, EcdsaSighashType, SchnorrSighashType};
     use groestlcoin::util::taproot::TapLeafHash;
-    use groestlcoin::{
-        EcdsaSig, EcdsaSigError, EcdsaSighashType, PrivateKey, SchnorrSighashType, Script,
-        Transaction, TxOut,
-    };
+    use groestlcoin::{EcdsaSig, EcdsaSigError, PrivateKey, Script, Transaction, TxOut};
     use secp256k1::{Message, Secp256k1, Signing};
 
     /// Signs the input at `input_index` with private key `sk`.
