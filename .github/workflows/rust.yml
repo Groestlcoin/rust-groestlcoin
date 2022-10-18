@@ -35,7 +35,7 @@ jobs:
       - name: Checkout Crate
         uses: actions/checkout@v3
       - name: Checkout Toolchain
-        uses: actions-rs/toolchain@v3
+        uses: actions-rs/toolchain@v1.0.6
         with:
           profile: minimal
           toolchain: ${{ matrix.rust }}
@@ -51,7 +51,7 @@ jobs:
       - name: Checkout Crate
         uses: actions/checkout@v3
       - name: Checkout Toolchain
-        uses: actions-rs/toolchain@v3
+        uses: actions-rs/toolchain@v1.0.6
         with:
           profile: minimal
           toolchain: stable
@@ -73,7 +73,7 @@ jobs:
       - name: Checkout Crate
         uses: actions/checkout@v3
       - name: Checkout Toolchain
-        uses: actions-rs/toolchain@v3
+        uses: actions-rs/toolchain@v1.0.6
         with:
           profile: minimal
           toolchain: stable
@@ -93,7 +93,7 @@ jobs:
       - name: Set up QEMU
         run: sudo apt update && sudo apt install -y qemu-system-arm gcc-arm-none-eabi
       - name: Checkout Toolchain
-        uses: actions-rs/toolchain@v3
+        uses: actions-rs/toolchain@v1.0.6
         with:
           profile: minimal
           toolchain: nightly
