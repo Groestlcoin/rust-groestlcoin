@@ -18,12 +18,11 @@ use crate::util::Error::{BlockBadTarget, BlockBadProofOfWork};
 use crate::util::hash::bitcoin_merkle_root;
 use crate::hashes::{Hash, HashEngine};
 use crate::hash_types::{Wtxid, BlockHash, TxMerkleNode, WitnessMerkleNode, WitnessCommitment};
-use crate::util::uint::Uint256;
 use crate::consensus::{encode, Encodable, Decodable};
-use crate::network::constants::Network;
 use crate::blockdata::transaction::Transaction;
-use crate::blockdata::constants::{max_target, WITNESS_SCALE_FACTOR};
+use crate::blockdata::constants::WITNESS_SCALE_FACTOR;
 use crate::blockdata::script;
+use crate::pow::{CompactTarget, Target, Work};
 use crate::VarInt;
 use crate::internal_macros::impl_consensus_encoding;
 use crate::io;
@@ -50,9 +49,8 @@ pub struct BlockHeader {
     pub merkle_root: TxMerkleNode,
     /// The timestamp of the block, as claimed by the miner.
     pub time: u32,
-    /// The target value below which the blockhash must lie, encoded as a
-    /// a float (with well-defined rounding, of course).
-    pub bits: u32,
+    /// The target value below which the blockhash must lie.
+    pub bits: CompactTarget,
     /// The nonce, selected to obtain a low enough blockhash.
     pub nonce: u32,
 }
@@ -67,99 +65,41 @@ impl BlockHeader {
         BlockHash::from_engine(engine)
     }
 
-    /// Computes the target [0, T] that a blockhash must land in to be valid.
-    pub fn target(&self) -> Uint256 {
-        Self::u256_from_compact_target(self.bits)
-    }
-
-    /// Computes the target value in [`Uint256`] format, from a compact representation.
-    ///
-    /// [`Uint256`]: ../../util/uint/struct.Uint256.html
-    ///
-    /// ```
-    /// use groestlcoin::block::BlockHeader;
-    ///
-    /// assert_eq!(0x1d00ffff,
-    ///     BlockHeader::compact_target_from_u256(
-    ///         &BlockHeader::u256_from_compact_target(0x1d00ffff)
-    ///     )
-    /// );
-    /// ```
-    pub fn u256_from_compact_target(bits: u32) -> Uint256 {
-        // This is a floating-point "compact" encoding originally used by
-        // OpenSSL, which satoshi put into consensus code, so we're stuck
-        // with it. The exponent needs to have 3 subtracted from it, hence
-        // this goofy decoding code:
-        let (mant, expt) = {
-            let unshifted_expt = bits >> 24;
-            if unshifted_expt <= 3 {
-                ((bits & 0xFFFFFF) >> (8 * (3 - unshifted_expt as usize)), 0)
-            } else {
-                (bits & 0xFFFFFF, 8 * ((bits >> 24) - 3))
-            }
-        };
-
-        // The mantissa is signed but may not be negative
-        if mant > 0x7FFFFF {
-            Default::default()
-        } else {
-            Uint256::from_u64(mant as u64).unwrap() << (expt as usize)
-        }
-    }
-
-    /// Computes the target value in float format from Uint256 format.
-    pub fn compact_target_from_u256(value: &Uint256) -> u32 {
-        let mut size = (value.bits() + 7) / 8;
-        let mut compact = if size <= 3 {
-            (value.low_u64() << (8 * (3 - size))) as u32
-        } else {
-            let bn = *value >> (8 * (size - 3));
-            bn.low_u32()
-        };
-
-        if (compact & 0x00800000) != 0 {
-            compact >>= 8;
-            size += 1;
-        }
-
-        compact | (size << 24) as u32
+    /// Computes the target (range [0, T] inclusive) that a blockhash must land in to be valid.
+    pub fn target(&self) -> Target {
+        self.bits.into()
     }
 
     /// Computes the popular "difficulty" measure for mining.
-    pub fn difficulty(&self, network: Network) -> u64 {
-        (max_target(network) / self.target()).low_u64()
+    pub fn difficulty(&self) -> u128 {
+        self.target().difficulty()
     }
 
     /// Checks that the proof-of-work for the block is valid, returning the block hash.
-    pub fn validate_pow(&self, required_target: &Uint256) -> Result<BlockHash, util::Error> {
-        let target = &self.target();
+    pub fn validate_pow(&self, required_target: Target) -> Result<BlockHash, util::Error> {
+        let target = self.target();
         if target != required_target {
             return Err(BlockBadTarget);
         }
         let block_hash = self.block_hash();
-        let mut ret = [0u64; 4];
-        util::endian::bytes_to_u64_slice_le(block_hash.as_inner(), &mut ret);
-        let hash = &Uint256(ret);
-        if hash <= target { Ok(block_hash) } else { Err(BlockBadProofOfWork) }
+        if target.is_met_by(block_hash) {
+            Ok(block_hash)
+        } else {
+            Err(BlockBadProofOfWork)
+        }
     }
 
     /// Returns the total work of the block.
-    pub fn work(&self) -> Uint256 {
-        // 2**256 / (target + 1) == ~target / (target+1) + 1    (eqn shamelessly stolen from bitcoind)
-        let mut ret = !self.target();
-        let mut ret1 = self.target();
-        ret1.increment();
-        ret = ret / ret1;
-        ret.increment();
-        ret
+    pub fn work(&self) -> Work {
+        self.target().to_work()
     }
 }
 
-/// Bitcoin block version number
+/// Groestlcoin block version number
 ///
 /// Originally used as a protocol version, but repurposed for soft-fork signaling.
 ///
-/// The inner value is a signed integer in Bitcoin Core for historical reasons, if version bits is
+/// The inner value is a signed integer in Groestlcoin Core for historical reasons, if version bits is
 /// being used the top three bits must be 001, this gives us a useful range of [0x20000000...0x3FFFFFFF].
 ///
 /// > When a block nVersion does not have top bits 001, it is treated as if all bits are 0 for the purposes of deployments.
@@ -221,7 +161,7 @@ impl Decodable for BlockVersion {
     }
 }
 
-/// Bitcoin block.
+/// Groestlcoin block.
 ///
 /// A collection of transactions with an attached proof of work.
 ///
@@ -447,13 +387,13 @@ impl From<&Block> for BlockHash {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     use crate::hashes::hex::FromHex;
 
     use crate::blockdata::block::{Block, BlockHeader, BlockVersion};
     use crate::consensus::encode::{deserialize, serialize};
-    use crate::util::uint::Uint256;
     use crate::util::Error::{BlockBadTarget, BlockBadProofOfWork};
-    use crate::network::constants::Network;
 
     #[test]
     fn test_coinbase_and_bip34() {
@@ -483,7 +423,7 @@ mod tests {
 
         let prevhash = Vec::from_hex("54e62863a89f1c737a8c9647c3843d16bcfd81c9b0048653b459df0200000000").unwrap();
         let merkle = Vec::from_hex("755988c47b18539187e9d050453781266ddd193820e94c72eff0b7562185f525").unwrap();
-        let work = Uint256([0x5228d4dedau64, 0, 0, 0]);
+        let work = Work::from(0x5228d4deda_u128);
 
         let decode: Result<Block, _> = deserialize(&some_block);
         let bad_decode: Result<Block, _> = deserialize(&cutoff_block);
@@ -496,11 +436,11 @@ mod tests {
         assert_eq!(real_decode.header.merkle_root, real_decode.compute_merkle_root().unwrap());
         assert_eq!(serialize(&real_decode.header.merkle_root), merkle);
         assert_eq!(real_decode.header.time, 1396708728);
-        assert_eq!(real_decode.header.bits, 0x1c031dab);
+        assert_eq!(real_decode.header.bits, CompactTarget::from_consensus(0x1c031dab));
         assert_eq!(real_decode.header.nonce, 3526936);
         assert_eq!(real_decode.header.work(), work);
-        assert_eq!(real_decode.header.validate_pow(&real_decode.header.target()).unwrap(), real_decode.block_hash());
-        assert_eq!(real_decode.header.difficulty(Network::Groestlcoin), 82);
+        assert_eq!(real_decode.header.validate_pow(real_decode.header.target()).unwrap(), real_decode.block_hash());
+        assert_eq!(real_decode.header.difficulty(), 82);
         // [test] TODO: check the transaction data
 
         assert_eq!(real_decode.size(), some_block.len());
@@ -522,7 +462,7 @@ mod tests {
 
         let prevhash = Vec::from_hex("51f4bcc013edd897566497e64c35735d4320f52e4c64b59a4007000000000000").unwrap();
         let merkle = Vec::from_hex("163c9ba874a3e94426b379e769bdfd4df93117114c14d14111dd7f1aa0a375c9").unwrap();
-        let work = Uint256([0x6b9fa222841d9u64, 0, 0, 0]);
+        let work = Work::from(0x6b9fa222841d9_u64);
 
         assert!(decode.is_ok());
         let real_decode = decode.unwrap();
@@ -531,11 +471,11 @@ mod tests {
         assert_eq!(serialize(&real_decode.header.merkle_root), merkle);
         assert_eq!(real_decode.header.merkle_root, real_decode.compute_merkle_root().unwrap());
         assert_eq!(real_decode.header.time, 1644213054);
-        assert_eq!(real_decode.header.bits, 0x1a260eff);
+        assert_eq!(real_decode.header.bits, CompactTarget::from_consensus(0x1a260eff));
         assert_eq!(real_decode.header.nonce, 121839433);
         assert_eq!(real_decode.header.work(), work);
-        assert_eq!(real_decode.header.validate_pow(&real_decode.header.target()).unwrap(), real_decode.block_hash());
-        assert_eq!(real_decode.header.difficulty(Network::Testnet), 440819);
+        assert_eq!(real_decode.header.validate_pow(real_decode.header.target()).unwrap(), real_decode.block_hash());
+        assert_eq!(real_decode.header.difficulty(), 440819);
         // [test] TODO: check the transaction data
 
         assert_eq!(real_decode.size(), segwit_block.len());
@@ -566,10 +506,10 @@ mod tests {
     fn validate_pow_test() {
         let some_header = Vec::from_hex("7000000054e62863a89f1c737a8c9647c3843d16bcfd81c9b0048653b459df0200000000755988c47b18539187e9d050453781266ddd193820e94c72eff0b7562185f52578154053ab1d031c18d13500").unwrap();
         let some_header: BlockHeader = deserialize(&some_header).expect("Can't deserialize correct block header");
-        assert_eq!(some_header.validate_pow(&some_header.target()).unwrap(), some_header.block_hash());
+        assert_eq!(some_header.validate_pow(some_header.target()).unwrap(), some_header.block_hash());
 
         // test with zero target
-        match some_header.validate_pow(&Uint256::default()) {
+        match some_header.validate_pow(Target::ZERO) {
             Err(BlockBadTarget) => (),
             _ => panic!("unexpected result from validate_pow"),
         }
@@ -577,7 +517,7 @@ mod tests {
         // test with modified header
         let mut invalid_header: BlockHeader = some_header;
         invalid_header.version.0 += 1;
-        match invalid_header.validate_pow(&invalid_header.target()) {
+        match invalid_header.validate_pow(invalid_header.target()) {
             Err(BlockBadProofOfWork) => (),
             _ => panic!("unexpected result from validate_pow"),
         }
@@ -589,7 +529,7 @@ mod tests {
 
         let header: BlockHeader = deserialize(&some_header).expect("Can't deserialize correct block header");
 
-        assert_eq!(header.bits, BlockHeader::compact_target_from_u256(&header.target()));
+        assert_eq!(header.bits, header.target().to_compact_lossy());
     }
 
     #[test]

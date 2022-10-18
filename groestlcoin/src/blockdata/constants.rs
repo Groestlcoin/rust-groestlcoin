@@ -21,7 +21,7 @@ use crate::blockdata::transaction::{OutPoint, Transaction, TxOut, TxIn, Sequence
 use crate::blockdata::block::{Block, BlockHeader, BlockVersion};
 use crate::blockdata::witness::Witness;
 use crate::network::constants::Network;
-use crate::util::uint::Uint256;
+use crate::pow::CompactTarget;
 use crate::internal_macros::{impl_array_newtype, impl_bytes_newtype};
 
 /// How many gros are in "one groestlcoin"
@@ -54,11 +54,6 @@ pub const MAX_SCRIPT_ELEMENT_SIZE: usize = 520;
 pub const SUBSIDY_HALVING_INTERVAL: u32 = 210_000;
 /// Maximum allowed value for an integer in Script.
 pub const MAX_SCRIPTNUM_VALUE: u32 = 0x80000000; // 2^31
-
-/// In Groestlcoind this is insanely described as ~((u256)0 >> 32)
-pub fn max_target(_: Network) -> Uint256 {
-    Uint256::from_u64(0xFFFF).unwrap() << 208
-}
 
 /// The maximum value allowed in an output (useful for sanity checking,
 /// since keeping everything below this value should prevent overflows
@@ -119,7 +114,7 @@ pub fn genesis_block(network: Network) -> Block {
                     prev_blockhash: Hash::all_zeros(),
                     merkle_root,
                     time: 1395342829,
-                    bits: 0x1e0fffff,
+                    bits: CompactTarget::from_consensus(0x1e0fffff),
                     nonce: 220035
                 },
                 txdata,
@@ -132,7 +127,7 @@ pub fn genesis_block(network: Network) -> Block {
                     prev_blockhash: Hash::all_zeros(),
                     merkle_root,
                     time: 1440000002,
-                    bits: 0x1e00ffff,
+                    bits: CompactTarget::from_consensus(0x1e00ffff),
                     nonce: 6556309
                 },
                 txdata,
@@ -145,7 +140,7 @@ pub fn genesis_block(network: Network) -> Block {
                     prev_blockhash: Hash::all_zeros(),
                     merkle_root,
                     time: 1606082400,
-                    bits: 0x1e00ffff,
+                    bits: CompactTarget::from_consensus(0x1e00ffff),
                     nonce: 14675970
                 },
                 txdata,
@@ -158,7 +153,7 @@ pub fn genesis_block(network: Network) -> Block {
                     prev_blockhash: Hash::all_zeros(),
                     merkle_root,
                     time: 1440000002,
-                    bits: 0x1e00ffff,
+                    bits: CompactTarget::from_consensus(0x1e00ffff),
                     nonce: 6556309
                 },
                 txdata,
@@ -232,7 +227,7 @@ mod test {
         assert_eq!(gen.header.merkle_root.to_hex(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
 
         assert_eq!(gen.header.time, 1395342829);
-        assert_eq!(gen.header.bits, 0x1e0fffff);
+        assert_eq!(gen.header.bits, CompactTarget::from_consensus(0x1e0fffff));
         assert_eq!(gen.header.nonce, 220035);
         assert_eq!(gen.header.block_hash().to_hex(), "00000ac5927c594d49cc0bdb81759d0da8297eb614683d3acb62f0703b639023");
     }
@@ -244,7 +239,7 @@ mod test {
         assert_eq!(gen.header.prev_blockhash, Hash::all_zeros());
         assert_eq!(gen.header.merkle_root.to_hex(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
         assert_eq!(gen.header.time, 1440000002);
-        assert_eq!(gen.header.bits, 0x1e00ffff);
+        assert_eq!(gen.header.bits, CompactTarget::from_consensus(0x1e00ffff));
         assert_eq!(gen.header.nonce, 6556309);
         assert_eq!(gen.header.block_hash().to_hex(), "000000ffbb50fc9898cdd36ec163e6ba23230164c0052a28876255b7dcf2cd36");
     }
@@ -256,7 +251,7 @@ mod test {
         assert_eq!(gen.header.prev_blockhash, Hash::all_zeros());
         assert_eq!(gen.header.merkle_root.to_hex(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
         assert_eq!(gen.header.time, 1606082400);
-        assert_eq!(gen.header.bits, 0x1e00ffff);
+        assert_eq!(gen.header.bits, CompactTarget::from_consensus(0x1e00ffff));
         assert_eq!(gen.header.nonce, 14675970);
         assert_eq!(gen.header.block_hash().to_hex(), "0000007fcaa2a27993c6cde9e7818c254357af517b876ceba2f23592bb14ab31");
     }

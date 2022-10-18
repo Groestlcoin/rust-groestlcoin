@@ -1,43 +1,14 @@
 // Written in 2014 by Andrew Poelstra <apoelstra@wpsoftware.net>
 // SPDX-License-Identifier: CC0-1.0
 
-//! Bitcoin consensus parameters.
+//! Groestlcoin consensus parameters.
 //!
-//! This module provides a predefined set of parameters for different Bitcoin
+//! This module provides a predefined set of parameters for different Groestlcoin
 //! chains (such as mainnet, testnet).
 //!
 
 use crate::network::constants::Network;
-use crate::util::uint::Uint256;
-
-/// Lowest possible difficulty for Mainnet. See comment on Params::pow_limit for more info.
-const MAX_BITS_BITCOIN: Uint256 = Uint256([
-    0x0000000000000000u64,
-    0x0000000000000000u64,
-    0x0000000000000000u64,
-    0x00000fffffffffffu64,
-]);
-/// Lowest possible difficulty for Testnet. See comment on Params::pow_limit for more info.
-const MAX_BITS_TESTNET: Uint256 = Uint256([
-    0x0000000000000000u64,
-    0x0000000000000000u64,
-    0x0000000000000000u64,
-    0x000000ffffffffffu64,
-]);
-/// Lowest possible difficulty for Signet. See comment on Params::pow_limit for more info.
-const MAX_BITS_SIGNET: Uint256 = Uint256([
-    0x0000000000000000u64,
-    0x0000000000000000u64,
-    0x0000000000000000u64,
-    0x00000377ae000000u64,
-]);
-/// Lowest possible difficulty for Regtest. See comment on Params::pow_limit for more info.
-const MAX_BITS_REGTEST: Uint256 = Uint256([
-    0x0000000000000000u64,
-    0x0000000000000000u64,
-    0x0000000000000000u64,
-    0x00ffffffffffffffu64,
-]);
+use crate::pow::Work;
 
 /// Parameters that influence chain consensus.
 #[non_exhaustive]
@@ -61,13 +32,13 @@ pub struct Params {
     pub miner_confirmation_window: u32,
     /// Proof of work limit value. It contains the lowest possible difficulty.
     ///
-    /// Note that this value differs from Bitcoin Core's powLimit field in that this value is
-    /// attainable, but Bitcoin Core's is not. Specifically, because targets in Bitcoin are always
+    /// Note that this value differs from Groestlcoin Core's powLimit field in that this value is
+    /// attainable, but Groestlcoin Core's is not. Specifically, because targets in Groestlcoin are always
     /// rounded to the nearest float expressible in "compact form", not all targets are attainable.
     /// Still, this should not affect consensus as the only place where the non-compact form of
-    /// this is used in Bitcoin Core's consensus algorithm is in comparison and there are no
-    /// compact-expressible values between Bitcoin Core's and the limit expressed here.
-    pub pow_limit: Uint256,
+    /// this is used in Groestlcoin Core's consensus algorithm is in comparison and there are no
+    /// compact-expressible values between Groestlcoin Core's and the limit expressed here.
+    pub pow_limit: Work,
     /// Expected amount of time to mine one block.
     pub pow_target_spacing: u64,
     /// Difficulty recalculation interval.
@@ -90,7 +61,7 @@ impl Params {
                 bip66_height: 800000, // 0000000007f3f37410d5f7e71a07bf09bb802d5af6726fc891f0248ad857708c
                 rule_change_activation_threshold: 1815, // 90%
                 miner_confirmation_window: 2016,
-                pow_limit: MAX_BITS_BITCOIN,
+                pow_limit: Work::MAINNET_MIN,
                 pow_target_spacing: 60,            // 1 minute.
                 pow_target_timespan: 14 * 24 * 60 * 60, // 2 weeks.
                 allow_min_difficulty_blocks: false,
@@ -104,7 +75,7 @@ impl Params {
                 bip66_height: 286, // 0000004b7778ba253a75b716c55b2c6609b5fb97691b3260978f9ce4a633106d
                 rule_change_activation_threshold: 1512, // 75%
                 miner_confirmation_window: 2016,
-                pow_limit: MAX_BITS_TESTNET,
+                pow_limit: Work::TESTNET_MIN,
                 pow_target_spacing: 60,            // 1 minute.
                 pow_target_timespan: 14 * 24 * 60 * 60, // 2 weeks.
                 allow_min_difficulty_blocks: true,
@@ -118,7 +89,7 @@ impl Params {
                 bip66_height: 1,
                 rule_change_activation_threshold: 1815, // 90%
                 miner_confirmation_window: 2016,
-                pow_limit: MAX_BITS_SIGNET,
+                pow_limit: Work::SIGNET_MIN,
                 pow_target_spacing: 60,            // 1 minute.
                 pow_target_timespan: 14 * 24 * 60 * 60, // 2 weeks.
                 allow_min_difficulty_blocks: false,
@@ -132,7 +103,7 @@ impl Params {
                 bip66_height: 1,
                 rule_change_activation_threshold: 108, // 75%
                 miner_confirmation_window: 144,
-                pow_limit: MAX_BITS_REGTEST,
+                pow_limit: Work::REGTEST_MIN,
                 pow_target_spacing: 60,            // 1 minute.
                 pow_target_timespan: 14 * 24 * 60 * 60, // 2 weeks.
                 allow_min_difficulty_blocks: true,
