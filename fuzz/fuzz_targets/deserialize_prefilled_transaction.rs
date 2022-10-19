@@ -2,7 +2,7 @@ extern crate groestlcoin;
 
 fn do_test(data: &[u8]) {
     // We already fuzz Transactions in `./deserialize_transaction.rs`.
-    let tx_result: Result<groestlcoin::util::bip152::PrefilledTransaction, _> = groestlcoin::consensus::encode::deserialize(data);
+    let tx_result: Result<groestlcoin::bip152::PrefilledTransaction, _> = groestlcoin::consensus::encode::deserialize(data);
 
     match tx_result {
         Err(_) => {},

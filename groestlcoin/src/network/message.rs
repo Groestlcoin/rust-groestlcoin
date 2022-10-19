@@ -487,7 +487,7 @@ mod test {
     use crate::network::message_bloom::{FilterAdd, FilterLoad, BloomFlags};
     use crate::MerkleBlock;
     use crate::network::message_compact_blocks::{GetBlockTxn, SendCmpct};
-    use crate::util::bip152::BlockTransactionsRequest;
+    use crate::bip152::BlockTransactionsRequest;
 
     fn sha256d_hash(slice: [u8;32]) -> sha256d::Hash {
         sha256d::Hash::from_slice(&slice).unwrap()
