@@ -14,7 +14,7 @@ use core::{fmt, cmp};
 use core::ops::Deref;
 
 use secp256k1::{Message, Secp256k1, Signing};
-use bitcoin_internals::write_err;
+use groestlcoin_internals::write_err;
 
 use crate::prelude::*;
 use crate::io;
