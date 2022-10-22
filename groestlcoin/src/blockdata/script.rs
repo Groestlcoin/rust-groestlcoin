@@ -18,7 +18,7 @@ use crate::io;
 use core::convert::TryFrom;
 use core::{fmt, default::Default};
 use core::ops::Index;
-use crate::internal_macros::debug_from_display;
+use groestlcoin_internals::debug_from_display;
 #[cfg(feature = "groestlcoinconsensus")]
 use groestlcoin_internals::write_err;
 
@@ -981,9 +981,16 @@ impl Builder {
         self
     }
 
-    /// Adds an `OP_VERIFY` to the script, unless the most-recently-added
-    /// opcode has an alternate `VERIFY` form, in which case that opcode
-    /// is replaced e.g., `OP_CHECKSIG` will become `OP_CHECKSIGVERIFY`.
+    /// Adds an `OP_VERIFY` to the script or replaces the last opcode with VERIFY form.
+    ///
+    /// Some opcodes such as `OP_CHECKSIG` have a verify variant that works as if `VERIFY` was
+    /// in the script right after. To save space this function appends `VERIFY` only if
+    /// the most-recently-added opcode *does not* have an alternate `VERIFY` form. If it does
+    /// the last opcode is replaced. E.g., `OP_CHECKSIG` will become `OP_CHECKSIGVERIFY`.
+    ///
+    /// Note that existing `OP_*VERIFY` opcodes do not lead to the instruction being ignored
+    /// because `OP_VERIFY` consumes an item from the stack so ignoring them would change the
+    /// semantics.
     pub fn push_verify(mut self) -> Builder {
         match self.1 {
             Some(opcodes::all::OP_EQUAL) => {

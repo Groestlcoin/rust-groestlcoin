@@ -32,7 +32,7 @@ use crate::blockdata::locktime::relative;
 use crate::consensus::{encode, Decodable, Encodable};
 use crate::hash_types::{Sighash, Txid, TxidInternal, Wtxid, WtxidInternal};
 use crate::VarInt;
-use crate::internal_macros::{impl_consensus_encoding, serde_struct_human_string_impl};
+use crate::internal_macros::impl_consensus_encoding;
 use crate::parse::impl_parse_str_through_int;
 
 #[cfg(doc)]
@@ -50,7 +50,8 @@ pub struct OutPoint {
     /// The index of the referenced output in its transaction's vout.
     pub vout: u32,
 }
-serde_struct_human_string_impl!(OutPoint, "an OutPoint", txid, vout);
+#[cfg(feature = "serde")]
+crate::serde_utils::serde_struct_human_string_impl!(OutPoint, "an OutPoint", txid, vout);
 
 impl OutPoint {
     /// Creates a new [`OutPoint`].
@@ -713,6 +714,16 @@ impl Transaction {
     /// For transactions with an empty witness, this is simply the consensus-serialized size times
     /// four. For transactions with a witness, this is the non-witness consensus-serialized size
     /// multiplied by three plus the with-witness consensus-serialized size.
+    ///
+    /// For transactions with no inputs, this function will return a value 2 less than the actual
+    /// weight of the serialized transaction. The reason is that zero-input transactions, post-segwit,
+    /// cannot be unambiguously serialized; we make a choice that adds two extra bytes. For more
+    /// details see [BIP 141](https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki)
+    /// which uses a "input count" of `0x00` as a `marker` for a Segwit-encoded transaction.
+    ///
+    /// If you need to use 0-input transactions, we strongly recommend you do so using the PSBT
+    /// API. The unsigned transaction encoded within PSBT is always a non-segwit transaction
+    /// and can therefore avoid this ambiguity.
     #[inline]
     pub fn weight(&self) -> usize {
         self.scaled_size(WITNESS_SCALE_FACTOR)
