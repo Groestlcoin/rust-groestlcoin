@@ -29,7 +29,7 @@ pub struct All {
 // private import so we don't have to use `all::OP_FOO` in this file.
 use self::all::*;
 
-/// The `all` module is provided so one can use a wildcard import `use bitcoin::opcodes::all::*` to
+/// The `all` module is provided so one can use a wildcard import `use groestlcoin::opcodes::all::*` to
 /// get all the `OP_FOO` opcodes without getting other types defined in `opcodes` (e.g. `All`, `Class`).
 pub mod all {
     //! Constants associated with All type
