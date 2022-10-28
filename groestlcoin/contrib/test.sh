@@ -33,6 +33,7 @@ then
     cargo clippy --example bip32 -- -D warnings
     cargo clippy --example handshake -- -D warnings
     cargo clippy --example ecdsa-psbt --features=groestlcoinconsensus -- -D warnings
+    cargo clippy --example taproot-psbt --features=groestlcoinconsensus -- -D warnings
 fi
 
 echo "********* Testing std *************"
@@ -76,6 +77,7 @@ do
 done
 
 cargo run --example ecdsa-psbt --features=groestlcoinconsensus
+cargo run --example taproot-psbt --features=groestlcoinconsensus
 
 # Use as dependency if told to
 if [ "$AS_DEPENDENCY" = true ]
