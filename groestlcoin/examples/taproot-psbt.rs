@@ -1,31 +1,31 @@
 //! Example of taproot PSBT workflow
 
-// We use the alias `alias bt='bitcoin-cli -regtest'` for brevity.
+// We use the alias `alias bt='groestlcoin-cli -regtest'` for brevity.
 
 // Step 0 - Wipe the `regtest` data directory to start from a clean slate.
 
-// Step 1 - Run `bitcoind -regtest -daemon` to start the daemon. Bitcoin Core 23.0+ is required.
+// Step 1 - Run `groestlcoind -regtest -daemon` to start the daemon. Groestlcoin Core 23.0+ is required.
 
 // Step 2 -
 //          2.1) Run `bt -named createwallet wallet_name=benefactor blank=true` to create a blank wallet with the name "benefactor"
 //          2.2) Run `bt -named createwallet wallet_name=beneficiary blank=true` to create a blank wallet with the name "beneficiary"
 //          2.3) Create the two aliases:
-//                  alias bt-benefactor='bitcoin-cli -regtest -rpcwallet=benefactor'
-//                  alias bt-beneficiary='bitcoin-cli -regtest -rpcwallet=beneficiary'
+//                  alias bt-benefactor='groestlcoin-cli -regtest -rpcwallet=benefactor'
+//                  alias bt-beneficiary='groestlcoin-cli -regtest -rpcwallet=beneficiary'
 //
 //          2.4) Import the example descriptors:
 //                  bt-benefactor importdescriptors '[
-//                     { "desc": "tr(tprv8ZgxMBicQKsPd4arFr7sKjSnKFDVMR2JHw9Y8L9nXN4kiok4u28LpHijEudH3mMYoL4pM5UL9Bgdz2M4Cy8EzfErmU9m86ZTw6hCzvFeTg7/86\'/1\'/0\'/1/*)#jzyeered", "active": true, "timestamp": "now", "internal": true },
-//                     { "desc": "tr(tprv8ZgxMBicQKsPd4arFr7sKjSnKFDVMR2JHw9Y8L9nXN4kiok4u28LpHijEudH3mMYoL4pM5UL9Bgdz2M4Cy8EzfErmU9m86ZTw6hCzvFeTg7/86\'/1\'/0\'/0/*)#rkpcykf4", "active": true, "timestamp": "now" }
+//                     { "desc": "tr(tprv8ZgxMBicQKsPd4arFr7sKjSnKFDVMR2JHw9Y8L9nXN4kiok4u28LpHijEudH3mMYoL4pM5UL9Bgdz2M4Cy8EzfErmU9m86ZTw6hCzwNYrkL/86\'/1\'/0\'/1/*)#jzyeered", "active": true, "timestamp": "now", "internal": true },
+//                     { "desc": "tr(tprv8ZgxMBicQKsPd4arFr7sKjSnKFDVMR2JHw9Y8L9nXN4kiok4u28LpHijEudH3mMYoL4pM5UL9Bgdz2M4Cy8EzfErmU9m86ZTw6hCzwNYrkL/86\'/1\'/0\'/0/*)#rkpcykf4", "active": true, "timestamp": "now" }
 //                  ]'
 //                  bt-beneficiary importdescriptors '[
-//                     { "desc": "tr(tprv8ZgxMBicQKsPe72C5c3cugP8b7AzEuNjP4NSC17Dkpqk5kaAmsL6FHwPsVxPpURVqbNwdLAbNqi8Cvdq6nycDwYdKHDjDRYcsMzfshimAUq/86\'/1\'/0\'/1/*)#w4ehwx46", "active": true, "timestamp": "now", "internal": true },
-//                     { "desc": "tr(tprv8ZgxMBicQKsPe72C5c3cugP8b7AzEuNjP4NSC17Dkpqk5kaAmsL6FHwPsVxPpURVqbNwdLAbNqi8Cvdq6nycDwYdKHDjDRYcsMzfshimAUq/86\'/1\'/0\'/0/*)#lpuknn9z", "active": true, "timestamp": "now" }
+//                     { "desc": "tr(tprv8ZgxMBicQKsPe72C5c3cugP8b7AzEuNjP4NSC17Dkpqk5kaAmsL6FHwPsVxPpURVqbNwdLAbNqi8Cvdq6nycDwYdKHDjDRYcsMzfsgdmGxj/86\'/1\'/0\'/1/*)#w4ehwx46", "active": true, "timestamp": "now", "internal": true },
+//                     { "desc": "tr(tprv8ZgxMBicQKsPe72C5c3cugP8b7AzEuNjP4NSC17Dkpqk5kaAmsL6FHwPsVxPpURVqbNwdLAbNqi8Cvdq6nycDwYdKHDjDRYcsMzfsgdmGxj/86\'/1\'/0\'/0/*)#lpuknn9z", "active": true, "timestamp": "now" }
 //                  ]'
 //
 // The xpriv and derivation path from the imported descriptors
-const BENEFACTOR_XPRIV_STR: &str = "tprv8ZgxMBicQKsPd4arFr7sKjSnKFDVMR2JHw9Y8L9nXN4kiok4u28LpHijEudH3mMYoL4pM5UL9Bgdz2M4Cy8EzfErmU9m86ZTw6hCzvFeTg7";
-const BENEFICIARY_XPRIV_STR: &str = "tprv8ZgxMBicQKsPe72C5c3cugP8b7AzEuNjP4NSC17Dkpqk5kaAmsL6FHwPsVxPpURVqbNwdLAbNqi8Cvdq6nycDwYdKHDjDRYcsMzfshimAUq";
+const BENEFACTOR_XPRIV_STR: &str = "tprv8ZgxMBicQKsPd4arFr7sKjSnKFDVMR2JHw9Y8L9nXN4kiok4u28LpHijEudH3mMYoL4pM5UL9Bgdz2M4Cy8EzfErmU9m86ZTw6hCzwNYrkL";
+const BENEFICIARY_XPRIV_STR: &str = "tprv8ZgxMBicQKsPe72C5c3cugP8b7AzEuNjP4NSC17Dkpqk5kaAmsL6FHwPsVxPpURVqbNwdLAbNqi8Cvdq6nycDwYdKHDjDRYcsMzfsgdmGxj";
 const BIP86_DERIVATION_PATH: &str = "m/86'/1'/0'/0/0";
 
 // Step 3 -
@@ -49,7 +49,7 @@ const UTXO_1: P2trUtxo = P2trUtxo {
     script_pubkey: UTXO_SCRIPT_PUBKEY,
     pubkey: UTXO_PUBKEY,
     master_fingerprint: UTXO_MASTER_FINGERPRINT,
-    amount_in_sats: 50 * COIN_VALUE, // 50 BTC
+    amount_in_sats: 512 * COIN_VALUE, // 50 BTC
     derivation_path: BIP86_DERIVATION_PATH,
 };
 
@@ -60,7 +60,7 @@ const UTXO_2: P2trUtxo = P2trUtxo {
     script_pubkey: UTXO_SCRIPT_PUBKEY,
     pubkey: UTXO_PUBKEY,
     master_fingerprint: UTXO_MASTER_FINGERPRINT,
-    amount_in_sats: 50 * COIN_VALUE,
+    amount_in_sats: 512 * COIN_VALUE,
     derivation_path: BIP86_DERIVATION_PATH,
 };
 
@@ -71,30 +71,30 @@ const UTXO_3: P2trUtxo = P2trUtxo {
     script_pubkey: UTXO_SCRIPT_PUBKEY,
     pubkey: UTXO_PUBKEY,
     master_fingerprint: UTXO_MASTER_FINGERPRINT,
-    amount_in_sats: 50 * COIN_VALUE,
+    amount_in_sats: 512 * COIN_VALUE,
     derivation_path: BIP86_DERIVATION_PATH,
 };
 
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
-use bitcoin::consensus::encode;
-use bitcoin::constants::COIN_VALUE;
-use bitcoin::hashes::hex::FromHex;
-use bitcoin::hashes::Hash;
-use bitcoin::opcodes::all::{OP_CHECKSIG, OP_CLTV, OP_DROP};
-use bitcoin::psbt::serialize::Serialize;
-use bitcoin::psbt::{self, Input, Output, Psbt, PsbtSighashType};
-use bitcoin::schnorr::TapTweak;
-use bitcoin::secp256k1::{Message, Secp256k1};
-use bitcoin::util::bip32::{
+use groestlcoin::consensus::encode;
+use groestlcoin::constants::COIN_VALUE;
+use groestlcoin::hashes::hex::FromHex;
+use groestlcoin::hashes::Hash;
+use groestlcoin::opcodes::all::{OP_CHECKSIG, OP_CLTV, OP_DROP};
+use groestlcoin::psbt::serialize::Serialize;
+use groestlcoin::psbt::{self, Input, Output, Psbt, PsbtSighashType};
+use groestlcoin::schnorr::TapTweak;
+use groestlcoin::secp256k1::{Message, Secp256k1};
+use groestlcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
 };
-use bitcoin::sighash::{self, SighashCache, SchnorrSighashType};
-use bitcoin::util::taproot::{
+use groestlcoin::sighash::{self, SighashCache, SchnorrSighashType};
+use groestlcoin::util::taproot::{
     LeafVersion, TapLeafHash, TapSighashHash, TaprootBuilder, TaprootSpendInfo,
 };
-use bitcoin::{
+use groestlcoin::{
     absolute, script, Address, Amount, OutPoint, SchnorrSig, Script,
     Transaction, TxIn, TxOut, Txid, Witness, XOnlyPublicKey,
 };
@@ -107,9 +107,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Just some addresses for outputs from our wallets. Not really important.
     let to_address =
-        Address::from_str("bcrt1p0p3rvwww0v9znrclp00uneq8ytre9kj922v8fxhnezm3mgsmn9usdxaefc")?;
+        Address::from_str("grsrt1p0p3rvwww0v9znrclp00uneq8ytre9kj922v8fxhnezm3mgsmn9usyt7nyn")?;
     let change_address =
-        Address::from_str("bcrt1pz449kexzydh2kaypatup5ultru3ej284t6eguhnkn6wkhswt0l7q3a7j76")?;
+        Address::from_str("grsrt1pz449kexzydh2kaypatup5ultru3ej284t6eguhnkn6wkhswt0l7qcsacn3")?;
     let amount_to_send_in_sats = COIN_VALUE;
     let change_amount = UTXO_1
         .amount_in_sats
@@ -234,7 +234,7 @@ fn generate_bip86_key_spend_tx(
                 vout: input_utxo.vout,
             },
             script_sig: Script::new(),
-            sequence: bitcoin::Sequence(0xFFFFFFFF), // Ignore nSequence.
+            sequence: groestlcoin::Sequence(0xFFFFFFFF), // Ignore nSequence.
             witness: Witness::default(),
         }],
         output: outputs,
@@ -418,7 +418,7 @@ impl BenefactorWallet {
             input: vec![TxIn {
                 previous_output: OutPoint { txid: tx.txid(), vout: 0 },
                 script_sig: Script::new(),
-                sequence: bitcoin::Sequence(0xFFFFFFFD), // enable locktime and opt-in RBF
+                sequence: groestlcoin::Sequence(0xFFFFFFFD), // enable locktime and opt-in RBF
                 witness: Witness::default(),
             }],
             output: vec![],
@@ -563,7 +563,7 @@ impl BenefactorWallet {
                 input: vec![TxIn {
                     previous_output: OutPoint { txid: tx.txid(), vout: 0 },
                     script_sig: Script::new(),
-                    sequence: bitcoin::Sequence(0xFFFFFFFD), // enable locktime and opt-in RBF
+                    sequence: groestlcoin::Sequence(0xFFFFFFFD), // enable locktime and opt-in RBF
                     witness: Witness::default(),
                 }],
                 output: vec![],
