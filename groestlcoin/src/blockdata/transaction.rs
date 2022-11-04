@@ -165,7 +165,7 @@ impl core::str::FromStr for OutPoint {
             return Err(ParseOutPointError::TooLong);
         }
         let find = s.find(':');
-        if find == None || find != s.rfind(':') {
+        if find.is_none() || find != s.rfind(':') {
             return Err(ParseOutPointError::Format);
         }
         let colon = find.unwrap();
@@ -1339,8 +1339,13 @@ mod tests {
         }
     }
 
-    #[ignore]
-    #[test]
+    #[test] #[ignore]
+    fn test_huge_witness() {
+        use crate::hashes::hex::FromHex;
+        deserialize::<Transaction>(&Vec::from_hex(include_str!("../../tests/data/huge_witness.hex").trim()).unwrap()).unwrap();
+    }
+
+    #[test] #[ignore]
     #[cfg(feature="groestlcoinconsensus")]
     fn test_transaction_verify () {
         use std::collections::HashMap;
