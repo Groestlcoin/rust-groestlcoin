@@ -1,17 +1,13 @@
 // Written in 2014 by Andrew Poelstra <apoelstra@wpsoftware.net>
 // SPDX-License-Identifier: CC0-1.0
 
-<<<<<<<< HEAD:groestlcoin/src/util/hash.rs
-//! Groestlcoin hash functions.
-========
-//! Bitcoin merkle tree functions.
->>>>>>>> upstream/master:groestlcoin/src/merkle_tree.rs
+//! Groestlcoin merkle tree functions.
 //!
 //! # Examples
 //!
 //! ```
-//! # use bitcoin::{merkle_tree, Txid};
-//! # use bitcoin::hashes::Hash;
+//! # use groestlcoin::{merkle_tree, Txid};
+//! # use groestlcoin::hashes::Hash;
 //! # let tx1 = Txid::all_zeros();  // Dummy hash values.
 //! # let tx2 = Txid::all_zeros();
 //! let tx_hashes = vec![tx1, tx2]; // All the hashes we wish to merkelize.
