@@ -164,6 +164,46 @@ pub enum Error {
     Serialization
 }
 
+// If groestlcoinonsensus-std is off but groestlcoinconsensus is present we patch the error type to
+// implement `std::error::Error`.
+#[cfg(all(feature = "std", feature = "groestlcoinconsensus", not(feature = "groestlcoinconsensus-std")))]
+mod bitcoinconsensus_hack {
+    use core::fmt;
+
+    #[repr(transparent)]
+    pub(crate) struct Error(groestlcoinconsensus::Error);
+
+    impl fmt::Debug for Error {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fmt::Debug::fmt(&self.0, f)
+        }
+    }
+
+    impl fmt::Display for Error {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fmt::Display::fmt(&self.0, f)
+        }
+    }
+
+    // groestlcoinconsensus::Error has no sources at this time
+    impl std::error::Error for Error {}
+
+    pub(crate) fn wrap_error(error: &groestlcoinconsensus::Error) -> &Error {
+        // Unfortunately, we cannot have the reference inside `Error` struct because of the 'static
+        // bound on `source` return type, so we have to use unsafe to overcome the limitation.
+        // SAFETY: the type is repr(transparent) and the lifetimes match
+        unsafe {
+            &*(error as *const _ as *const Error)
+        }
+    }
+}
+
+#[cfg(not(all(feature = "std", feature = "groestlcoinconsensus", not(feature = "groestlcoinconsensus-std"))))]
+mod bitcoinconsensus_hack {
+    #[allow(unused_imports)] // conditionally used
+    pub(crate) use core::convert::identity as wrap_error;
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -171,7 +211,7 @@ impl fmt::Display for Error {
             Error::EarlyEndOfScript => f.write_str("unexpected end of script"),
             Error::NumericOverflow => f.write_str("numeric overflow (number on stack larger than 4 bytes)"),
             #[cfg(feature = "groestlcoinconsensus")]
-            Error::BitcoinConsensus(ref e) => write_err!(f, "groestlcoinconsensus verification failed"; e),
+            Error::BitcoinConsensus(ref e) => write_err!(f, "groestlcoinconsensus verification failed"; bitcoinconsensus_hack::wrap_error(e)),
             Error::UnknownSpentOutput(ref point) => write!(f, "unknown spent output: {}", point),
             Error::Serialization => f.write_str("can not serialize the spending transaction in Transaction::verify()"),
         }
@@ -191,7 +231,7 @@ impl std::error::Error for Error {
             | UnknownSpentOutput(_)
             | Serialization => None,
             #[cfg(feature = "groestlcoinconsensus")]
-            BitcoinConsensus(ref e) => Some(e),
+            BitcoinConsensus(ref e) => Some(bitcoinconsensus_hack::wrap_error(e)),
         }
     }
 }
@@ -272,7 +312,7 @@ pub fn read_scriptint(v: &[u8]) -> Result<i64, Error> {
         Some(last) => last,
         None => return Ok(0),
     };
-    // Comment and code copied from bitcoin core:
+    // Comment and code copied from Bitcoin Core:
     // https://github.com/bitcoin/bitcoin/blob/447f50e4aed9a8b1d80e1891cda85801aeb80b4e/src/script/script.h#L247-L262
     // If the most-significant-byte - excluding the sign bit - is zero
     // then we're not minimal. Note how this test also rejects the

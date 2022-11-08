@@ -26,14 +26,17 @@
 //! * `no-std` - enables additional features required for this crate to be usable
 //!              without std. Does **not** disable `std`. Depends on `hashbrown`
 //!              and `core2`.
-//!
+//! * `bitcoinconsensus-std` - enables `std` in `bitcoinconsensus` and communicates it
+//!                            to this crate so it knows how to implement
+//!                            `std::error::Error`. At this time there's a hack to
+//!                            achieve the same without this feature but it could
+//!                            happen the implementations diverge one day.
 
 #![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
 // Experimental features we need.
 #![cfg_attr(bench, feature(test))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 // Coding conventions
-#![forbid(unsafe_code)]
 #![deny(non_upper_case_globals)]
 #![deny(non_camel_case_types)]
 #![deny(non_snake_case)]
@@ -70,6 +73,11 @@ pub use {bech32, groestlcoin_hashes as hashes, secp256k1};
 #[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
 pub use base64;
 
+// Re-export hashbrown when enabled
+#[cfg(feature = "hashbrown")]
+#[cfg_attr(docsrs, doc(cfg(feature = "hashbrown")))]
+pub use hashbrown;
+
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate actual_serde as serde;
@@ -85,6 +93,7 @@ mod serde_utils;
 #[macro_use]
 pub mod network;
 pub mod address;
+pub mod amount;
 pub mod bip152;
 pub mod bip158;
 pub mod bip32;
@@ -106,7 +115,7 @@ use std::io;
 use core2::io;
 
 pub use crate::address::{Address, AddressType};
-pub use crate::blockdata::block::{self, Block, BlockHeader, BlockVersion};
+pub use crate::blockdata::block::{self, Block};
 pub use crate::blockdata::locktime::{self, absolute, relative};
 pub use crate::blockdata::script::{self, Script};
 pub use crate::blockdata::transaction::{self, OutPoint, Sequence, Transaction, TxIn, TxOut};
@@ -116,7 +125,7 @@ pub use crate::consensus::encode::VarInt;
 pub use crate::hash_types::*;
 pub use crate::network::constants::Network;
 pub use crate::pow::{CompactTarget, Target, Work};
-pub use crate::util::amount::{Amount, Denomination, SignedAmount};
+pub use crate::amount::{Amount, Denomination, SignedAmount};
 pub use crate::util::ecdsa::{self, EcdsaSig, EcdsaSigError};
 pub use crate::util::key::{KeyPair, PrivateKey, PublicKey, XOnlyPublicKey};
 pub use crate::util::merkleblock::MerkleBlock;
