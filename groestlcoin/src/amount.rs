@@ -1238,11 +1238,7 @@ pub mod serde {
     //! #[derive(Serialize, Deserialize)]
     //! # #[serde(crate = "actual_serde")]
     //! pub struct HasAmount {
-<<<<<<<< HEAD:groestlcoin/src/util/amount.rs
-    //!     #[serde(with = "groestlcoin::util::amount::serde::as_btc")]
-========
-    //!     #[serde(with = "bitcoin::amount::serde::as_btc")]
->>>>>>>> upstream/master:groestlcoin/src/amount.rs
+    //!     #[serde(with = "groestlcoin::amount::serde::as_btc")]
     //!     pub amount: Amount,
     //! }
     //! ```

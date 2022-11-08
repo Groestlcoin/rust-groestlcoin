@@ -26,7 +26,7 @@
 //! * `no-std` - enables additional features required for this crate to be usable
 //!              without std. Does **not** disable `std`. Depends on `hashbrown`
 //!              and `core2`.
-//! * `bitcoinconsensus-std` - enables `std` in `bitcoinconsensus` and communicates it
+//! * `groestlcoinconsensus-std` - enables `std` in `groestlcoinconsensus` and communicates it
 //!                            to this crate so it knows how to implement
 //!                            `std::error::Error`. At this time there's a hack to
 //!                            achieve the same without this feature but it could
