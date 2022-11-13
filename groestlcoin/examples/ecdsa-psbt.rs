@@ -37,7 +37,7 @@ use groestlcoin::consensus::encode;
 use groestlcoin::hashes::hex::FromHex;
 use groestlcoin::locktime::absolute;
 use groestlcoin::secp256k1::{Secp256k1, Signing, Verification};
-use groestlcoin::util::bip32::{
+use groestlcoin::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint, IntoDerivationPath,
 };
 use groestlcoin::util::psbt::{self, Input, Psbt, PsbtSighashType};

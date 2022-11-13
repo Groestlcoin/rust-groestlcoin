@@ -87,7 +87,7 @@ use groestlcoin::psbt::serialize::Serialize;
 use groestlcoin::psbt::{self, Input, Output, Psbt, PsbtSighashType};
 use groestlcoin::schnorr::TapTweak;
 use groestlcoin::secp256k1::{Message, Secp256k1};
-use groestlcoin::util::bip32::{
+use groestlcoin::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
 };
 use groestlcoin::sighash::{self, SighashCache, SchnorrSighashType};
