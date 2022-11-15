@@ -163,15 +163,9 @@ impl PartialMerkleTree {
     /// # Examples
     ///
     /// ```rust
-<<<<<<<< HEAD:groestlcoin/src/util/merkleblock.rs
     /// use groestlcoin::hash_types::Txid;
     /// use groestlcoin::hashes::hex::FromHex;
-    /// use groestlcoin::util::merkleblock::PartialMerkleTree;
-========
-    /// use bitcoin::hash_types::Txid;
-    /// use bitcoin::hashes::hex::FromHex;
-    /// use bitcoin::merkle_tree::{MerkleBlock, PartialMerkleTree};
->>>>>>>> upstream/master:bitcoin/src/merkle_tree/block.rs
+    /// use groestlcoin::merkle_tree::{MerkleBlock, PartialMerkleTree};
     ///
     /// // Block 80000
     /// let txids: Vec<Txid> = [
