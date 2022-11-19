@@ -31,7 +31,7 @@ use core::convert::TryFrom;
 use core::str::FromStr;
 use core::{fmt, ops};
 
-use bitcoin_internals::{debug_from_display, write_err};
+use groestlcoin_internals::{debug_from_display, write_err};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
