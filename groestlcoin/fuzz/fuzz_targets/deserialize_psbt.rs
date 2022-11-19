@@ -1,12 +1,12 @@
 extern crate groestlcoin;
 
 fn do_test(data: &[u8]) {
-    let psbt: Result<groestlcoin::util::psbt::PartiallySignedTransaction, _> = groestlcoin::consensus::encode::deserialize(data);
+    let psbt: Result<groestlcoin::psbt::PartiallySignedTransaction, _> = groestlcoin::consensus::encode::deserialize(data);
     match psbt {
         Err(_) => {},
         Ok(psbt) => {
             let ser = groestlcoin::consensus::encode::serialize(&psbt);
-            let deser: groestlcoin::util::psbt::PartiallySignedTransaction  = groestlcoin::consensus::encode::deserialize(&ser).unwrap();
+            let deser: groestlcoin::psbt::PartiallySignedTransaction  = groestlcoin::consensus::encode::deserialize(&ser).unwrap();
             // Since the fuzz data could order psbt fields differently, we compare to our deser/ser instead of data
             assert_eq!(ser, groestlcoin::consensus::encode::serialize(&deser));
         }

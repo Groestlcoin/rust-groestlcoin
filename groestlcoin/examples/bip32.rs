@@ -4,10 +4,10 @@ use std::str::FromStr;
 use std::{env, process};
 
 use groestlcoin::address::Address;
+use groestlcoin::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use groestlcoin::hashes::hex::FromHex;
 use groestlcoin::secp256k1::ffi::types::AlignedType;
 use groestlcoin::secp256k1::Secp256k1;
-use groestlcoin::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use groestlcoin::PublicKey;
 
 fn main() {

@@ -1,3 +1,2 @@
 [workspace]
-members = ["groestlcoin", "internals"]
-exclude = ["embedded", "fuzz"]
+members = ["groestlcoin", "hashes", "internals"]

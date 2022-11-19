@@ -2,8 +2,9 @@
 ignore = [
        "groestlcoin/src/blockdata",
        "groestlcoin/src/consensus",
-       "groestlcoin/src/network",
+       "groestlcoin/src/psbt",
        "groestlcoin/src/util",
+       "hashes",
 ]
 
 hard_tabs = false

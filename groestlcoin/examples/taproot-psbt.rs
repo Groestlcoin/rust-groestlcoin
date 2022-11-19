@@ -78,6 +78,7 @@ const UTXO_3: P2trUtxo = P2trUtxo {
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
+use groestlcoin::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use groestlcoin::consensus::encode;
 use groestlcoin::constants::COIN_VALUE;
 use groestlcoin::hashes::hex::FromHex;
@@ -87,16 +88,13 @@ use groestlcoin::psbt::serialize::Serialize;
 use groestlcoin::psbt::{self, Input, Output, Psbt, PsbtSighashType};
 use groestlcoin::schnorr::TapTweak;
 use groestlcoin::secp256k1::{Message, Secp256k1};
-use groestlcoin::bip32::{
-    ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
-};
-use groestlcoin::sighash::{self, SighashCache, SchnorrSighashType};
+use groestlcoin::sighash::{self, SchnorrSighashType, SighashCache};
 use groestlcoin::util::taproot::{
     LeafVersion, TapLeafHash, TapSighashHash, TaprootBuilder, TaprootSpendInfo,
 };
 use groestlcoin::{
-    absolute, script, Address, Amount, OutPoint, SchnorrSig, Script,
-    Transaction, TxIn, TxOut, Txid, Witness, XOnlyPublicKey,
+    absolute, script, Address, Amount, OutPoint, SchnorrSig, Script, Transaction, TxIn, TxOut,
+    Txid, Witness, XOnlyPublicKey,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

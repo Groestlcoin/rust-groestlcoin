@@ -33,14 +33,14 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::str::FromStr;
 
-use groestlcoin::consensus::encode;
-use groestlcoin::hashes::hex::FromHex;
-use groestlcoin::locktime::absolute;
-use groestlcoin::secp256k1::{Secp256k1, Signing, Verification};
 use groestlcoin::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint, IntoDerivationPath,
 };
-use groestlcoin::util::psbt::{self, Input, Psbt, PsbtSighashType};
+use groestlcoin::consensus::encode;
+use groestlcoin::hashes::hex::FromHex;
+use groestlcoin::locktime::absolute;
+use groestlcoin::psbt::{self, Input, Psbt, PsbtSighashType};
+use groestlcoin::secp256k1::{Secp256k1, Signing, Verification};
 use groestlcoin::{
     Address, Amount, Network, OutPoint, PublicKey, Script, Sequence, Transaction, TxIn, TxOut,
     Txid, Witness,
@@ -236,7 +236,7 @@ impl WatchOnly {
     /// Finalizes the PSBT, in BIP174 parlance this is the 'Finalizer'.
     /// This is just an example. For a production-ready PSBT Finalizer, use [rust-miniscript](https://docs.rs/miniscript/latest/miniscript/psbt/trait.PsbtExt.html#tymethod.finalize)
     fn finalize_psbt(&self, mut psbt: Psbt) -> Result<Psbt> {
-        use groestlcoin::util::psbt::serialize::Serialize;
+        use groestlcoin::psbt::serialize::Serialize;
 
         if psbt.inputs.is_empty() {
             return Err(psbt::SignError::MissingInputUtxo.into());
