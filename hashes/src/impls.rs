@@ -23,7 +23,7 @@ use std::{error, io};
 #[cfg(not(feature = "std"))]
 use core2::{error, io};
 
-use crate::{Error, HashEngine, hex, sha1, sha256, sha512, ripemd160, siphash24, hmac};
+use crate::{Error, HashEngine, hex, sha1, sha256, sha512, ripemd160, siphash24, hmac, groestld};
 
 impl error::Error for Error {
     #[cfg(feature = "std")]
@@ -49,6 +49,15 @@ impl io::Write for sha1::HashEngine {
 }
 
 impl io::Write for sha256::HashEngine {
+    fn flush(&mut self) -> io::Result<()> { Ok(()) }
+
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.input(buf);
+        Ok(buf.len())
+    }
+}
+
+impl io::Write for groestld::HashEngine {
     fn flush(&mut self) -> io::Result<()> { Ok(()) }
 
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {

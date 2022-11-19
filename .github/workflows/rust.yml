@@ -105,8 +105,8 @@ jobs:
           override: true
           components: rust-src
           target: thumbv7m-none-eabi
-      - name: Run bitcoin/embedded
-        run: cd bitcoin/embedded && cargo run --target thumbv7m-none-eabi
+      - name: Run groestlcoin/embedded
+        run: cd groestlcoin/embedded && cargo run --target thumbv7m-none-eabi
       - name: Run hashes/embedded no alloc
         run: cd hashes/embedded && cargo run --target thumbv7m-none-eabi
       - name: Run hashes/embedded with alloc

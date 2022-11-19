@@ -1,22 +1,22 @@
-# .gitignore for rust-bitcoin repository workspace.
+# .gitignore for rust-groestlcoin repository workspace.
 
 # Lock files
 Cargo.lock
 internals/Cargo.lock
-bitcoin/Cargo.lock
+groestlcoin/Cargo.lock
 hashes/Cargo.lock
 
 # Build artifacts
 target
 internals/target
-bitcoin/target
+groestlcoin/target
 hashes/target
 
 # Test artifacts
-bitcoin/dep_test
+groestlcoin/dep_test
 
 # Fuzz artifacts
-bitcoin/fuzz/hfuzz_target
-bitcoin/fuzz/hfuzz_workspace
+groestlcoin/fuzz/hfuzz_target
+groestlcoin/fuzz/hfuzz_workspace
 hashes/fuzz/hfuzz_target
 hashes/fuzz/hfuzz_workspace

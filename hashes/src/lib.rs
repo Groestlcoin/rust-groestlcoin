@@ -24,8 +24,8 @@
 //! Hashing a single byte slice or a string:
 //!
 //! ```rust
-//! use bitcoin_hashes::sha256;
-//! use bitcoin_hashes::Hash;
+//! use groestlcoin_hashes::sha256;
+//! use groestlcoin_hashes::Hash;
 //!
 //! let bytes = [0u8; 5];
 //! let hash_of_bytes = sha256::Hash::hash(&bytes);
@@ -36,8 +36,8 @@
 //! Hashing content from a reader:
 //!
 //! ```rust
-//! use bitcoin_hashes::sha256;
-//! use bitcoin_hashes::Hash;
+//! use groestlcoin_hashes::sha256;
+//! use groestlcoin_hashes::Hash;
 //!
 //! #[cfg(std)]
 //! # fn main() -> std::io::Result<()> {
@@ -56,8 +56,8 @@
 //! Hashing content by [`std::io::Write`] on HashEngine:
 //!
 //! ```rust
-//! use bitcoin_hashes::sha256;
-//! use bitcoin_hashes::Hash;
+//! use groestlcoin_hashes::sha256;
+//! use groestlcoin_hashes::Hash;
 //! use std::io::Write;
 //!
 //! #[cfg(std)]
@@ -82,7 +82,7 @@
 #![deny(non_camel_case_types)]
 #![deny(non_snake_case)]
 #![deny(unused_mut)]
-#![deny(missing_docs)]
+//#![deny(missing_docs)]
 
 // Experimental features we need.
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -103,6 +103,7 @@
 #[cfg(all(not(feature = "alloc"), feature = "std"))] use std as alloc;
 #[cfg(feature = "serde")] pub extern crate serde;
 #[cfg(all(test,feature = "serde"))] extern crate serde_test;
+pub extern crate groestl;
 
 #[doc(hidden)]
 pub mod _export {
@@ -131,6 +132,7 @@ pub mod sha256t;
 pub mod siphash24;
 pub mod sha512;
 pub mod cmp;
+pub mod groestld;
 
 use core::{borrow, fmt, hash, ops};
 

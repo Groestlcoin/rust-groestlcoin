@@ -8,10 +8,9 @@ edition = "2018"
 [workspace]
 members = ["."]
 
-[dependencies.bitcoin_hashes]
+[dependencies.groestlcoin_hashes]
 path = "../.."
 features = ['schemars', 'serde']
-
 [dependencies]
 jsonschema-valid = "^0.4.0"
 serde = { version = "1.0", default-features = false}
