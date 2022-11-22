@@ -102,10 +102,10 @@ impl Network {
     /// ```
     pub fn magic(self) -> Magic { Magic::from(self) }
 
-    /// Converts a `Network` to its equivalent `bitcoind -chain` argument name.
+    /// Converts a `Network` to its equivalent `groestlcoind -chain` argument name.
     ///
     /// ```bash,no_run
-    /// $ bitcoin-23.0/bin/bitcoind --help | grep -C 3 '\-chain=<chain>'
+    /// $ groestlcoin-23.0/bin/groestlcoind --help | grep -C 3 '\-chain=<chain>'
     /// Chain selection options:
     ///
     /// -chain=<chain>
@@ -113,7 +113,7 @@ impl Network {
     /// ```
     pub fn to_core_arg(self) -> &'static str {
         match self {
-            Network::Bitcoin => "main",
+            Network::Groestlcoin => "main",
             Network::Testnet => "test",
             Network::Signet => "signet",
             Network::Regtest => "regtest",
