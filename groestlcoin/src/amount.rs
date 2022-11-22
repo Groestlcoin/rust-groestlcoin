@@ -1345,7 +1345,7 @@ pub mod serde {
         }
 
         pub mod opt {
-            //! Serialize and deserialize [Option<Amount>] as JSON numbers denominated in GRS.
+            //! Serialize and deserialize `Option<Amount>` as JSON numbers denominated in GRS.
             //! Use with `#[serde(default, with = "amount::serde::as_btc::opt")]`.
 
             use core::fmt;
