@@ -5,19 +5,11 @@
 //! This module provides support for taproot tagged hashes.
 //!
 
-<<<<<<<< HEAD:groestlcoin/src/util/taproot.rs
-use crate::prelude::*;
-use crate::io;
-use groestlcoin_internals::write_err;
-use secp256k1::{self, Secp256k1, Scalar};
-
-========
 use core::cmp::Reverse;
->>>>>>>> upstream/master:groestlcoin/src/taproot.rs
 use core::convert::TryFrom;
 use core::fmt;
 
-use bitcoin_internals::write_err;
+use groestlcoin_internals::write_err;
 use secp256k1::{self, Scalar, Secp256k1};
 
 use crate::consensus::Encodable;
