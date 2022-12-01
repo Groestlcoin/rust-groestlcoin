@@ -2,6 +2,7 @@
 ignore = [
        "groestlcoin/src/blockdata",
        "groestlcoin/src/consensus",
+       "groestlcoin/src/crypto",
        "groestlcoin/src/psbt",
        "groestlcoin/src/util",
        "hashes",

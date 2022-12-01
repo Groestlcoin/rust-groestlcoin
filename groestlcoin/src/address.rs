@@ -21,6 +21,12 @@
 //! // Generate pay-to-pubkey-hash address.
 //! let address = Address::p2pkh(&public_key, Network::Groestlcoin);
 //! ```
+//!
+//! # Note: creating a new address requires the rand feature flag
+//!
+//! ```toml
+//! groestlcoin = { version = "...", features = ["rand"] }
+//! ```
 
 use core::convert::TryFrom;
 use core::fmt;
@@ -37,15 +43,15 @@ use crate::blockdata::constants::{
 use crate::blockdata::opcodes::all::*;
 use crate::blockdata::script::Instruction;
 use crate::blockdata::{opcodes, script};
+use crate::crypto::key::PublicKey;
+use crate::crypto::schnorr::{TapTweak, TweakedPublicKey, UntweakedPublicKey};
 use crate::error::ParseIntError;
 use crate::hash_types::{PubkeyHash, ScriptHash};
 use crate::hashes::{sha256, Hash, HashEngine};
 use crate::network::constants::Network;
 use crate::prelude::*;
+use crate::taproot::TapBranchHash;
 use crate::util::base58;
-use crate::util::key::PublicKey;
-use crate::util::schnorr::{TapTweak, TweakedPublicKey, UntweakedPublicKey};
-use crate::util::taproot::TapBranchHash;
 
 /// Address error.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -877,10 +883,10 @@ mod tests {
     use secp256k1::XOnlyPublicKey;
 
     use super::*;
+    use crate::crypto::key::PublicKey;
     use crate::hashes::hex::{FromHex, ToHex};
     use crate::internal_macros::{hex, hex_into, hex_script};
     use crate::network::constants::Network::{Groestlcoin, Testnet};
-    use crate::util::key::PublicKey;
 
     fn roundtrips(addr: &Address) {
         assert_eq!(

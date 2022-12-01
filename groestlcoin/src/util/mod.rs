@@ -6,11 +6,7 @@
 //! Functions needed by all parts of the Groestlcoin library.
 //!
 
-pub mod key;
-pub mod ecdsa;
-pub mod schnorr;
 pub mod base58;
-pub mod taproot;
 
 /// The `misc` module was moved and re-named to `sign_message`.
 pub mod misc {

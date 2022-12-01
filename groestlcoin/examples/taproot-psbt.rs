@@ -83,18 +83,18 @@ use groestlcoin::consensus::encode;
 use groestlcoin::constants::COIN_VALUE;
 use groestlcoin::hashes::hex::FromHex;
 use groestlcoin::hashes::Hash;
+use groestlcoin::key::XOnlyPublicKey;
 use groestlcoin::opcodes::all::{OP_CHECKSIG, OP_CLTV, OP_DROP};
 use groestlcoin::psbt::serialize::Serialize;
 use groestlcoin::psbt::{self, Input, Output, Psbt, PsbtSighashType};
-use groestlcoin::schnorr::TapTweak;
+use groestlcoin::schnorr::{self, TapTweak};
 use groestlcoin::secp256k1::{Message, Secp256k1};
 use groestlcoin::sighash::{self, SchnorrSighashType, SighashCache};
-use groestlcoin::util::taproot::{
+use groestlcoin::taproot::{
     LeafVersion, TapLeafHash, TapSighashHash, TaprootBuilder, TaprootSpendInfo,
 };
 use groestlcoin::{
-    absolute, script, Address, Amount, OutPoint, SchnorrSig, Script, Transaction, TxIn, TxOut,
-    Txid, Witness, XOnlyPublicKey,
+    absolute, script, Address, Amount, OutPoint, Script, Transaction, TxIn, TxOut, Txid, Witness,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -734,7 +734,7 @@ fn sign_psbt_schnorr(
 
     let sig = secp.sign_schnorr(&Message::from_slice(&hash.into_inner()[..]).unwrap(), &keypair);
 
-    let final_signature = SchnorrSig { sig, hash_ty };
+    let final_signature = schnorr::Signature { sig, hash_ty };
 
     if let Some(lh) = leaf_hash {
         psbt_input.tap_script_sigs.insert((pubkey, lh), final_signature);
