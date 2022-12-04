@@ -2,7 +2,7 @@
 //!
 //! For remaining types see: ./serde_opcodes.rs
 //!
-//! If you find a type defined in `rust-bitcoin` that implements `Serialize` and does _not_ have a
+//! If you find a type defined in `rust-groestlcoin` that implements `Serialize` and does _not_ have a
 //! regression test please add it.
 //!
 //! Types/tests were found using, and are ordered by, the output of: `git grep -l Serialize`.
@@ -26,18 +26,18 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use bincode::serialize;
-use bitcoin::bip32::{ChildNumber, ExtendedPrivKey, ExtendedPubKey, KeySource};
-use bitcoin::blockdata::locktime::{absolute, relative};
-use bitcoin::blockdata::witness::Witness;
-use bitcoin::consensus::encode::deserialize;
-use bitcoin::hashes::hex::FromHex;
-use bitcoin::hashes::{hash160, ripemd160, sha256, sha256d, Hash};
-use bitcoin::psbt::raw::{self, Key, Pair, ProprietaryKey};
-use bitcoin::psbt::{Input, Output, Psbt, PsbtSighashType};
-use bitcoin::schnorr::{self, UntweakedPublicKey};
-use bitcoin::sighash::{EcdsaSighashType, SchnorrSighashType};
-use bitcoin::taproot::{ControlBlock, LeafVersion, TaprootBuilder, TaprootSpendInfo};
-use bitcoin::{
+use groestlcoin::bip32::{ChildNumber, ExtendedPrivKey, ExtendedPubKey, KeySource};
+use groestlcoin::blockdata::locktime::{absolute, relative};
+use groestlcoin::blockdata::witness::Witness;
+use groestlcoin::consensus::encode::deserialize;
+use groestlcoin::hashes::hex::FromHex;
+use groestlcoin::hashes::{hash160, ripemd160, sha256, sha256d, Hash};
+use groestlcoin::psbt::raw::{self, Key, Pair, ProprietaryKey};
+use groestlcoin::psbt::{Input, Output, Psbt, PsbtSighashType};
+use groestlcoin::schnorr::{self, UntweakedPublicKey};
+use groestlcoin::sighash::{EcdsaSighashType, SchnorrSighashType};
+use groestlcoin::taproot::{ControlBlock, LeafVersion, TaprootBuilder, TaprootSpendInfo};
+use groestlcoin::{
     ecdsa, Address, Block, Network, OutPoint, PrivateKey, PublicKey, Script, Sequence, Target,
     Transaction, TxIn, TxOut, Txid, Work,
 };
@@ -146,7 +146,7 @@ fn serde_regression_witness() {
 fn serde_regression_address() {
     let s = include_str!("data/serde/public_key_hex");
     let pk = PublicKey::from_str(s.trim()).unwrap();
-    let addr = Address::p2pkh(&pk, Network::Bitcoin);
+    let addr = Address::p2pkh(&pk, Network::Groestlcoin);
 
     let got = serialize(&addr).unwrap();
     let want = include_bytes!("data/serde/address_bincode") as &[_];
