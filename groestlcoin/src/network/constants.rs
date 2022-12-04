@@ -104,7 +104,7 @@ impl Network {
 
     /// Converts a `Network` to its equivalent `groestlcoind -chain` argument name.
     ///
-    /// ```bash,no_run
+    /// ```bash
     /// $ groestlcoin-23.0/bin/groestlcoind --help | grep -C 3 '\-chain=<chain>'
     /// Chain selection options:
     ///
