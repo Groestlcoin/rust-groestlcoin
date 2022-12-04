@@ -10,12 +10,8 @@
 use core::convert::TryInto;
 use core::{fmt, iter, slice, str};
 
-<<<<<<<< HEAD:groestlcoin/src/util/base58.rs
 use crate::hashes::{groestld, Hash};
-========
-use crate::hashes::{sha256d, Hash};
 use crate::prelude::*;
->>>>>>>> upstream/master:groestlcoin/src/base58.rs
 
 static BASE58_CHARS: &[u8] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -86,12 +82,8 @@ pub fn decode_check(data: &str) -> Result<Vec<u8>, Error> {
     }
     let check_start = ret.len() - 4;
 
-<<<<<<<< HEAD:groestlcoin/src/util/base58.rs
-    let hash_check = groestld::Hash::hash(&ret[..check_start])[..4].try_into().expect("4 byte slice");
-========
     let hash_check =
-        sha256d::Hash::hash(&ret[..check_start])[..4].try_into().expect("4 byte slice");
->>>>>>>> upstream/master:groestlcoin/src/base58.rs
+        groestld::Hash::hash(&ret[..check_start])[..4].try_into().expect("4 byte slice");
     let data_check = ret[check_start..].try_into().expect("4 byte slice");
 
     let expected = u32::from_le_bytes(hash_check);
@@ -122,17 +114,8 @@ pub fn check_encode_slice(data: &[u8]) -> String { encode_check(data) }
 ///
 /// The checksum is the first four bytes of the groestld of the data, concatenated onto the end.
 pub fn encode_check(data: &[u8]) -> String {
-<<<<<<<< HEAD:groestlcoin/src/util/base58.rs
     let checksum = groestld::Hash::hash(data);
-    encode_iter(
-        data.iter()
-            .cloned()
-            .chain(checksum[0..4].iter().cloned())
-    )
-========
-    let checksum = sha256d::Hash::hash(data);
     encode_iter(data.iter().cloned().chain(checksum[0..4].iter().cloned()))
->>>>>>>> upstream/master:groestlcoin/src/base58.rs
 }
 
 /// Encodes `data` as base58, including the checksum, into a formatter.
@@ -147,15 +130,8 @@ pub fn check_encode_slice_to_fmt(fmt: &mut fmt::Formatter, data: &[u8]) -> fmt::
 ///
 /// The checksum is the first four bytes of the groestld of the data, concatenated onto the end.
 pub fn encode_check_to_fmt(fmt: &mut fmt::Formatter, data: &[u8]) -> fmt::Result {
-<<<<<<<< HEAD:groestlcoin/src/util/base58.rs
     let checksum = groestld::Hash::hash(data);
-    let iter = data.iter()
-        .cloned()
-        .chain(checksum[0..4].iter().cloned());
-========
-    let checksum = sha256d::Hash::hash(data);
     let iter = data.iter().cloned().chain(checksum[0..4].iter().cloned());
->>>>>>>> upstream/master:groestlcoin/src/base58.rs
     format_iter(fmt, iter)
 }
 
@@ -312,24 +288,16 @@ mod tests {
         assert_eq!(&encode(&[0, 0, 0, 0, 13, 36][..]), "1111211");
 
         // Long input (>100 bytes => has to use heap)
-<<<<<<<< HEAD:groestlcoin/src/util/base58.rs
-        let res = encode("GroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestl\
-        coinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoin".as_bytes());
-        let exp = "2hXiLBbH9kmBoA9HWRRpWuHu29Hg49ApfMGzw6CXJkHn2sVUFjm8qF8FQQm29jFNXHjUXs59Q\
-        K9gk2MrWjiLokRHQ2t71bY5HjQUmutR2rTU91sc9gZjixxegH45Zs19PkCweG4bshVEm3XvqSDnELis8yjxkb\
-        aeV3DFCuYA69mxwtsqZpJxqWCSbu9vPBAoX5bWKeF5bRXNSd9tp4F7GMWCmvQqC2fxpVqk78YkxCs6H4EAJncp\
-        sNxAxCwrLQ164Pzn2y5zupcmLmwEf1SRmN997q5J3rU3ytRf3ot1iuymf";
-========
         let res = encode(
-            "BitcoinBitcoinBitcoinBitcoinBitcoinBitcoinBitcoinBitcoinBitcoinBit\
-        coinBitcoinBitcoinBitcoinBitcoinBitcoinBitcoinBitcoinBitcoinBitcoinBitcoin"
+            "GroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestl\
+            coinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoin"
                 .as_bytes(),
         );
         let exp =
-            "ZqC5ZdfpZRi7fjA8hbhX5pEE96MdH9hEaC1YouxscPtbJF16qVWksHWR4wwvx7MotFcs2ChbJqK8KJ9X\
-        wZznwWn1JFDhhTmGo9v6GjAVikzCsBWZehu7bm22xL8b5zBR5AsBygYRwbFJsNwNkjpyFuDKwmsUTKvkULCvucPJrN5\
-        QUdxpGakhqkZFL7RU4yT";
->>>>>>>> upstream/master:groestlcoin/src/base58.rs
+            "2hXiLBbH9kmBoA9HWRRpWuHu29Hg49ApfMGzw6CXJkHn2sVUFjm8qF8FQQm29jFNXHjUXs59Q\
+            K9gk2MrWjiLokRHQ2t71bY5HjQUmutR2rTU91sc9gZjixxegH45Zs19PkCweG4bshVEm3XvqSDnELis8yjxkb\
+            aeV3DFCuYA69mxwtsqZpJxqWCSbu9vPBAoX5bWKeF5bRXNSd9tp4F7GMWCmvQqC2fxpVqk78YkxCs6H4EAJncp\
+            sNxAxCwrLQ164Pzn2y5zupcmLmwEf1SRmN997q5J3rU3ytRf3ot1iuymf";
         assert_eq!(&res, exp);
 
         // Addresses
@@ -350,15 +318,10 @@ mod tests {
         assert_eq!(decode("111211").ok(), Some(vec![0u8, 0, 0, 13, 36]));
 
         // Addresses
-<<<<<<<< HEAD:groestlcoin/src/util/base58.rs
-        assert_eq!(decode_check("Fsq2GUc7R9f3JSfv3ma5JwkGPaFm3uH23D").ok(),
-                   Some(Vec::from_hex("24f8917303bfa8ef24f292e8fa1419b20460ba064d").unwrap()));
-========
         assert_eq!(
-            decode_check("1PfJpZsjreyVrqeoAfabrRwwjQyoSQMmHH").ok(),
-            Some(Vec::from_hex("00f8917303bfa8ef24f292e8fa1419b20460ba064d").unwrap())
+            decode_check("Fsq2GUc7R9f3JSfv3ma5JwkGPaFm3uH23D").ok(),
+            Some(Vec::from_hex("24f8917303bfa8ef24f292e8fa1419b20460ba064d").unwrap())
         );
->>>>>>>> upstream/master:groestlcoin/src/base58.rs
         // Non Base58 char.
         assert_eq!(decode("¢").unwrap_err(), Error::BadByte(194));
     }
