@@ -120,10 +120,10 @@ impl Network {
         }
     }
 
-    /// Converts a `bitcoind -chain` argument name to its equivalent `Network`.
+    /// Converts a `groestlcoind -chain` argument name to its equivalent `Network`.
     ///
     /// ```bash
-    /// $ bitcoin-23.0/bin/bitcoind --help | grep -C 3 '\-chain=<chain>'
+    /// $ groestlcoin-23.0/bin/groestlcoind --help | grep -C 3 '\-chain=<chain>'
     /// Chain selection options:
     ///
     /// -chain=<chain>
@@ -133,9 +133,9 @@ impl Network {
         use Network::*;
 
         let network = match core_arg {
-           "main" => Bitcoin,
+           "main" => Groestlcoin,
            "test" => Testnet,
-           "signet" => Signet, 
+           "signet" => Signet,
            "regtest" => Regtest,
            _ => return Err(ParseNetworkError(core_arg.to_owned())),
         };
@@ -603,7 +603,7 @@ mod tests {
     #[test]
     fn from_to_core_arg() {
         let expected_pairs = [
-            (Network::Bitcoin, "main"),
+            (Network::Groestlcoin, "main"),
             (Network::Testnet, "test"),
             (Network::Regtest, "regtest"),
             (Network::Signet, "signet"),
