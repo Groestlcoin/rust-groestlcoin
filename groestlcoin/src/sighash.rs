@@ -12,6 +12,7 @@ use core::borrow::Borrow;
 use core::ops::{Deref, DerefMut};
 use core::{fmt, str};
 
+use crate::{io, Script, ScriptBuf, Transaction, TxIn, TxOut, Sequence, Sighash};
 use crate::blockdata::transaction::EncodeSigningDataResult;
 use crate::blockdata::witness::Witness;
 use crate::consensus::{encode, Encodable};
@@ -19,7 +20,6 @@ use crate::error::impl_std_error;
 use crate::hashes::{sha256, Hash};
 use crate::prelude::*;
 use crate::taproot::{LeafVersion, TapLeafHash, TapSighashHash, TAPROOT_ANNEX_PREFIX};
-use crate::{io, Script, Sequence, Sighash, Transaction, TxIn, TxOut};
 
 /// Used for signature hash for invalid use of SIGHASH_SINGLE.
 #[rustfmt::skip]
@@ -824,7 +824,7 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
             if anyone_can_pay {
                 tx.input = vec![TxIn {
                     previous_output: self_.input[input_index].previous_output,
-                    script_sig: script_pubkey.clone(),
+                    script_sig: script_pubkey.to_owned(),
                     sequence: self_.input[input_index].sequence,
                     witness: Witness::default(),
                 }];
@@ -834,9 +834,9 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
                     tx.input.push(TxIn {
                         previous_output: input.previous_output,
                         script_sig: if n == input_index {
-                            script_pubkey.clone()
+                            script_pubkey.to_owned()
                         } else {
-                            Script::new()
+                            ScriptBuf::new()
                         },
                         sequence: if n != input_index
                             && (sighash == EcdsaSighashType::Single
@@ -1001,13 +1001,13 @@ impl<R: DerefMut<Target = Transaction>> SighashCache<R> {
     /// use groestlcoin::{absolute, Transaction, Script};
     /// use groestlcoin::sighash::{EcdsaSighashType, SighashCache};
     ///
-    /// let mut tx_to_sign = Transaction { version: 2, lock_time: absolute::PackedLockTime::ZERO, input: Vec::new(), output: Vec::new() };
+    /// let mut tx_to_sign = Transaction { version: 2, lock_time: absolute::LockTime::ZERO, input: Vec::new(), output: Vec::new() };
     /// let input_count = tx_to_sign.input.len();
     ///
     /// let mut sig_hasher = SighashCache::new(&mut tx_to_sign);
     /// for inp in 0..input_count {
-    ///     let prevout_script = Script::new();
-    ///     let _sighash = sig_hasher.segwit_signature_hash(inp, &prevout_script, 42, EcdsaSighashType::All);
+    ///     let prevout_script = Script::empty();
+    ///     let _sighash = sig_hasher.segwit_signature_hash(inp, prevout_script, 42, EcdsaSighashType::All);
     ///     // ... sign the sighash
     ///     sig_hasher.witness_mut(inp).unwrap().push(&Vec::new());
     /// }
@@ -1075,11 +1075,11 @@ mod tests {
         // We need a tx with more inputs than outputs.
         let tx = Transaction {
             version: 1,
-            lock_time: absolute::PackedLockTime::ZERO,
+            lock_time: absolute::LockTime::ZERO,
             input: vec![TxIn::default(), TxIn::default()],
             output: vec![TxOut::default()],
         };
-        let script = Script::new();
+        let script = ScriptBuf::new();
         let cache = SighashCache::new(&tx);
 
         let got = cache.legacy_signature_hash(1, &script, SIGHASH_SINGLE).expect("sighash");
@@ -1103,7 +1103,7 @@ mod tests {
             expected_result: &str,
         ) {
             let tx: Transaction = deserialize(&Vec::from_hex(tx).unwrap()[..]).unwrap();
-            let script = Script::from(Vec::from_hex(script).unwrap());
+            let script = ScriptBuf::from(Vec::from_hex(script).unwrap());
             let mut raw_expected = Vec::from_hex(expected_result).unwrap();
             raw_expected.reverse();
             let want = Sighash::from_slice(&raw_expected[..]).unwrap();
@@ -1264,7 +1264,7 @@ mod tests {
     fn test_sighash_errors() {
         let dumb_tx = Transaction {
             version: 0,
-            lock_time: absolute::PackedLockTime::ZERO,
+            lock_time: absolute::LockTime::ZERO,
             input: vec![TxIn::default()],
             output: vec![],
         };
@@ -1309,7 +1309,7 @@ mod tests {
             })
         );
         assert_eq!(
-            c.legacy_signature_hash(10, &Script::default(), 0u32),
+            c.legacy_signature_hash(10, Script::empty(), 0u32),
             Err(Error::IndexOutOfInputsBounds {
                 index: 10,
                 inputs_size: 1
@@ -1350,7 +1350,7 @@ mod tests {
 
         let leaf_hash = match (script_hex, script_leaf_hash) {
             (Some(script_hex), _) => {
-                let script_inner = Script::from_hex(script_hex).unwrap();
+                let script_inner = ScriptBuf::from_hex(script_hex).unwrap();
                 Some(ScriptPath::with_defaults(&script_inner).leaf_hash())
             }
             (_, Some(script_leaf_hash)) => Some(TapLeafHash::from_hex(script_leaf_hash).unwrap()),
@@ -1379,24 +1379,32 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn bip_341_sighash_tests() {
-        fn sighash_deser_numeric<'de, D>(deserializer: D) -> Result<SchnorrSighashType, D::Error> where D: actual_serde::Deserializer<'de> {
+        fn sighash_deser_numeric<'de, D>(deserializer: D) -> Result<SchnorrSighashType, D::Error>
+        where
+            D: actual_serde::Deserializer<'de>,
+        {
             use actual_serde::de::{Deserialize, Error, Unexpected};
 
             let raw = u8::deserialize(deserializer)?;
-            SchnorrSighashType::from_consensus_u8(raw)
-                .map_err(|_| D::Error::invalid_value(Unexpected::Unsigned(raw.into()), &"number in range 0-3 or 0x81-0x83"))
+            SchnorrSighashType::from_consensus_u8(raw).map_err(|_| {
+                D::Error::invalid_value(
+                    Unexpected::Unsigned(raw.into()),
+                    &"number in range 0-3 or 0x81-0x83",
+                )
+            })
         }
-            
-        use crate::hashes::hex::ToHex;
-        use crate::taproot::{TapTweakHash, TapBranchHash};
+
         use secp256k1::{self, SecretKey, XOnlyPublicKey};
+
         use crate::consensus::serde as con_serde;
+        use crate::hashes::hex::ToHex;
+        use crate::taproot::{TapBranchHash, TapTweakHash};
 
         #[derive(serde::Deserialize)]
         #[serde(crate = "actual_serde")]
         struct UtxoSpent {
             #[serde(rename = "scriptPubKey")]
-            script_pubkey: Script,
+            script_pubkey: ScriptBuf,
             #[serde(rename = "amountSats")]
             value: u64,
         }
@@ -1480,14 +1488,18 @@ mod tests {
         }
 
         let json_str = include_str!("../tests/data/bip341_tests.json");
-        let mut data = serde_json::from_str::<TestData>(json_str).expect("JSON was not well-formatted");
+        let mut data =
+            serde_json::from_str::<TestData>(json_str).expect("JSON was not well-formatted");
 
         assert_eq!(data.version, 1u64);
         let secp = &secp256k1::Secp256k1::new();
         let key_path = data.key_path_spending.remove(0);
 
         let raw_unsigned_tx = key_path.given.raw_unsigned_tx;
-        let utxos = key_path.given.utxos_spent.into_iter()
+        let utxos = key_path
+            .given
+            .utxos_spent
+            .into_iter()
             .map(|txo| TxOut { value: txo.value, script_pubkey: txo.script_pubkey })
             .collect::<Vec<_>>();
 
@@ -1594,7 +1606,7 @@ mod tests {
         }
     }
 
-    fn p2pkh_hex(pk: &str) -> Script {
+    fn p2pkh_hex(pk: &str) -> ScriptBuf {
         let pk: PublicKey = PublicKey::from_str(pk).unwrap();
         Address::p2pkh(&pk, Network::Groestlcoin).script_pubkey()
     }

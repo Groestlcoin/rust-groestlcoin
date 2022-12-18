@@ -20,6 +20,7 @@ serde = ["actual-serde", "groestlcoin_hashes/serde", "secp256k1/serde"]
 secp-lowmemory = ["secp256k1/lowmemory"]
 secp-recovery = ["secp256k1/recovery"]
 groestlcoinconsensus-std = ["groestlcoinconsensus/std", "std"]
+rust_v_1_53 = []
 
 # At least one of std, no-std must be enabled.
 #

@@ -16,7 +16,7 @@ use crate::prelude::*;
 
 use crate::io;
 use crate::string::FromHexStr;
-use core::{fmt, str, default::Default};
+use core::{cmp, fmt, str, default::Default};
 use core::convert::TryFrom;
 
 use groestlcoin_internals::write_err;
@@ -26,7 +26,7 @@ use crate::hashes::hex::FromHex;
 
 use crate::blockdata::constants::WITNESS_SCALE_FACTOR;
 #[cfg(feature="groestlcoinconsensus")] use crate::blockdata::script;
-use crate::blockdata::script::Script;
+use crate::blockdata::script::{ScriptBuf, Script};
 use crate::blockdata::witness::Witness;
 use crate::blockdata::locktime::absolute::{self, Height, Time};
 use crate::blockdata::locktime::relative;
@@ -198,7 +198,7 @@ pub struct TxIn {
     pub previous_output: OutPoint,
     /// The script which pushes values on the stack which will cause
     /// the referenced output's script to be accepted.
-    pub script_sig: Script,
+    pub script_sig: ScriptBuf,
     /// The sequence number, which suggests to miners which of two
     /// conflicting transactions should be preferred, or 0xFFFFFFFF
     /// to ignore this feature. This is generally never used since
@@ -225,13 +225,45 @@ impl TxIn {
     pub fn enables_lock_time(&self) -> bool {
         self.sequence != Sequence::MAX
     }
+
+    /// The weight of the TxIn when it's included in a legacy transaction (i.e., a transaction
+    /// having only legacy inputs).
+    ///
+    /// The witness weight is ignored here even when the witness is non-empty.
+    /// If you want the witness to be taken into account, use `TxIn::segwit_weight` instead.
+    ///
+    /// Keep in mind that when adding a TxIn to a transaction, the total weight of the transaction
+    /// might increase more than `TxIn::legacy_weight`. This happens when the new input added causes
+    /// the input length `VarInt` to increase its encoding length.
+    pub fn legacy_weight(&self) -> usize {
+        let script_sig_size = self.script_sig.len();
+        // Size in vbytes:
+        // previous_output (36) + script_sig varint len + script_sig push + sequence (4)
+        // We then multiply by 4 to convert to WU
+        (36 + VarInt(script_sig_size as u64).len() + script_sig_size + 4) * 4
+    }
+
+    /// The weight of the TxIn when it's included in a segwit transaction (i.e., a transcation
+    /// having at least one segwit input).
+    ///
+    /// This always takes into account the witness, even when empty, in which
+    /// case 1WU for the witness length varint (`00`) is included.
+    ///
+    /// Keep in mind that when adding a TxIn to a transaction, the total weight of the transaction
+    /// might increase more than `TxIn::segwit_weight`. This happens when:
+    /// - the new input added causes the input length `VarInt` to increase its encoding length
+    /// - the new input is the first segwit input added - this will add an additional 2WU to the
+    /// transaction weight to take into account the segwit marker
+    pub fn segwit_weight(&self) -> usize {
+        self.legacy_weight() + self.witness.serialized_len()
+    }
 }
 
 impl Default for TxIn {
     fn default() -> TxIn {
         TxIn {
             previous_output: OutPoint::default(),
-            script_sig: Script::new(),
+            script_sig: ScriptBuf::new(),
             sequence: Sequence::MAX,
             witness: Witness::default(),
         }
@@ -466,13 +498,28 @@ pub struct TxOut {
     /// The value of the output, in satoshis.
     pub value: u64,
     /// The script which must be satisfied for the output to be spent.
-    pub script_pubkey: Script
+    pub script_pubkey: ScriptBuf
+}
+
+impl TxOut {
+    /// The weight of the txout in witness units
+    ///
+    /// Keep in mind that when adding a TxOut to a transaction, the total weight of the transaction
+    /// might increase more than `TxOut::weight`. This happens when the new output added causes
+    /// the output length `VarInt` to increase its encoding length.
+    pub fn weight(&self) -> usize {
+        let script_len = self.script_pubkey.len();
+        // In vbytes:
+        // value (8) + script varint len + script push
+        // Then we multiply by 4 to convert to WU
+        (8 + VarInt(script_len as u64).len() + script_len) * 4
+    }
 }
 
 // This is used as a "null txout" in consensus signing code.
 impl Default for TxOut {
     fn default() -> TxOut {
-        TxOut { value: 0xffffffffffffffff, script_pubkey: Script::new() }
+        TxOut { value: 0xffffffffffffffff, script_pubkey: ScriptBuf::new() }
     }
 }
 
@@ -505,7 +552,7 @@ impl<E> EncodeSigningDataResult<E> {
     /// # use groestlcoin_hashes::{Hash, hex::FromHex};
     /// # let mut writer = Sighash::engine();
     /// # let input_index = 0;
-    /// # let script_pubkey = groestlcoin::Script::new();
+    /// # let script_pubkey = groestlcoin::ScriptBuf::new();
     /// # let sighash_u32 = 0u32;
     /// # const SOME_TX: &'static str = "0100000001a15d57094aa7a21a28cb20b59aab8fc7d1149a3bdbcddba9c622e4f5f6a99ece010000006c493046022100f93bb0e7d8db7bd46e40132d1f8242026e045f03a0efe71bbb8e3f475e970d790221009337cd7f1f929f00cc6ff01f03729b069a7c21b59b1736ddfee5db5946c5da8c0121033b9b137ee87d5a812d6f506efdd37f0affa7ffc310711c06c7f3e097c9447c52ffffffff0100e1f505000000001976a9140389035a9225b3839e2bbf32d826a1e222031fd888ac00000000";
     /// # let raw_tx = Vec::from_hex(SOME_TX).unwrap();
@@ -576,7 +623,20 @@ impl<E> EncodeSigningDataResult<E> {
 ///
 /// We therefore deviate from the spec by always using the Segwit witness encoding
 /// for 0-input transactions, which results in unambiguously parseable transactions.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+///
+/// ### A note on ordering
+///
+/// This type implements `Ord`, even though it contains a locktime, which is not
+/// itself `Ord`. This was done to simplify applications that may need to hold
+/// transactions inside a sorted container. We have ordered the locktimes based
+/// on their representation as a `u32`, which is not a semantically meaningful
+/// order, and therefore the ordering on `Transaction` itself is not semantically
+/// meaningful either.
+///
+/// The ordering is, however, consistent with the ordering present in this library
+/// before this change, so users should not notice any breakage (here) when
+/// transitioning from 0.29 to 0.30.
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(crate = "actual_serde"))]
 pub struct Transaction {
@@ -588,11 +648,25 @@ pub struct Transaction {
     ///
     /// * [BIP-65 OP_CHECKLOCKTIMEVERIFY](https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki)
     /// * [BIP-113 Median time-past as endpoint for lock-time calculations](https://github.com/bitcoin/bips/blob/master/bip-0113.mediawiki)
-    pub lock_time: absolute::PackedLockTime,
+    pub lock_time: absolute::LockTime,
     /// List of transaction inputs.
     pub input: Vec<TxIn>,
     /// List of transaction outputs.
     pub output: Vec<TxOut>,
+}
+
+impl cmp::PartialOrd for Transaction {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl cmp::Ord for Transaction {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.version.cmp(&other.version)
+            .then(self.lock_time.to_consensus_u32().cmp(&other.lock_time.to_consensus_u32()))
+            .then(self.input.cmp(&other.input))
+            .then(self.output.cmp(&other.output))
+    }
 }
 
 impl Transaction {
@@ -604,7 +678,7 @@ impl Transaction {
         let cloned_tx = Transaction {
             version: self.version,
             lock_time: self.lock_time,
-            input: self.input.iter().map(|txin| TxIn { script_sig: Script::new(), witness: Witness::default(), .. *txin }).collect(),
+            input: self.input.iter().map(|txin| TxIn { script_sig: ScriptBuf::new(), witness: Witness::default(), .. *txin }).collect(),
             output: self.output.clone(),
         };
         cloned_tx.txid().into()
@@ -892,7 +966,7 @@ impl Transaction {
         if !self.is_lock_time_enabled() {
             return true;
         }
-        absolute::LockTime::from(self.lock_time).is_satisfied_by(height, time)
+        self.lock_time.is_satisfied_by(height, time)
     }
 
     /// Returns `true` if this transactions nLockTime is enabled ([BIP-65]).
@@ -1055,7 +1129,7 @@ mod tests {
     use core::str::FromStr;
 
     use crate::blockdata::constants::WITNESS_SCALE_FACTOR;
-    use crate::blockdata::script::Script;
+    use crate::blockdata::script::ScriptBuf;
     use crate::blockdata::locktime::absolute;
     use crate::consensus::encode::serialize;
     use crate::consensus::encode::deserialize;
@@ -1121,7 +1195,7 @@ mod tests {
     fn test_txin_default() {
         let txin = TxIn::default();
         assert_eq!(txin.previous_output, OutPoint::default());
-        assert_eq!(txin.script_sig, Script::new());
+        assert_eq!(txin.script_sig, ScriptBuf::new());
         assert_eq!(txin.sequence, Sequence::from_consensus(0xFFFFFFFF));
         assert_eq!(txin.previous_output, OutPoint::default());
         assert_eq!(txin.witness.len(), 0);
@@ -1155,7 +1229,7 @@ mod tests {
                    "ce9ea9f6f5e422c6a9dbcddb3b9a14d1c78fab9ab520cb281aa2a74a09575da1".to_string());
         assert_eq!(realtx.input[0].previous_output.vout, 1);
         assert_eq!(realtx.output.len(), 1);
-        assert_eq!(realtx.lock_time, absolute::PackedLockTime::ZERO);
+        assert_eq!(realtx.lock_time, absolute::LockTime::ZERO);
 
         assert_eq!(format!("{:x}", realtx.txid()),
                    "196aa0d232576dd6809e4e2d9c1110f805abd9b5a22e6cf1d8a4fff3f9b503ea".to_string());
@@ -1189,7 +1263,7 @@ mod tests {
                    "7cac3cf9a112cf04901a51d605058615d56ffe6d04b45270e89d1720ea955859".to_string());
         assert_eq!(realtx.input[0].previous_output.vout, 1);
         assert_eq!(realtx.output.len(), 1);
-        assert_eq!(realtx.lock_time, absolute::PackedLockTime::ZERO);
+        assert_eq!(realtx.lock_time, absolute::LockTime::ZERO);
 
         assert_eq!(format!("{:x}", realtx.txid()),
                    "4ca6adf8b9ae5b25f002b8b6ecf67ce9afd337132debe65c65c27236ad64c975".to_string());
@@ -1270,10 +1344,10 @@ mod tests {
         let old_ntxid = tx.ntxid();
         assert_eq!(format!("{:x}", old_ntxid), "b7e72a7f5c2d72032bb11bcc46da00da904887d45fbfe5d17945fe5fb1d54131");
         // changing sigs does not affect it
-        tx.input[0].script_sig = Script::new();
+        tx.input[0].script_sig = ScriptBuf::new();
         assert_eq!(old_ntxid, tx.ntxid());
         // changing pks does
-        tx.output[0].script_pubkey = Script::new();
+        tx.output[0].script_pubkey = ScriptBuf::new();
         assert!(old_ntxid != tx.ntxid());
     }
 
@@ -1487,6 +1561,50 @@ mod tests {
         let hex = "0xzb93";
         let result = Sequence::from_hex_str(hex);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn txin_txout_weight_tests() {
+        // [(is_segwit, tx_hex)]
+        let txs = [
+                // one segwit input (P2WPKH)
+                (true, "020000000001018a763b78d3e17acea0625bf9e52b0dc1beb2241b2502185348ba8ff4a253176e0100000000ffffffff0280d725000000000017a914c07ed639bd46bf7087f2ae1dfde63b815a5f8b488767fda20300000000160014869ec8520fa2801c8a01bfdd2e82b19833cd0daf02473044022016243edad96b18c78b545325aaff80131689f681079fb107a67018cb7fb7830e02205520dae761d89728f73f1a7182157f6b5aecf653525855adb7ccb998c8e6143b012103b9489bde92afbcfa85129a82ffa512897105d1a27ad9806bded27e0532fc84e700000000"),
+                // one segwit input (P2WSH)
+                (true, "01000000000101a3ccad197118a2d4975fadc47b90eacfdeaf8268adfdf10ed3b4c3b7e1ad14530300000000ffffffff0200cc5501000000001976a91428ec6f21f4727bff84bb844e9697366feeb69f4d88aca2a5100d00000000220020701a8d401c84fb13e6baf169d59684e17abd9fa216c8cc5b9fc63d622ff8c58d04004730440220548f11130353b3a8f943d2f14260345fc7c20bde91704c9f1cbb5456355078cd0220383ed4ed39b079b618bcb279bbc1f2ca18cb028c4641cb522c9c5868c52a0dc20147304402203c332ecccb3181ca82c0600520ee51fee80d3b4a6ab110945e59475ec71e44ac0220679a11f3ca9993b04ccebda3c834876f353b065bb08f50076b25f5bb93c72ae1016952210375e00eb72e29da82b89367947f29ef34afb75e8654f6ea368e0acdfd92976b7c2103a1b26313f430c4b15bb1fdce663207659d8cac749a0e53d70eff01874496feff2103c96d495bfdd5ba4145e3e046fee45e84a8a48ad05bd8dbb395c011a32cf9f88053ae00000000"),
+                // one segwit input (P2WPKH) and two legacy inputs (P2PKH)
+                (true, "010000000001036b6b6ac7e34e97c53c1cc74c99c7948af2e6aac75d8778004ae458d813456764000000006a473044022001deec7d9075109306320b3754188f81a8236d0d232b44bc69f8309115638b8f02204e17a5194a519cf994d0afeea1268740bdc10616b031a521113681cc415e815c012103488d3272a9fad78ee887f0684cb8ebcfc06d0945e1401d002e590c7338b163feffffffffc75bd7aa6424aee972789ec28ba181254ee6d8311b058d165bd045154d7660b0000000006b483045022100c8641bcbee3e4c47a00417875015d8c5d5ea918fb7e96f18c6ffe51bc555b401022074e2c46f5b1109cd79e39a9aa203eadd1d75356415e51d80928a5fb5feb0efee0121033504b4c6dfc3a5daaf7c425aead4c2dbbe4e7387ce8e6be2648805939ecf7054ffffffff494df3b205cd9430a26f8e8c0dc0bb80496fbc555a524d6ea307724bc7e60eee0100000000ffffffff026d861500000000001976a9145c54ed1360072ebaf56e87693b88482d2c6a101588ace407000000000000160014761e31e2629c6e11936f2f9888179d60a5d4c1f900000247304402201fa38a67a63e58b67b6cfffd02f59121ca1c8a1b22e1efe2573ae7e4b4f06c2b022002b9b431b58f6e36b3334fb14eaecee7d2f06967a77ef50d8d5f90dda1057f0c01210257dc6ce3b1100903306f518ee8fa113d778e403f118c080b50ce079fba40e09a00000000"),
+                // three legacy inputs (P2PKH)
+                (false, "0100000003e4d7be4314204a239d8e00691128dca7927e19a7339c7948bde56f669d27d797010000006b483045022100b988a858e2982e2daaf0755b37ad46775d6132057934877a5badc91dee2f66ff022020b967c1a2f0916007662ec609987e951baafa6d4fda23faaad70715611d6a2501210254a2dccd8c8832d4677dc6f0e562eaaa5d11feb9f1de2c50a33832e7c6190796ffffffff9e22eb1b3f24c260187d716a8a6c2a7efb5af14a30a4792a6eeac3643172379c000000006a47304402207df07f0cd30dca2cf7bed7686fa78d8a37fe9c2254dfdca2befed54e06b779790220684417b8ff9f0f6b480546a9e90ecee86a625b3ea1e4ca29b080da6bd6c5f67e01210254a2dccd8c8832d4677dc6f0e562eaaa5d11feb9f1de2c50a33832e7c6190796ffffffff1123df3bfb503b59769731da103d4371bc029f57979ebce68067768b958091a1000000006a47304402207a016023c2b0c4db9a7d4f9232fcec2193c2f119a69125ad5bcedcba56dd525e02206a734b3a321286c896759ac98ebfd9d808df47f1ce1fbfbe949891cc3134294701210254a2dccd8c8832d4677dc6f0e562eaaa5d11feb9f1de2c50a33832e7c6190796ffffffff0200c2eb0b000000001976a914e5eb3e05efad136b1405f5c2f9adb14e15a35bb488ac88cfff1b000000001976a9144846db516db3130b7a3c92253599edec6bc9630b88ac00000000"),
+                // one segwit input (P2TR)
+                (true, "01000000000101b5cee87f1a60915c38bb0bc26aaf2b67be2b890bbc54bb4be1e40272e0d2fe0b0000000000ffffffff025529000000000000225120106daad8a5cb2e6fc74783714273bad554a148ca2d054e7a19250e9935366f3033760000000000002200205e6d83c44f57484fd2ef2a62b6d36cdcd6b3e06b661e33fd65588a28ad0dbe060141df9d1bfce71f90d68bf9e9461910b3716466bfe035c7dbabaa7791383af6c7ef405a3a1f481488a91d33cd90b098d13cb904323a3e215523aceaa04e1bb35cdb0100000000"),
+                // one legacy input (P2PKH)
+                (false, "0100000001c336895d9fa674f8b1e294fd006b1ac8266939161600e04788c515089991b50a030000006a47304402204213769e823984b31dcb7104f2c99279e74249eacd4246dabcf2575f85b365aa02200c3ee89c84344ae326b637101a92448664a8d39a009c8ad5d147c752cbe112970121028b1b44b4903c9103c07d5a23e3c7cf7aeb0ba45ddbd2cfdce469ab197381f195fdffffff040000000000000000536a4c5058325bb7b7251cf9e36cac35d691bd37431eeea426d42cbdecca4db20794f9a4030e6cb5211fabf887642bcad98c9994430facb712da8ae5e12c9ae5ff314127d33665000bb26c0067000bb0bf00322a50c300000000000017a9145ca04fdc0a6d2f4e3f67cfeb97e438bb6287725f8750c30000000000001976a91423086a767de0143523e818d4273ddfe6d9e4bbcc88acc8465003000000001976a914c95cbacc416f757c65c942f9b6b8a20038b9b12988ac00000000"),
+            ];
+
+        let empty_transaction_size = Transaction {
+            version: 0,
+            lock_time: absolute::LockTime::ZERO,
+            input: vec![],
+            output: vec![],
+        }
+        .weight();
+
+        for (is_segwit, tx) in &txs {
+            let txin_weight = if *is_segwit {
+                TxIn::segwit_weight
+            } else {
+                TxIn::legacy_weight
+            };
+            let tx: Transaction = deserialize(Vec::from_hex(tx).unwrap().as_slice()).unwrap();
+            // The empty tx size doesn't include the segwit marker (`0001`), so, in case of segwit txs,
+            // we have to manually add it ourselves
+            let segwit_marker_size = if *is_segwit { 2 } else { 0 };
+            let calculated_size = empty_transaction_size
+                + segwit_marker_size
+                + tx.input.iter().fold(0, |sum, i| sum + txin_weight(i))
+                + tx.output.iter().fold(0, |sum, o| sum + o.weight());
+            assert_eq!(calculated_size, tx.weight());
+        }
     }
 }
 

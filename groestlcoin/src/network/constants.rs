@@ -133,11 +133,11 @@ impl Network {
         use Network::*;
 
         let network = match core_arg {
-           "main" => Groestlcoin,
-           "test" => Testnet,
-           "signet" => Signet,
-           "regtest" => Regtest,
-           _ => return Err(ParseNetworkError(core_arg.to_owned())),
+            "main" => Groestlcoin,
+            "test" => Testnet,
+            "signet" => Signet,
+            "regtest" => Regtest,
+            _ => return Err(ParseNetworkError(core_arg.to_owned())),
         };
         Ok(network)
     }

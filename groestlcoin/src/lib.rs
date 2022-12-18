@@ -59,7 +59,6 @@ compile_error!(
 #[cfg(bench)]
 extern crate test;
 
-#[cfg(feature = "no-std")]
 #[macro_use]
 extern crate alloc;
 
@@ -111,26 +110,24 @@ pub mod string;
 pub mod taproot;
 pub mod util;
 
-#[cfg(feature = "std")]
-use std::io;
-
-#[cfg(not(feature = "std"))]
-use core2::io;
-
 // May depend on crate features and we don't want to bother with it
 #[allow(unused)]
 #[cfg(feature = "std")]
 use std::error::Error as StdError;
+#[cfg(feature = "std")]
+use std::io;
 
 #[allow(unused)]
 #[cfg(not(feature = "std"))]
 use core2::error::Error as StdError;
+#[cfg(not(feature = "std"))]
+use core2::io;
 
 pub use crate::address::{Address, AddressType};
 pub use crate::amount::{Amount, Denomination, SignedAmount};
 pub use crate::blockdata::block::{self, Block};
 pub use crate::blockdata::locktime::{self, absolute, relative};
-pub use crate::blockdata::script::{self, Script};
+pub use crate::blockdata::script::{self, Script, ScriptBuf};
 pub use crate::blockdata::transaction::{self, OutPoint, Sequence, Transaction, TxIn, TxOut};
 pub use crate::blockdata::witness::{self, Witness};
 pub use crate::blockdata::{constants, opcodes};
