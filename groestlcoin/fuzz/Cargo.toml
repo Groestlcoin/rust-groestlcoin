@@ -64,5 +64,5 @@ path = "fuzz_targets/script_bytes_to_asm_fmt.rs"
 name = "deserialize_witness"
 path = "fuzz_targets/deserialize_witness.rs"
 
-[patch.crates-io.bitcoin_hashes]
+[patch.crates-io.groestlcoin_hashes]
 path = "../../hashes"

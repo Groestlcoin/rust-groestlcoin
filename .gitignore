@@ -1,4 +1,5 @@
 # .gitignore for rust-groestlcoin repository workspace.
+.idea/
 
 # Lock files
 Cargo.lock

@@ -1,5 +1,5 @@
 [workspace]
 members = ["groestlcoin", "hashes", "internals"]
 
-[patch.crates-io.bitcoin_hashes]
+[patch.crates-io.groestlcoin_hashes]
 path = "hashes"
