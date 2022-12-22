@@ -963,15 +963,10 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
         self.segwit_cache.get_or_insert_with(|| {
             let common_cache = Self::common_cache_minimal_borrow(common_cache, tx);
             SegwitCache {
-                prevouts: sha256::Hash::from_inner(
-                    sha256::Hash::hash(&common_cache.prevouts).into_inner(),
-                ),
-                sequences: sha256::Hash::from_inner(
-                    sha256::Hash::hash(&common_cache.sequences).into_inner(),
-                ),
-                outputs: sha256::Hash::from_inner(
-                    sha256::Hash::hash(&common_cache.outputs).into_inner(),
-                ),
+                // will this work?
+                prevouts: common_cache.prevouts.hash_again(),
+                sequences: common_cache.sequences.hash_again(),
+                outputs: common_cache.outputs.hash_again(),
             }
         })
     }
