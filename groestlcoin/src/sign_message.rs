@@ -239,7 +239,7 @@ mod tests {
         let message = "rust-groestlcoin MessageSignature test";
         let msg_hash = super::signed_msg_hash(message);
         // let msg = secp256k1::Message::from(msg_hash);
-        let msg = secp256k1::Message::from_slice(&msg_hash).expect("message");
+        let msg = secp256k1::Message::from_slice(msg_hash.as_ref()).expect("message");
 
         let privkey = secp256k1::SecretKey::new(&mut secp256k1::rand::thread_rng());
         let secp_sig = secp.sign_ecdsa_recoverable(&msg, &privkey);

@@ -963,15 +963,10 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
         self.segwit_cache.get_or_insert_with(|| {
             let common_cache = Self::common_cache_minimal_borrow(common_cache, tx);
             SegwitCache {
-                prevouts: sha256::Hash::from_inner(
-                    sha256::Hash::hash(&common_cache.prevouts).into_inner(),
-                ),
-                sequences: sha256::Hash::from_inner(
-                    sha256::Hash::hash(&common_cache.sequences).into_inner(),
-                ),
-                outputs: sha256::Hash::from_inner(
-                    sha256::Hash::hash(&common_cache.outputs).into_inner(),
-                ),
+                // will this work?
+                prevouts: common_cache.prevouts,
+                sequences: common_cache.sequences,
+                outputs: common_cache.outputs,
             }
         })
     }
@@ -1554,7 +1549,7 @@ mod tests {
                 .unwrap();
 
             //let msg = secp256k1::Message::from(sighash);
-            let msg = secp256k1::Message::from_slice(&sighash).unwrap();
+            let msg = secp256k1::Message::from_slice(sighash.as_ref()).unwrap();
             let key_spend_sig = secp.sign_schnorr_with_aux_rand(&msg, &tweaked_keypair, &[0u8; 32]);
 
             assert_eq!(expected.internal_pubkey, internal_key);
@@ -1631,22 +1626,22 @@ mod tests {
             cache.segwit_signature_hash(1, &witness_script, value, EcdsaSighashType::All).unwrap(),
             hex_from_slice!(
                 Sighash,
-                "c304d56804b24a6801a77803281a497f5526e20f14e65df1006887fc57f0ee39"
+                "78d30165e9873c05d3e3eea458d41559dbb42ad5bb79db4e5be4827a05ed62b4"
             )
         );
 
         let cache = cache.segwit_cache();
         assert_eq!(
             cache.prevouts,
-            hex_from_slice!("96b827c8483d4e9b96712b6713a7b68d6e8003a781feba36c31143470b4efd37")
+            hex_from_slice!("c771f7ed8ee6224d08700833d1c6d31e7a1f6b7a3840c4e186c22136e8c9a6ed")
         );
         assert_eq!(
             cache.sequences,
-            hex_from_slice!("52b0a642eea2fb7ae638c36f6252b6750293dbe574a806984b8e4d8548339a3b")
+            hex_from_slice!("b258c7ef98e1770484c86e4023c5b7361eb8e02e56b6fb7233af17ebe9eb017e")
         );
         assert_eq!(
             cache.outputs,
-            hex_from_slice!("863ef3e1a92afbfdb97f31ad0fc7683ee943e9abcf2501590ff8f6551f47e5e5")
+            hex_from_slice!("48f88af72cd8cc9af8cbeb53b6c60b20b4a074dcd5be578cbc279311c7d72ea9")
         );
     }
 
@@ -1669,22 +1664,22 @@ mod tests {
             cache.segwit_signature_hash(0, &witness_script, value, EcdsaSighashType::All).unwrap(),
             hex_from_slice!(
                 Sighash,
-                "bc1c830fde767c143e007f9de485d6d291f5f87169a419f426ed9db97167cf31"
+                "12885c3df56d146075151c6dbf2afe9506333d4f3e6cea38f58ca8520805a30f"
             )
         );
 
         let cache = cache.segwit_cache();
         assert_eq!(
             cache.prevouts,
-            hex_from_slice!("b0287b4a252ac05af83d2dcef00ba313af78a3e9c329afa216eb3aa2a7b4613a")
+            hex_from_slice!("cddf06e3e7cc7c2b515aa8960e7ee526ffe975f30a421ca092075ade5cf47533")
         );
         assert_eq!(
             cache.sequences,
-            hex_from_slice!("18606b350cd8bf565266bc352f0caddcf01e8fa789dd8a15386327cf8cabe198")
+            hex_from_slice!("b4248c210a2905b94345e1a8414d0e12efcfb2f4f0f2397159a71283397a0ccd")
         );
         assert_eq!(
             cache.outputs,
-            hex_from_slice!("de984f44532e2173ca0d64314fcefe6d30da6f8cf27bafa706da61df8a226c83")
+            hex_from_slice!("324d2443ed14b2ca1e7af61aba2d7fa517c5b8feb6433106b67a653a98b5c1a1")
         );
     }
 
@@ -1712,22 +1707,22 @@ mod tests {
             cache.segwit_signature_hash(0, &witness_script, value, EcdsaSighashType::All).unwrap(),
             hex_from_slice!(
                 Sighash,
-                "7f38d84960e8fbb4635d0fd291162edd3b5b1a60ed6c40ae19888716295cae48"
+                "f49b945ea2188fbb44771c80c51e3b5185e90748b4600dd45c3e6268f634fa8a"
             )
         );
 
         let cache = cache.segwit_cache();
         assert_eq!(
             cache.prevouts,
-            hex_from_slice!("74afdc312af5183c4198a40ca3c1a275b485496dd3929bca388c4b5e31f7aaa0")
+            hex_from_slice!("1f1f6dc580200b32c0579c35acc3f5e54045e46fe1b6e6d3dbe75e3ad9e5125d")
         );
         assert_eq!(
             cache.sequences,
-            hex_from_slice!("3bb13029ce7b1f559ef5e747fcac439f1455a2ec7c5f09b72290795e70665044")
+            hex_from_slice!("ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e")
         );
         assert_eq!(
             cache.outputs,
-            hex_from_slice!("bc4d309071414bed932f98832b27b4d76dad7e6c1346f487a8fdbb8eb90307cc")
+            hex_from_slice!("691738022230671f6f97f0f6343ac62568f82a3e02bfb20dba155d509480c523")
         );
     }
 }
