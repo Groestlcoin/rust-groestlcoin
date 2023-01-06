@@ -285,6 +285,16 @@ fn parse_signed_to_satoshi(
     Ok((is_negative, value))
 }
 
+fn split_amount_and_denomination(s: &str) -> Result<(&str, Denomination), ParseAmountError> {
+  let (i, j) = if let Some(i) = s.find(' ') {
+    (i, i + 1)
+  } else {
+    let i = s.find(|c: char| c.is_alphabetic()).ok_or(ParseAmountError::InvalidFormat)?;
+    (i, i)
+  };
+  Ok((&s[..i], s[j..].parse()?))
+}
+
 /// Options given by `fmt::Formatter`
 struct FormatOptions {
     fill: char,
@@ -520,14 +530,8 @@ impl Amount {
     /// If you want to parse only the amount without the denomination,
     /// use [Self::from_str_in].
     pub fn from_str_with_denomination(s: &str) -> Result<Amount, ParseAmountError> {
-        let mut split = s.splitn(3, ' ');
-        let amt_str = split.next().unwrap();
-        let denom_str = split.next().ok_or(ParseAmountError::InvalidFormat)?;
-        if split.next().is_some() {
-            return Err(ParseAmountError::InvalidFormat);
-        }
-
-        Amount::from_str_in(amt_str, denom_str.parse()?)
+        let (amt, denom) = split_amount_and_denomination(s)?;
+        Amount::from_str_in(amt, denom)
     }
 
     /// Express this [Amount] as a floating-point value in the given denomination.
@@ -861,14 +865,8 @@ impl SignedAmount {
     /// If you want to parse only the amount without the denomination,
     /// use [Self::from_str_in].
     pub fn from_str_with_denomination(s: &str) -> Result<SignedAmount, ParseAmountError> {
-        let mut split = s.splitn(3, ' ');
-        let amt_str = split.next().unwrap();
-        let denom_str = split.next().ok_or(ParseAmountError::InvalidFormat)?;
-        if split.next().is_some() {
-            return Err(ParseAmountError::InvalidFormat);
-        }
-
-        SignedAmount::from_str_in(amt_str, denom_str.parse()?)
+        let (amt, denom) = split_amount_and_denomination(s)?;
+        SignedAmount::from_str_in(amt, denom)
     }
 
     /// Express this [SignedAmount] as a floating-point value in the given denomination.
@@ -1893,39 +1891,51 @@ mod tests {
     #[allow(clippy::inconsistent_digit_grouping)] // Group to show 100,000,000 sats per groestlcoin.
     fn from_str() {
         use super::ParseAmountError as E;
-        let p = Amount::from_str;
-        let sp = SignedAmount::from_str;
 
-        assert_eq!(p("x GRS"), Err(E::InvalidCharacter('x')));
-        assert_eq!(p("5 GRS GRS"), Err(E::InvalidFormat));
-        assert_eq!(p("5 5 GRS"), Err(E::InvalidFormat));
+        assert_eq!(Amount::from_str("x GRS"), Err(E::InvalidCharacter('x')));
+        assert_eq!(Amount::from_str("xGRS"), Err(E::UnknownDenomination("xGRS".into())));
+        assert_eq!(Amount::from_str("5 GRS GRS"), Err(E::UnknownDenomination("GRS GRS".into())));
+        assert_eq!(Amount::from_str("5GRS GRS"), Err(E::InvalidCharacter('G')));
+        assert_eq!(Amount::from_str("5 5 GRS"), Err(E::UnknownDenomination("5 GRS".into())));
 
-        assert_eq!(p("5 BCH"), Err(E::UnknownDenomination("BCH".to_owned())));
+        #[cfg_attr(rust_v_1_46, track_caller)]
+        fn case(s: &str, expected: Result<Amount, ParseAmountError>) {
+          assert_eq!(Amount::from_str(s), expected);
+          assert_eq!(Amount::from_str(&s.replace(' ', "")), expected);
+        }
 
-        assert_eq!(p("-1 GRS"), Err(E::Negative));
-        assert_eq!(p("-0.0 GRS"), Err(E::Negative));
-        assert_eq!(p("0.123456789 GRS"), Err(E::TooPrecise));
-        assert_eq!(sp("-0.1 gro"), Err(E::TooPrecise));
-        assert_eq!(p("0.123456 mGRS"), Err(E::TooPrecise));
-        assert_eq!(sp("-1.001 groestls"), Err(E::TooPrecise));
-        assert_eq!(sp("-200000000000 GRS"), Err(E::TooBig));
-        assert_eq!(p("18446744073709551616 gro"), Err(E::TooBig));
+        #[cfg_attr(rust_v_1_46, track_caller)]
+        fn scase(s: &str, expected: Result<SignedAmount, ParseAmountError>) {
+          assert_eq!(SignedAmount::from_str(s), expected);
+          assert_eq!(SignedAmount::from_str(&s.replace(' ', "")), expected);
+        }
 
-        assert_eq!(sp("0 mgro"), Err(E::TooPrecise));
-        assert_eq!(sp("-0 mgro"), Err(E::TooPrecise));
-        assert_eq!(sp("000 mgro"), Err(E::TooPrecise));
-        assert_eq!(sp("-000 mgro"), Err(E::TooPrecise));
-        assert_eq!(p("0 mgro"), Err(E::TooPrecise));
-        assert_eq!(p("-0 mgro"), Err(E::TooPrecise));
-        assert_eq!(p("000 mgro"), Err(E::TooPrecise));
-        assert_eq!(p("-000 mgro"), Err(E::TooPrecise));
+        case("5 BCH", Err(E::UnknownDenomination("BCH".to_owned())));
 
-        assert_eq!(p(".5 groestls"), Ok(Amount::from_sat(50)));
-        assert_eq!(sp("-.5 groestls"), Ok(SignedAmount::from_sat(-50)));
-        assert_eq!(p("0.00253583 GRS"), Ok(Amount::from_sat(253583)));
-        assert_eq!(sp("-5 gro"), Ok(SignedAmount::from_sat(-5)));
-        assert_eq!(p("0.10000000 GRS"), Ok(Amount::from_sat(100_000_00)));
-        assert_eq!(sp("-100 groestls"), Ok(SignedAmount::from_sat(-10_000)));
+        case("-1 GRS", Err(E::Negative));
+        case("-0.0 GRS", Err(E::Negative));
+        case("0.123456789 GRS", Err(E::TooPrecise));
+        scase("-0.1 gro", Err(E::TooPrecise));
+        case("0.123456 mGRS", Err(E::TooPrecise));
+        scase("-1.001 groestls", Err(E::TooPrecise));
+        scase("-200000000000 GRS", Err(E::TooBig));
+        case("18446744073709551616 gro", Err(E::TooBig));
+
+        scase("0 mgro", Err(E::TooPrecise));
+        scase("-0 mgro", Err(E::TooPrecise));
+        scase("000 mgro", Err(E::TooPrecise));
+        scase("-000 mgro", Err(E::TooPrecise));
+        case("0 mgro", Err(E::TooPrecise));
+        case("-0 mgro", Err(E::TooPrecise));
+        case("000 mgro", Err(E::TooPrecise));
+        case("-000 mgro", Err(E::TooPrecise));
+
+        case(".5 groestls", Ok(Amount::from_sat(50)));
+        scase("-.5 groestls", Ok(SignedAmount::from_sat(-50)));
+        case("0.00253583 GRS", Ok(Amount::from_sat(253583)));
+        scase("-5 gro", Ok(SignedAmount::from_sat(-5)));
+        case("0.10000000 GRS", Ok(Amount::from_sat(100_000_00)));
+        scase("-100 groestls", Ok(SignedAmount::from_sat(-10_000)));
     }
 
     #[test]
@@ -2031,8 +2041,14 @@ mod tests {
         assert_eq!(Amount::from_str(&denom(amt, D::MilliSatoshi)), Ok(amt));
         assert_eq!(Amount::from_str(&denom(amt, D::PicoBitcoin)), Ok(amt));
 
-        assert_eq!(Amount::from_str("42 gro GRS"), Err(ParseAmountError::InvalidFormat));
-        assert_eq!(SignedAmount::from_str("-42 gro GRS"), Err(ParseAmountError::InvalidFormat));
+        assert_eq!(
+          Amount::from_str("42 gro GRS"),
+          Err(ParseAmountError::UnknownDenomination("gro GRS".into())),
+        );
+        assert_eq!(
+          SignedAmount::from_str("-42 gro GRS"),
+          Err(ParseAmountError::UnknownDenomination("gro GRS".into())),
+        );
     }
 
     #[cfg(feature = "serde")]

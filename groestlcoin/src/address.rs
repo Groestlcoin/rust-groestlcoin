@@ -8,24 +8,23 @@
 //! # Example: creating a new address from a randomly-generated key pair
 //!
 //! ```rust
-//! use groestlcoin::network::constants::Network;
-//! use groestlcoin::address::Address;
-//! use groestlcoin::PublicKey;
-//! use groestlcoin::secp256k1::Secp256k1;
-//! use groestlcoin::secp256k1::rand::thread_rng;
+//! # #[cfg(feature = "rand-std")] {
+//! use groestlcoin::{Address, PublicKey, Network};
+//! use groestlcoin::secp256k1::{rand, Secp256k1};
 //!
 //! // Generate random key pair.
 //! let s = Secp256k1::new();
-//! let public_key = PublicKey::new(s.generate_keypair(&mut thread_rng()).1);
+//! let public_key = PublicKey::new(s.generate_keypair(&mut rand::thread_rng()).1);
 //!
 //! // Generate pay-to-pubkey-hash address.
 //! let address = Address::p2pkh(&public_key, Network::Groestlcoin);
+//! # }
 //! ```
 //!
-//! # Note: creating a new address requires the rand feature flag
+//! # Note: creating a new address requires the rand-std feature flag
 //!
 //! ```toml
-//! groestlcoin = { version = "...", features = ["rand"] }
+//! groestlcoin = { version = "...", features = ["rand-std"] }
 //! ```
 
 use core::convert::TryFrom;
@@ -886,7 +885,7 @@ mod tests {
 
     use super::*;
     use crate::crypto::key::PublicKey;
-    use crate::hashes::hex::{FromHex, ToHex};
+    use crate::hashes::hex::ToHex;
     use crate::internal_macros::{hex, hex_into, hex_script};
     use crate::network::constants::Network::{Groestlcoin, Testnet};
 

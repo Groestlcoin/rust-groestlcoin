@@ -1757,12 +1757,13 @@ impl Builder {
             self.push_opcode(opcodes::OP_FALSE)
         }
         // Otherwise encode it as data
-        else { self.push_scriptint(data) }
+        else { self.push_int_non_minimal(data) }
     }
 
-    /// Adds instructions to push an integer onto the stack, using the explicit
-    /// encoding regardless of the availability of dedicated opcodes.
-    pub fn push_scriptint(self, data: i64) -> Builder {
+    /// Adds instructions to push an integer onto the stack without optimization.
+    ///
+    /// This uses the explicit encoding regardless of the availability of dedicated opcodes.
+    pub(super) fn push_int_non_minimal(self, data: i64) -> Builder {
         let mut buf = [0u8; 8];
         let len = write_scriptint(&mut buf, data);
         self.push_slice(&buf[..len])
@@ -2015,7 +2016,7 @@ mod test {
     use crate::blockdata::opcodes;
     use crate::crypto::key::PublicKey;
     use crate::psbt::serialize::Serialize;
-    use crate::internal_macros::hex_script;
+    use crate::internal_macros::{hex, hex_script};
 
     #[test]
     fn script() {
@@ -2029,7 +2030,7 @@ mod test {
         script = script.push_int(4);  comp.push(84u8); assert_eq!(script.as_bytes(), &comp[..]);
         script = script.push_int(-1); comp.push(79u8); assert_eq!(script.as_bytes(), &comp[..]);
         // forced scriptint
-        script = script.push_scriptint(4); comp.extend([1u8, 4].iter().cloned()); assert_eq!(script.as_bytes(), &comp[..]);
+        script = script.push_int_non_minimal(4); comp.extend([1u8, 4].iter().cloned()); assert_eq!(script.as_bytes(), &comp[..]);
         // big ints
         script = script.push_int(17); comp.extend([1u8, 17].iter().cloned()); assert_eq!(script.as_bytes(), &comp[..]);
         script = script.push_int(10000); comp.extend([2u8, 16, 39].iter().cloned()); assert_eq!(script.as_bytes(), &comp[..]);
@@ -2041,12 +2042,12 @@ mod test {
         script = script.push_slice("NRA4VR".as_bytes()); comp.extend([6u8, 78, 82, 65, 52, 86, 82].iter().cloned()); assert_eq!(script.as_bytes(), &comp[..]);
 
         // keys
-        let keystr = "21032e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af";
-        let key = PublicKey::from_str(&keystr[2..]).unwrap();
-        script = script.push_key(&key); comp.extend(Vec::from_hex(keystr).unwrap().iter().cloned()); assert_eq!(script.as_bytes(), &comp[..]);
-        let keystr = "41042e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af191923a2964c177f5b5923ae500fca49e99492d534aa3759d6b25a8bc971b133";
-        let key = PublicKey::from_str(&keystr[2..]).unwrap();
-        script = script.push_key(&key); comp.extend(Vec::from_hex(keystr).unwrap().iter().cloned()); assert_eq!(script.as_bytes(), &comp[..]);
+        const KEYSTR1: &str = "21032e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af";
+        let key = PublicKey::from_str(&KEYSTR1[2..]).unwrap();
+        script = script.push_key(&key); comp.extend_from_slice(&hex!(KEYSTR1)); assert_eq!(script.as_bytes(), &comp[..]);
+        const KEYSTR2: &str = "41042e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af191923a2964c177f5b5923ae500fca49e99492d534aa3759d6b25a8bc971b133";
+        let key = PublicKey::from_str(&KEYSTR2[2..]).unwrap();
+        script = script.push_key(&key); comp.extend_from_slice(&hex!(KEYSTR2)); assert_eq!(script.as_bytes(), &comp[..]);
 
         // opcodes
         script = script.push_opcode(OP_CHECKSIG); comp.push(0xACu8); assert_eq!(script.as_bytes(), &comp[..]);
@@ -2193,10 +2194,10 @@ mod test {
         // Notice the "20" which prepends the keystr. That 20 is hexidecimal for "32". The Builder automatically adds the 32 opcode
         // to our script in order to give a heads up to the script compiler that it should add the next 32 bytes to the stack.
         // From: https://github.com/bitcoin-core/btcdeb/blob/e8c2750c4a4702768c52d15640ed03bf744d2601/doc/tapscript-example.md?plain=1#L43
-        let keystr = "209997a497d964fc1a62885b05a51166a65a90df00492c8d7cf61d6accf54803be";
-        let x_only_key = XOnlyPublicKey::from_str(&keystr[2..]).unwrap();
+        const KEYSTR: &str = "209997a497d964fc1a62885b05a51166a65a90df00492c8d7cf61d6accf54803be";
+        let x_only_key = XOnlyPublicKey::from_str(&KEYSTR[2..]).unwrap();
         let script = Builder::new().push_x_only_key(&x_only_key);
-        assert_eq!(script.into_bytes(), Vec::from_hex(keystr).unwrap());
+        assert_eq!(script.into_bytes(), hex!(KEYSTR));
     }
 
     #[test]
@@ -2204,7 +2205,7 @@ mod test {
         // from txid 3bb5e6434c11fb93f64574af5d116736510717f2c595eb45b52c28e31622dfff which was in my mempool when I wrote the test
         let script = Builder::new().push_opcode(OP_DUP)
                                    .push_opcode(OP_HASH160)
-                                   .push_slice(&Vec::from_hex("16e1ae70ff0fa102905d4af297f6912bda6cce19").unwrap())
+                                   .push_slice(&hex!("16e1ae70ff0fa102905d4af297f6912bda6cce19"))
                                    .push_opcode(OP_EQUALVERIFY)
                                    .push_opcode(OP_CHECKSIG)
                                    .into_script();
@@ -2317,7 +2318,7 @@ mod test {
 
     #[test]
     fn script_serialize() {
-        let hex_script = Vec::from_hex("6c493046022100f93bb0e7d8db7bd46e40132d1f8242026e045f03a0efe71bbb8e3f475e970d790221009337cd7f1f929f00cc6ff01f03729b069a7c21b59b1736ddfee5db5946c5da8c0121033b9b137ee87d5a812d6f506efdd37f0affa7ffc310711c06c7f3e097c9447c52").unwrap();
+        let hex_script = hex!("6c493046022100f93bb0e7d8db7bd46e40132d1f8242026e045f03a0efe71bbb8e3f475e970d790221009337cd7f1f929f00cc6ff01f03729b069a7c21b59b1736ddfee5db5946c5da8c0121033b9b137ee87d5a812d6f506efdd37f0affa7ffc310711c06c7f3e097c9447c52");
         let script: Result<ScriptBuf, _> = deserialize(&hex_script);
         assert!(script.is_ok());
         assert_eq!(serialize(&script.unwrap()), hex_script);
@@ -2553,8 +2554,8 @@ mod test {
 	#[cfg(feature = "groestlcoinconsensus")]
 	fn test_groestlcoinconsensus () {
 		// a random segwit transaction from the blockchain using native segwit
-		let spent = Builder::from(Vec::from_hex("0014f2075f97aaef79587e621275f0ba25e47e750e1a").unwrap()).into_script();
-		let spending = Vec::from_hex("020000000001019e0e6d901a29f49fc217edb0e18c036727115834fb6ada9c764e9740a16a83b90000000000ffffffff0198e6180207000000160014bb380c38f25920fc9946f6a84b6442eebbb77248024730440220786b3e70502d1c0ec300d3144d74b4cbc87fb1168e5821b78404962aaab05e9902203e27204e4ad621802c4191fee6eed8d1b97c7b2ba7e083fb7e4d09380cb7d0a401210223b5e6c2231dc61a800fde397f64d271dc8e65d8fd01a7932d3e4270dd32774e00000000").unwrap();
+		let spent = Builder::from(hex!("0014f2075f97aaef79587e621275f0ba25e47e750e1a")).into_script();
+		let spending = hex!("020000000001019e0e6d901a29f49fc217edb0e18c036727115834fb6ada9c764e9740a16a83b90000000000ffffffff0198e6180207000000160014bb380c38f25920fc9946f6a84b6442eebbb77248024730440220786b3e70502d1c0ec300d3144d74b4cbc87fb1168e5821b78404962aaab05e9902203e27204e4ad621802c4191fee6eed8d1b97c7b2ba7e083fb7e4d09380cb7d0a401210223b5e6c2231dc61a800fde397f64d271dc8e65d8fd01a7932d3e4270dd32774e00000000");
 		spent.verify(0, crate::Amount::from_sat(30099980000), spending.as_slice()).unwrap();
 	}
 

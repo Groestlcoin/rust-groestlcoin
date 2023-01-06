@@ -129,15 +129,14 @@ impl_consensus_encoding!(GetHeadersMessage, version, locator_hashes, stop_hash);
 mod tests {
     use super::{GetBlocksMessage, GetHeadersMessage, Vec};
     use crate::consensus::encode::{deserialize, serialize};
-    use crate::hashes::hex::FromHex;
     use crate::hashes::Hash;
+    use crate::internal_macros::hex;
 
     #[test]
     fn getblocks_message_test() {
-        let from_sat = Vec::from_hex("72110100013ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb0000000000000000000000000000000000000000000000000000000000000000").unwrap();
+        let from_sat = hex!("72110100013ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb0000000000000000000000000000000000000000000000000000000000000000");
         let genhash =
-            Vec::from_hex("3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb")
-                .unwrap();
+            hex!("3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
 
         let decode: Result<GetBlocksMessage, _> = deserialize(&from_sat);
         assert!(decode.is_ok());
@@ -152,10 +151,9 @@ mod tests {
 
     #[test]
     fn getheaders_message_test() {
-        let from_sat = Vec::from_hex("72110100013ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb0000000000000000000000000000000000000000000000000000000000000000").unwrap();
+        let from_sat = hex!("72110100013ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb0000000000000000000000000000000000000000000000000000000000000000");
         let genhash =
-            Vec::from_hex("3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb")
-                .unwrap();
+            hex!("3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
 
         let decode: Result<GetHeadersMessage, _> = deserialize(&from_sat);
         assert!(decode.is_ok());

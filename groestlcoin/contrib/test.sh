@@ -31,9 +31,9 @@ if [ "$DO_LINT" = true ]
 then
     cargo clippy --all-features --all-targets -- -D warnings
     cargo clippy --example bip32 -- -D warnings
-    cargo clippy --example handshake -- -D warnings
+    cargo clippy --example handshake --features=rand-std -- -D warnings
     cargo clippy --example ecdsa-psbt --features=groestlcoinconsensus -- -D warnings
-    cargo clippy --example taproot-psbt --features=groestlcoinconsensus -- -D warnings
+    cargo clippy --example taproot-psbt --features=rand-std,groestlcoinconsensus -- -D warnings
 fi
 
 echo "********* Testing std *************"

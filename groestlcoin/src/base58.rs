@@ -273,7 +273,7 @@ impl std::error::Error for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hashes::hex::FromHex;
+    use crate::internal_macros::hex;
 
     #[test]
     fn test_base58_encode() {
@@ -301,7 +301,7 @@ mod tests {
         assert_eq!(&res, exp);
 
         // Addresses
-        let addr = Vec::from_hex("24f8917303bfa8ef24f292e8fa1419b20460ba064d").unwrap();
+        let addr = hex!("24f8917303bfa8ef24f292e8fa1419b20460ba064d");
         assert_eq!(&encode_check(&addr[..]), "Fsq2GUc7R9f3JSfv3ma5JwkGPaFm3uH23D");
     }
 
@@ -320,7 +320,7 @@ mod tests {
         // Addresses
         assert_eq!(
             decode_check("Fsq2GUc7R9f3JSfv3ma5JwkGPaFm3uH23D").ok(),
-            Some(Vec::from_hex("24f8917303bfa8ef24f292e8fa1419b20460ba064d").unwrap())
+            Some(hex!("24f8917303bfa8ef24f292e8fa1419b20460ba064d"))
         );
         // Non Base58 char.
         assert_eq!(decode("¢").unwrap_err(), Error::BadByte(194));

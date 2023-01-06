@@ -491,20 +491,24 @@ impl Decodable for MerkleBlock {
 
 #[cfg(test)]
 mod tests {
-    use core::cmp::min;
-
+    #[cfg(feature = "rand-std")]
     use secp256k1::rand::prelude::*;
 
     use super::*;
     use crate::consensus::encode::{deserialize, serialize};
-    use crate::hash_types::{TxMerkleNode, Txid};
+    #[cfg(feature = "rand-std")]
+    use crate::hash_types::TxMerkleNode;
     use crate::hashes::hex::{FromHex, ToHex};
+    #[cfg(feature = "rand-std")]
     use crate::hashes::Hash;
-    use crate::{merkle_tree, Block};
+    use crate::internal_macros::hex;
+    use crate::{Block, Txid};
 
     /// accepts `pmt_test_$num`
+    #[cfg(feature = "rand-std")]
     fn pmt_test_from_name(name: &str) { pmt_test(name[9..].parse().unwrap()) }
 
+    #[cfg(feature = "rand-std")]
     macro_rules! pmt_tests {
     ($($name:ident),* $(,)?) => {
          $(
@@ -515,6 +519,7 @@ mod tests {
          )*
     }
 }
+    #[cfg(feature = "rand-std")]
     pmt_tests!(
         pmt_test_1,
         pmt_test_4,
@@ -530,7 +535,11 @@ mod tests {
         pmt_test_4095
     );
 
+    #[cfg(feature = "rand-std")]
     fn pmt_test(tx_count: usize) {
+        use core::cmp::min;
+        use crate::merkle_tree;
+
         let mut rng = thread_rng();
         // Create some fake tx ids
         let tx_ids = (1..=tx_count)
@@ -623,22 +632,22 @@ mod tests {
     #[test]
     fn merkleblock_serialization() {
         // Got it by running the rpc call
-        // `gettxoutproof '["d0c54928d8ace117254e2786c308632976f0f612d62dd0f0a280b9e1db6e3dd7"]'`
-        let mb_hex =
+        // `gettxoutproof '["220ebc64e21abece964927322cba69180ed853bb187fbc6923bac7d010b9d87a"]'`
+        const MB_HEX: &str =
             "0000002063280a27a86a2bf9c5e3ba174690c316bdbc12945a73a863650d000000000000d4aefe8dcb7164\
             00868f87660cc7e59d2d5372121240801f5428a43ae735f66247af00625c331b1a3a8aee650400000003b0e\
             1f8e96bbde499c4564a1442643b203794e432c2c4ecfaaaf066b7772e3768d73d6edbe1b980a2f0d02dd612\
             f6f076296308c386274e2517e1acd82849c5d01cd7ef8c0ab37f5ea8ecc95c9db52e406e4a0fde8741ea8ce\
             4b78224aa1e6a1c010b";
 
-        let mb: MerkleBlock = deserialize(&Vec::from_hex(mb_hex).unwrap()).unwrap();
+        let mb: MerkleBlock = deserialize(&hex!(MB_HEX)).unwrap();
         assert_eq!(get_block_3955537().block_hash(), mb.header.block_hash());
         assert_eq!(
             mb.header.merkle_root,
             mb.txn.extract_matches(&mut vec![], &mut vec![]).unwrap()
         );
         // Serialize again and check that it matches the original bytes
-        assert_eq!(mb_hex, serialize(&mb).to_hex().as_str());
+        assert_eq!(MB_HEX, serialize(&mb).to_hex().as_str());
     }
 
     /// Create a CMerkleBlock using a list of txids which will be found in the
@@ -704,6 +713,7 @@ mod tests {
         assert_eq!(index.len(), 0);
     }
 
+    #[cfg(feature = "rand-std")]
     impl PartialMerkleTree {
         /// Flip one bit in one of the hashes - this should break the authentication
         fn damage(&mut self, rng: &mut ThreadRng) {
@@ -719,7 +729,7 @@ mod tests {
     /// Returns a real block (0000000000000f20f063e2e0b1dd2f028db56840242db8324acf92286e8850fb)
     /// with 4 txs.
     fn get_block_3955537() -> Block {
-        let block_hex =
+        const BLOCK_HEX: &str =
             "0000002063280a27a86a2bf9c5e3ba174690c316bdbc12945a73a863650d000000000000d4aefe8dcb7164\
             00868f87660cc7e59d2d5372121240801f5428a43ae735f66247af00625c331b1a3a8aee650401000000000\
             1010000000000000000000000000000000000000000000000000000000000000000ffffffff2003515b3c04\
@@ -765,6 +775,6 @@ mod tests {
             4022063e1d9da6fe2e9ba958701f98cd9a4268410594abbc6e8112b410895ef29d3f4022059f74ebcf6f805\
             01d464e8d76a8ae5251f2270889d2db881f0f22883511e880301210251ffb811aaf0ddfb5c19ca56db4d04b\
             e3e71a7f3565178420b9c051f59355fc5505b3c00";
-        deserialize(&Vec::from_hex(block_hex).unwrap()).unwrap()
+        deserialize(&hex!(BLOCK_HEX)).unwrap()
     }
 }

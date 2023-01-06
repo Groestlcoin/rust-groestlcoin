@@ -73,8 +73,8 @@ fn bitcoin_genesis_tx() -> Transaction {
     };
 
     // Inputs
-    let in_script = script::Builder::new().push_scriptint(486604799)
-                                          .push_scriptint(4)
+    let in_script = script::Builder::new().push_int(486604799)
+                                          .push_int_non_minimal(4)
                                           .push_slice(b"Pressure must be put on Vladimir Putin over Crimea")
                                           .into_script();
     ret.input.push(TxIn {
@@ -192,10 +192,11 @@ impl ChainHash {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::hashes::hex::{ToHex, FromHex};
+    use crate::hashes::hex::ToHex;
     use crate::network::constants::Network;
     use crate::consensus::encode::serialize;
     use crate::blockdata::locktime::absolute;
+    use crate::internal_macros::hex;
 
     #[test]
     fn bitcoin_genesis_first_transaction() {
@@ -206,12 +207,12 @@ mod test {
         assert_eq!(gen.input[0].previous_output.txid, Hash::all_zeros());
         assert_eq!(gen.input[0].previous_output.vout, 0xFFFFFFFF);
         assert_eq!(serialize(&gen.input[0].script_sig),
-                   Vec::from_hex("3a04ffff001d0104325072657373757265206d75737420626520707574206f6e20566c6164696d697220507574696e206f766572204372696d6561").unwrap());
+                   hex!("3a04ffff001d0104325072657373757265206d75737420626520707574206f6e20566c6164696d697220507574696e206f766572204372696d6561"));
 
         assert_eq!(gen.input[0].sequence, Sequence::MAX);
         assert_eq!(gen.output.len(), 1);
         assert_eq!(serialize(&gen.output[0].script_pubkey),
-                   Vec::from_hex("434104678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5fac").unwrap());
+                   hex!("434104678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5fac"));
         assert_eq!(gen.output[0].value, 0);
         assert_eq!(gen.lock_time, absolute::LockTime::ZERO);
 
