@@ -77,7 +77,7 @@ do
 done
 
 cargo run --example ecdsa-psbt --features=groestlcoinconsensus
-cargo run --example taproot-psbt --features=groestlcoinconsensus
+cargo run --example taproot-psbt --features=rand-std,groestlcoinconsensus
 
 # Use as dependency if told to
 if [ "$AS_DEPENDENCY" = true ]
