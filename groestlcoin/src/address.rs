@@ -1377,12 +1377,12 @@ mod tests {
         assert_eq!(
             json,
             serde_json::Value::String(
-                "tgrs1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3quvjfuq".to_owned()
+                "tgrs1qw4z3xrtgx4f6w7akwpp2xa0gupmkv4yauemmm9".to_owned()
             )
         );
 
         let addr =
-            Address::from_str("tgrs1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3quvjfuq")
+            Address::from_str("tgrs1qw4z3xrtgx4f6w7akwpp2xa0gupmkv4yauemmm9")
                 .unwrap().assume_checked();
         let json = serde_json::to_value(&addr).unwrap();
         assert_eq!(
