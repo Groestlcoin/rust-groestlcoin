@@ -1388,7 +1388,7 @@ mod tests {
             })
         }
 
-        use bitcoin_internals::hex::display::DisplayHex;
+        use groestlcoin_internals::hex::display::DisplayHex;
         use secp256k1::{self, SecretKey, XOnlyPublicKey};
 
         use crate::consensus::serde as con_serde;
