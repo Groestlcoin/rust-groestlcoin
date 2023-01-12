@@ -1388,11 +1388,11 @@ mod tests {
             })
         }
 
+        use bitcoin_internals::hex::display::DisplayHex;
         use secp256k1::{self, SecretKey, XOnlyPublicKey};
 
         use crate::consensus::serde as con_serde;
-        use crate::hashes::hex::ToHex;
-        use crate::taproot::{TapBranchHash, TapTweakHash};
+        use crate::taproot::{TapNodeHash, TapTweakHash};
 
         #[derive(serde::Deserialize)]
         #[serde(crate = "actual_serde")]
@@ -1429,7 +1429,7 @@ mod tests {
         struct KpsInputSpendingGiven {
             txin_index: usize,
             internal_privkey: SecretKey,
-            merkle_root: Option<TapBranchHash>,
+            merkle_root: Option<TapNodeHash>,
             #[serde(deserialize_with = "sighash_deser_numeric")]
             hash_type: SchnorrSighashType,
         }
@@ -1553,7 +1553,7 @@ mod tests {
 
             assert_eq!(expected.internal_pubkey, internal_key);
             assert_eq!(expected.tweak, tweak);
-            assert_eq!(expected.sig_msg, sig_msg.to_hex());
+            assert_eq!(expected.sig_msg, sig_msg.to_lower_hex_string());
             assert_eq!(expected.sig_hash, sighash);
             assert_eq!(expected_hash_ty, hash_ty);
             assert_eq!(expected_key_spend_sig, key_spend_sig);

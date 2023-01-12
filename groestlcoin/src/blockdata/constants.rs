@@ -192,7 +192,6 @@ impl ChainHash {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::hashes::hex::ToHex;
     use crate::network::constants::Network;
     use crate::consensus::encode::serialize;
     use crate::blockdata::locktime::absolute;
@@ -216,7 +215,7 @@ mod test {
         assert_eq!(gen.output[0].value, 0);
         assert_eq!(gen.lock_time, absolute::LockTime::ZERO);
 
-        assert_eq!(gen.wtxid().to_hex(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
+        assert_eq!(gen.wtxid().to_string(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
     }
 
     #[test]
@@ -225,12 +224,12 @@ mod test {
 
         assert_eq!(gen.header.version, block::Version::ONE);
         assert_eq!(gen.header.prev_blockhash, Hash::all_zeros());
-        assert_eq!(gen.header.merkle_root.to_hex(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
+        assert_eq!(gen.header.merkle_root.to_string(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
 
         assert_eq!(gen.header.time, 1395342829);
         assert_eq!(gen.header.bits, CompactTarget::from_consensus(0x1e0fffff));
         assert_eq!(gen.header.nonce, 220035);
-        assert_eq!(gen.header.block_hash().to_hex(), "00000ac5927c594d49cc0bdb81759d0da8297eb614683d3acb62f0703b639023");
+        assert_eq!(gen.header.block_hash().to_string(), "00000ac5927c594d49cc0bdb81759d0da8297eb614683d3acb62f0703b639023");
     }
 
     #[test]
@@ -238,11 +237,11 @@ mod test {
         let gen = genesis_block(Network::Testnet);
         assert_eq!(gen.header.version, block::Version::THREE);
         assert_eq!(gen.header.prev_blockhash, Hash::all_zeros());
-        assert_eq!(gen.header.merkle_root.to_hex(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
+        assert_eq!(gen.header.merkle_root.to_string(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
         assert_eq!(gen.header.time, 1440000002);
         assert_eq!(gen.header.bits, CompactTarget::from_consensus(0x1e00ffff));
         assert_eq!(gen.header.nonce, 6556309);
-        assert_eq!(gen.header.block_hash().to_hex(), "000000ffbb50fc9898cdd36ec163e6ba23230164c0052a28876255b7dcf2cd36");
+        assert_eq!(gen.header.block_hash().to_string(), "000000ffbb50fc9898cdd36ec163e6ba23230164c0052a28876255b7dcf2cd36");
     }
 
     #[test]
@@ -250,11 +249,11 @@ mod test {
         let gen = genesis_block(Network::Signet);
         assert_eq!(gen.header.version, block::Version::THREE);
         assert_eq!(gen.header.prev_blockhash, Hash::all_zeros());
-        assert_eq!(gen.header.merkle_root.to_hex(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
+        assert_eq!(gen.header.merkle_root.to_string(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
         assert_eq!(gen.header.time, 1606082400);
         assert_eq!(gen.header.bits, CompactTarget::from_consensus(0x1e00ffff));
         assert_eq!(gen.header.nonce, 14675970);
-        assert_eq!(gen.header.block_hash().to_hex(), "0000007fcaa2a27993c6cde9e7818c254357af517b876ceba2f23592bb14ab31");
+        assert_eq!(gen.header.block_hash().to_string(), "0000007fcaa2a27993c6cde9e7818c254357af517b876ceba2f23592bb14ab31");
     }
 
     // The *_chain_hash tests are sanity/regression tests, they verify that the const byte array
@@ -304,7 +303,7 @@ mod test {
     // Test vector taken from: https://github.com/lightning/bolts/blob/master/00-introduction.md
     #[test]
     fn mainnet_chain_hash_test_vector() {
-        let got = ChainHash::using_genesis_block(Network::Groestlcoin).to_hex();
+        let got = ChainHash::using_genesis_block(Network::Groestlcoin).to_string();
         let want = "2390633b70f062cb3a3d6814b67e29a80d9d7581db0bcc494d597c92c50a0000";
         assert_eq!(got, want);
     }

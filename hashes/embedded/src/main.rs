@@ -9,7 +9,7 @@ extern crate groestlcoin_hashes;
 #[cfg(feature = "alloc")] use alloc_cortex_m::CortexMHeap;
 #[cfg(feature = "alloc")] use core::alloc::Layout;
 #[cfg(feature = "alloc")] use cortex_m::asm;
-#[cfg(feature = "alloc")] use groestlcoin_hashes::hex::ToHex;
+#[cfg(feature = "alloc")] use alloc::string::ToString;
 
 use groestlcoin_hashes::{sha256, Hash, HashEngine};
 use core2::io::Write;
@@ -57,7 +57,7 @@ fn check_result(engine: sha256::HashEngine) {
     }
 
     #[cfg(feature = "alloc")]
-    if hash.to_hex() != hash_check.to_hex() {
+    if hash.to_string() != hash_check.to_string() {
         debug::exit(debug::EXIT_FAILURE);
     }
 }

@@ -5,6 +5,20 @@
 //! This module is for special serde serializations.
 //!
 
+pub(crate) struct SerializeBytesAsHex<'a>(pub(crate) &'a [u8]);
+
+impl<'a> serde::Serialize for SerializeBytesAsHex<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use bitcoin_internals::hex::display::DisplayHex;
+
+        serializer.collect_str(&format_args!("{:x}", self.0.as_hex()))
+    }
+}
+
+
 pub mod btreemap_byte_values {
     //! Module for serialization of BTreeMaps with hex byte values.
     #![allow(missing_docs)]
@@ -13,7 +27,7 @@ pub mod btreemap_byte_values {
 
     use serde;
 
-    use crate::hashes::hex::{FromHex, ToHex};
+    use crate::hashes::hex::FromHex;
     use crate::prelude::*;
 
     pub fn serialize<S, T>(v: &BTreeMap<T, Vec<u8>>, s: S) -> Result<S::Ok, S::Error>
@@ -29,7 +43,7 @@ pub mod btreemap_byte_values {
         } else {
             let mut map = s.serialize_map(Some(v.len()))?;
             for (key, value) in v.iter() {
-                map.serialize_entry(key, &value.to_hex())?;
+                map.serialize_entry(key, &super::SerializeBytesAsHex(value))?;
             }
             map.end()
         }
@@ -237,7 +251,7 @@ pub mod hex_bytes {
 
     use serde;
 
-    use crate::hashes::hex::{FromHex, ToHex};
+    use crate::hashes::hex::FromHex;
 
     pub fn serialize<T, S>(bytes: &T, s: S) -> Result<S::Ok, S::Error>
     where
@@ -248,7 +262,7 @@ pub mod hex_bytes {
         if !s.is_human_readable() {
             serde::Serialize::serialize(bytes, s)
         } else {
-            s.serialize_str(&bytes.as_ref().to_hex())
+            serde::Serialize::serialize(&super::SerializeBytesAsHex(bytes.as_ref()), s)
         }
     }
 
@@ -294,15 +308,27 @@ pub mod hex_bytes {
     }
 }
 
-macro_rules! serde_string_impl {
-    ($name:ident, $expecting:literal) => {
+macro_rules! serde_string_serialize_impl {
+    ($name:ty, $expecting:literal) => {
+	impl $crate::serde::Serialize for $name {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: $crate::serde::Serializer,
+            {
+                serializer.collect_str(&self)
+            }
+        }
+    };
+}
+
+macro_rules! serde_string_deserialize_impl {
+    ($name:ty, $expecting:literal) => {
         impl<'de> $crate::serde::Deserialize<'de> for $name {
             fn deserialize<D>(deserializer: D) -> Result<$name, D::Error>
             where
                 D: $crate::serde::de::Deserializer<'de>,
             {
                 use core::fmt::{self, Formatter};
-                use core::str::FromStr;
 
                 struct Visitor;
                 impl<'de> $crate::serde::de::Visitor<'de> for Visitor {
@@ -316,25 +342,25 @@ macro_rules! serde_string_impl {
                     where
                         E: $crate::serde::de::Error,
                     {
-                        $name::from_str(v).map_err(E::custom)
+			v.parse::<$name>().map_err(E::custom)
                     }
                 }
 
                 deserializer.deserialize_str(Visitor)
             }
         }
+    };
+}
 
-        impl $crate::serde::Serialize for $name {
-            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            where
-                S: $crate::serde::Serializer,
-            {
-                serializer.collect_str(&self)
-            }
-        }
+macro_rules! serde_string_impl {
+    ($name:ty, $expecting:literal) => {
+	$crate::serde_utils::serde_string_deserialize_impl!($name, $expecting);
+	$crate::serde_utils::serde_string_serialize_impl!($name, $expecting);
     };
 }
 pub(crate) use serde_string_impl;
+pub(crate) use serde_string_serialize_impl;
+pub(crate) use serde_string_deserialize_impl;
 
 /// A combination macro where the human-readable serialization is done like
 /// serde_string_impl and the non-human-readable impl is done as a struct.

@@ -93,7 +93,7 @@ use groestlcoin::taproot::{
     LeafVersion, TapLeafHash, TapSighashHash, TaprootBuilder, TaprootSpendInfo,
 };
 use groestlcoin::{
-    absolute, script, Address, Amount, OutPoint, ScriptBuf, Transaction, TxIn, TxOut, Txid, Witness,
+    absolute, script, Address, Amount, Network, OutPoint, ScriptBuf, Transaction, TxIn, TxOut, Txid, Witness,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -104,9 +104,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Just some addresses for outputs from our wallets. Not really important.
     let to_address =
-        Address::from_str("grsrt1p0p3rvwww0v9znrclp00uneq8ytre9kj922v8fxhnezm3mgsmn9usyt7nyn")?;
+        Address::from_str("grsrt1p0p3rvwww0v9znrclp00uneq8ytre9kj922v8fxhnezm3mgsmn9usyt7nyn")?
+	.require_network(Network::Regtest)?;
     let change_address =
-        Address::from_str("grsrt1pz449kexzydh2kaypatup5ultru3ej284t6eguhnkn6wkhswt0l7qcsacn3")?;
+        Address::from_str("grsrt1pz449kexzydh2kaypatup5ultru3ej284t6eguhnkn6wkhswt0l7qcsacn3")?
+	.require_network(Network::Regtest)?;
     let amount_to_send_in_sats = COIN_VALUE;
     let change_amount = UTXO_1
         .amount_in_sats
