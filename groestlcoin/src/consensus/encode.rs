@@ -21,7 +21,6 @@ use crate::prelude::*;
 use core::{fmt, mem, u32, convert::From};
 
 use groestlcoin_internals::write_err;
-use groestlcoin_internals::hex::display::DisplayHex;
 
 use crate::hashes::{sha256d, Hash, sha256, groestld};
 use crate::hash_types::{BlockHash, FilterHash, TxMerkleNode, FilterHeader};

@@ -1101,7 +1101,6 @@ impl std::error::Error for TaprootError {
 mod test {
     use core::str::FromStr;
 
-    use groestlcoin_internals::hex::display::DisplayHex;
     use secp256k1::{VerifyOnly, XOnlyPublicKey};
 
     use super::*;
