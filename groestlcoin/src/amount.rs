@@ -249,7 +249,10 @@ fn parse_signed_to_satoshi(
             // many as the difference in precision.
             let last_n = unsigned_abs(precision_diff).into();
             if is_too_precise(s, last_n) {
-                return Err(ParseAmountError::TooPrecise);
+                match s.parse::<i64>() {
+                    Ok(v) if v == 0_i64 => return Ok((is_negative, 0)),
+                    _ => return Err(ParseAmountError::TooPrecise),
+                }
             }
             s = &s[0..s.len() - last_n];
             0
@@ -1542,6 +1545,30 @@ mod tests {
     use super::*;
 
     #[test]
+    fn from_str_zero() {
+        let denoms = vec!["GRS", "mGRS", "uGRS", "nGRS", "pGRS", "groestls", "gros", "mgros"];
+        for denom in denoms {
+            for v in &["0", "000"] {
+                let s = format!("{} {}", v, denom);
+                match Amount::from_str(&s) {
+                    Err(e) => panic!("Failed to crate amount from {}: {:?}", s, e),
+                    Ok(amount) => assert_eq!(amount, Amount::from_sat(0)),
+                }
+            }
+
+            let s = format!("-0 {}", denom);
+            match Amount::from_str(&s) {
+                Err(e) => assert_eq!(e, ParseAmountError::Negative),
+                Ok(_) => panic!("Unsigned amount from {}", s),
+            }
+            match SignedAmount::from_str(&s) {
+                Err(e) => panic!("Failed to crate amount from {}: {:?}", s, e),
+                Ok(amount) => assert_eq!(amount, SignedAmount::from_sat(0)),
+            }
+        }
+    }
+
+    #[test]
     fn mul_div() {
         let sat = Amount::from_sat;
         let ssat = SignedAmount::from_sat;
@@ -1934,15 +1961,6 @@ mod tests {
         scase("-1.001 groestls", Err(E::TooPrecise));
         scase("-200000000000 GRS", Err(E::TooBig));
         case("18446744073709551616 gro", Err(E::TooBig));
-
-        scase("0 mgro", Err(E::TooPrecise));
-        scase("-0 mgro", Err(E::TooPrecise));
-        scase("000 mgro", Err(E::TooPrecise));
-        scase("-000 mgro", Err(E::TooPrecise));
-        case("0 mgro", Err(E::TooPrecise));
-        case("-0 mgro", Err(E::TooPrecise));
-        case("000 mgro", Err(E::TooPrecise));
-        case("-000 mgro", Err(E::TooPrecise));
 
         case(".5 groestls", Ok(Amount::from_sat(50)));
         scase("-.5 groestls", Ok(SignedAmount::from_sat(-50)));

@@ -90,7 +90,6 @@ See [`hashes::Hash::DISPLAY_BACKWARD`] for more details.
     impl_hashencode!(Txid);
     impl_hashencode!(Wtxid);
     impl_hashencode!(BlockHash);
-    impl_hashencode!(Sighash);
 
     impl_hashencode!(TxMerkleNode);
     impl_hashencode!(WitnessMerkleNode);
