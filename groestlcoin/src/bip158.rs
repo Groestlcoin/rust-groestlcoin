@@ -419,9 +419,9 @@ impl GcsFilter {
     fn new(k0: u64, k1: u64, p: u8) -> GcsFilter { GcsFilter { k0, k1, p } }
 
     /// Golomb-Rice encodes a number `n` to a bit stream (parameter 2^k).
-    fn golomb_rice_encode<'a, W>(
+    fn golomb_rice_encode<W>(
         &self,
-        writer: &mut BitStreamWriter<'a, W>,
+        writer: &mut BitStreamWriter<W>,
         n: u64,
     ) -> Result<usize, io::Error>
     where
@@ -561,7 +561,6 @@ mod test {
     use super::*;
     use crate::consensus::encode::deserialize;
     use crate::hash_types::BlockHash;
-    use crate::hashes::hex::FromHex;
     use crate::ScriptBuf;
     use crate::internal_macros::hex;
 
@@ -572,16 +571,16 @@ mod test {
 
         let testdata = serde_json::from_str::<Value>(data).unwrap().as_array().unwrap().clone();
         for t in testdata.iter().skip(1) {
-            let block_hash = BlockHash::from_hex(t.get(1).unwrap().as_str().unwrap()).unwrap();
+            let block_hash = t.get(1).unwrap().as_str().unwrap().parse::<BlockHash>().unwrap();
             let block: Block =
                 deserialize(&hex!(t.get(2).unwrap().as_str().unwrap())).unwrap();
             assert_eq!(block.block_hash(), block_hash);
             let scripts = t.get(3).unwrap().as_array().unwrap();
             let previous_filter_header =
-                FilterHeader::from_hex(t.get(4).unwrap().as_str().unwrap()).unwrap();
+                t.get(4).unwrap().as_str().unwrap().parse::<FilterHeader>().unwrap();
             let filter_content = hex!(t.get(5).unwrap().as_str().unwrap());
             let filter_header =
-                FilterHeader::from_hex(t.get(6).unwrap().as_str().unwrap()).unwrap();
+                t.get(6).unwrap().as_str().unwrap().parse::<FilterHeader>().unwrap();
 
             let mut txmap = HashMap::new();
             let mut si = scripts.iter();

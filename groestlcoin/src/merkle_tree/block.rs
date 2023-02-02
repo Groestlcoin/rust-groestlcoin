@@ -33,8 +33,7 @@
 //! assert!(mb.extract_matches(&mut matches, &mut index).is_ok());
 //! assert_eq!(1, matches.len());
 //! assert_eq!(
-//!     Txid::from_hex(
-//!         "d0c54928d8ace117254e2786c308632976f0f612d62dd0f0a280b9e1db6e3dd7").unwrap(),
+//!     "d0c54928d8ace117254e2786c308632976f0f612d62dd0f0a280b9e1db6e3dd7".parse::<Txid>().unwrap(),
 //!     matches[0]
 //! );
 //! assert_eq!(1, index.len());
@@ -164,7 +163,7 @@ impl PartialMerkleTree {
     ///     "5a4ebf66822b0b2d56bd9dc64ece0bc38ee7844a23ff1d7320a88c5fdb2ad3e2",
     /// ]
     /// .iter()
-    /// .map(|hex| Txid::from_hex(hex).unwrap())
+    /// .map(|hex| hex.parse::<Txid>().unwrap())
     /// .collect();
     ///
     /// // Select the second transaction
@@ -418,8 +417,7 @@ impl MerkleBlock {
     /// let block: Block = groestlcoin::consensus::deserialize(&block_bytes).unwrap();
     ///
     /// // Create a merkle block containing a single transaction
-    /// let txid = Txid::from_hex(
-    ///     "5a122f0ce6973325e60d687163cddbcb0979e6c11188ab787fdaf3f8b200f918").unwrap();
+    /// let txid = "5a122f0ce6973325e60d687163cddbcb0979e6c11188ab787fdaf3f8b200f918".parse::<Txid>().unwrap();
     /// let match_txids: Vec<Txid> = vec![txid].into_iter().collect();
     /// let mb = MerkleBlock::from_block_with_predicate(&block, |t| match_txids.contains(t));
     ///
@@ -498,7 +496,6 @@ mod tests {
     use crate::consensus::encode::{deserialize, serialize};
     #[cfg(feature = "rand-std")]
     use crate::hash_types::TxMerkleNode;
-    use crate::hashes::hex::FromHex;
     #[cfg(feature = "rand-std")]
     use crate::hashes::Hash;
     use crate::internal_macros::hex;
@@ -543,7 +540,7 @@ mod tests {
         let mut rng = thread_rng();
         // Create some fake tx ids
         let tx_ids = (1..=tx_count)
-            .map(|i| Txid::from_hex(&format!("{:064x}", i)).unwrap())
+            .map(|i| format!("{:064x}", i).parse::<Txid>().unwrap())
             .collect::<Vec<_>>();
 
         // Calculate the merkle root and height
@@ -617,7 +614,7 @@ mod tests {
         // Create some fake tx ids with the last 2 hashes repeating
         let txids: Vec<Txid> = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 10]
             .iter()
-            .map(|i| Txid::from_hex(&format!("{:064x}", i)).unwrap())
+            .map(|i| format!("{:064x}", i).parse::<Txid>().unwrap())
             .collect();
 
         let matches =
@@ -661,7 +658,7 @@ mod tests {
             "68372e77b766f0aafaecc4c232e49437203b6442144a56c499e4bd6be9f8e1b0",
         ]
         .iter()
-        .map(|hex| Txid::from_hex(hex).unwrap())
+        .map(|hex| hex.parse::<Txid>().unwrap())
         .collect();
 
         let txid1 = txids[0];
@@ -695,7 +692,7 @@ mod tests {
         let block = get_block_3955537();
         let txids: Vec<Txid> = ["c0ffee00003bafa802c8aa084379aa98d9fcd632ddc2ed9782b586ec87451f20"]
             .iter()
-            .map(|hex| Txid::from_hex(hex).unwrap())
+            .map(|hex| hex.parse::<Txid>().unwrap())
             .collect();
 
         let merkle_block = MerkleBlock::from_block_with_predicate(&block, |t| txids.contains(t));

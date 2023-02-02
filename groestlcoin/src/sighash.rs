@@ -1058,7 +1058,7 @@ mod tests {
     use crate::hash_types::Sighash;
     use crate::hashes::hex::FromHex;
     use crate::hashes::{Hash, HashEngine};
-    use crate::internal_macros::{hex, hex_from_slice, hex_script};
+    use crate::internal_macros::hex;
     use crate::network::constants::Network;
     use crate::taproot::{TapLeafHash, TapSighashHash};
 
@@ -1348,7 +1348,7 @@ mod tests {
                 let script_inner = ScriptBuf::from_hex(script_hex).unwrap();
                 Some(ScriptPath::with_defaults(&script_inner).leaf_hash())
             }
-            (_, Some(script_leaf_hash)) => Some(TapLeafHash::from_hex(script_leaf_hash).unwrap()),
+            (_, Some(script_leaf_hash)) => Some(script_leaf_hash.parse::<TapLeafHash>().unwrap()),
             _ => None,
         };
         // All our tests use the default `0xFFFFFFFF` codeseparator value
@@ -1623,24 +1623,22 @@ mod tests {
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.segwit_signature_hash(1, &witness_script, value, EcdsaSighashType::All).unwrap(),
-            hex_from_slice!(
-                Sighash,
-                "78d30165e9873c05d3e3eea458d41559dbb42ad5bb79db4e5be4827a05ed62b4"
-            )
+            "78d30165e9873c05d3e3eea458d41559dbb42ad5bb79db4e5be4827a05ed62b4".parse::<Sighash>().unwrap(),
         );
 
         let cache = cache.segwit_cache();
+        // Parse hex into Vec because BIP143 test vector displays forwards but our sha256d::Hash displays backwards.
         assert_eq!(
-            cache.prevouts,
-            hex_from_slice!("c771f7ed8ee6224d08700833d1c6d31e7a1f6b7a3840c4e186c22136e8c9a6ed")
+            cache.prevouts.into_inner().as_ref(),
+            &Vec::from_hex("c771f7ed8ee6224d08700833d1c6d31e7a1f6b7a3840c4e186c22136e8c9a6ed").unwrap()[..],
         );
         assert_eq!(
-            cache.sequences,
-            hex_from_slice!("b258c7ef98e1770484c86e4023c5b7361eb8e02e56b6fb7233af17ebe9eb017e")
+            cache.sequences.into_inner().as_ref(),
+            &Vec::from_hex("b258c7ef98e1770484c86e4023c5b7361eb8e02e56b6fb7233af17ebe9eb017e").unwrap()[..],
         );
         assert_eq!(
-            cache.outputs,
-            hex_from_slice!("48f88af72cd8cc9af8cbeb53b6c60b20b4a074dcd5be578cbc279311c7d72ea9")
+            cache.outputs.into_inner().as_ref(),
+            &Vec::from_hex("48f88af72cd8cc9af8cbeb53b6c60b20b4a074dcd5be578cbc279311c7d72ea9").unwrap()[..],
         );
     }
 
@@ -1661,24 +1659,22 @@ mod tests {
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.segwit_signature_hash(0, &witness_script, value, EcdsaSighashType::All).unwrap(),
-            hex_from_slice!(
-                Sighash,
-                "12885c3df56d146075151c6dbf2afe9506333d4f3e6cea38f58ca8520805a30f"
-            )
+            "12885c3df56d146075151c6dbf2afe9506333d4f3e6cea38f58ca8520805a30f".parse::<Sighash>().unwrap(),
         );
 
         let cache = cache.segwit_cache();
+        // Parse hex into Vec because BIP143 test vector displays forwards but our sha256d::Hash displays backwards.
         assert_eq!(
-            cache.prevouts,
-            hex_from_slice!("cddf06e3e7cc7c2b515aa8960e7ee526ffe975f30a421ca092075ade5cf47533")
+            cache.prevouts.into_inner().as_ref(),
+            &Vec::from_hex("cddf06e3e7cc7c2b515aa8960e7ee526ffe975f30a421ca092075ade5cf47533").unwrap()[..],
         );
         assert_eq!(
-            cache.sequences,
-            hex_from_slice!("b4248c210a2905b94345e1a8414d0e12efcfb2f4f0f2397159a71283397a0ccd")
+            cache.sequences.into_inner().as_ref(),
+            &Vec::from_hex("b4248c210a2905b94345e1a8414d0e12efcfb2f4f0f2397159a71283397a0ccd").unwrap()[..],
         );
         assert_eq!(
-            cache.outputs,
-            hex_from_slice!("324d2443ed14b2ca1e7af61aba2d7fa517c5b8feb6433106b67a653a98b5c1a1")
+            cache.outputs.into_inner().as_ref(),
+            &Vec::from_hex("324d2443ed14b2ca1e7af61aba2d7fa517c5b8feb6433106b67a653a98b5c1a1").unwrap()[..],
         );
     }
 
@@ -1691,37 +1687,35 @@ mod tests {
              05000000001976a9147480a33f950689af511e6e84c138dbbd3c3ee41588ac00000000"),
         ).unwrap();
 
-        let witness_script = hex_script!(
+        let witness_script = ScriptBuf::from_hex(
             "56210307b8ae49ac90a048e9b53357a2354b3334e9c8bee813ecb98e99a7e07e8c3ba32103b28f0c28\
              bfab54554ae8c658ac5c3e0ce6e79ad336331f78c428dd43eea8449b21034b8113d703413d57761b8b\
              9781957b8c0ac1dfe69f492580ca4195f50376ba4a21033400f6afecb833092a9a21cfdf1ed1376e58\
              c5d1f47de74683123987e967a8f42103a6d48b1131e94ba04d9737d61acdaa1322008af9602b3b1486\
              2c07a1789aac162102d8b661b0b3302ee2f162b09e07a55ad5dfbe673a9f01d9f0c19617681024306b\
              56ae"
-        );
+        ).unwrap();
         let value = 987654321;
 
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.segwit_signature_hash(0, &witness_script, value, EcdsaSighashType::All).unwrap(),
-            hex_from_slice!(
-                Sighash,
-                "f49b945ea2188fbb44771c80c51e3b5185e90748b4600dd45c3e6268f634fa8a"
-            )
+            "f49b945ea2188fbb44771c80c51e3b5185e90748b4600dd45c3e6268f634fa8a".parse::<Sighash>().unwrap(),
         );
 
         let cache = cache.segwit_cache();
+        // Parse hex into Vec because BIP143 test vector displays forwards but our sha256d::Hash displays backwards.
         assert_eq!(
-            cache.prevouts,
-            hex_from_slice!("1f1f6dc580200b32c0579c35acc3f5e54045e46fe1b6e6d3dbe75e3ad9e5125d")
+            cache.prevouts.into_inner().as_ref(),
+            &Vec::from_hex("1f1f6dc580200b32c0579c35acc3f5e54045e46fe1b6e6d3dbe75e3ad9e5125d").unwrap()[..],
         );
         assert_eq!(
-            cache.sequences,
-            hex_from_slice!("ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e")
+            cache.sequences.into_inner().as_ref(),
+            &Vec::from_hex("ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e").unwrap()[..],
         );
         assert_eq!(
-            cache.outputs,
-            hex_from_slice!("691738022230671f6f97f0f6343ac62568f82a3e02bfb20dba155d509480c523")
+            cache.outputs.into_inner().as_ref(),
+            &Vec::from_hex("691738022230671f6f97f0f6343ac62568f82a3e02bfb20dba155d509480c523").unwrap()[..],
         );
     }
 }

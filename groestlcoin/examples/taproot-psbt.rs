@@ -81,7 +81,6 @@ use std::str::FromStr;
 use groestlcoin::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use groestlcoin::consensus::encode;
 use groestlcoin::constants::COIN_VALUE;
-use groestlcoin::hashes::hex::FromHex;
 use groestlcoin::hashes::Hash;
 use groestlcoin::key::XOnlyPublicKey;
 use groestlcoin::opcodes::all::{OP_CHECKSIG, OP_CLTV, OP_DROP};
@@ -93,7 +92,7 @@ use groestlcoin::taproot::{
     LeafVersion, TapLeafHash, TapSighashHash, TaprootBuilder, TaprootSpendInfo,
 };
 use groestlcoin::{
-    absolute, script, Address, Amount, Network, OutPoint, ScriptBuf, Transaction, TxIn, TxOut, Txid, Witness,
+    absolute, script, Address, Amount, Network, OutPoint, ScriptBuf, Transaction, TxIn, TxOut, Witness,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -239,7 +238,7 @@ fn generate_bip86_key_spend_tx(
         lock_time: absolute::LockTime::ZERO,
         input: vec![TxIn {
             previous_output: OutPoint {
-                txid: Txid::from_hex(input_utxo.txid)?,
+                txid: input_utxo.txid.parse()?,
                 vout: input_utxo.vout,
             },
             script_sig: ScriptBuf::new(),
@@ -290,7 +289,7 @@ fn generate_bip86_key_spend_tx(
                 vout,
                 &sighash::Prevouts::All(&[TxOut {
                     value: from_amount,
-                    script_pubkey: ScriptBuf::from_str(input_utxo.script_pubkey)?,
+                    script_pubkey: ScriptBuf::from_hex(input_utxo.script_pubkey)?,
                 }]),
                 hash_ty,
             )?;

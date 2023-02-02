@@ -37,13 +37,12 @@ use groestlcoin::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint, IntoDerivationPath,
 };
 use groestlcoin::consensus::encode;
-use groestlcoin::hashes::hex::FromHex;
 use groestlcoin::locktime::absolute;
 use groestlcoin::psbt::{self, Input, Psbt, PsbtSighashType};
 use groestlcoin::secp256k1::{Secp256k1, Signing, Verification};
 use groestlcoin::{
     Address, Amount, Network, OutPoint, PublicKey, ScriptBuf, Sequence, Transaction, TxIn, TxOut,
-    Txid, Witness,
+    Witness,
 };
 
 type Result<T> = std::result::Result<T, Error>;
@@ -189,7 +188,7 @@ impl WatchOnly {
             lock_time: absolute::LockTime::ZERO,
             input: vec![TxIn {
                 previous_output: OutPoint {
-                    txid: Txid::from_hex(INPUT_UTXO_TXID)?,
+                    txid: INPUT_UTXO_TXID.parse()?,
                     vout: INPUT_UTXO_VOUT,
                 },
                 script_sig: ScriptBuf::new(),

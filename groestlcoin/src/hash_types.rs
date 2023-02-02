@@ -48,14 +48,14 @@ See [`hashes::Hash::DISPLAY_BACKWARD`] for more details.
     hash_newtype!(Wtxid, sha256d::Hash, 32, doc="A groestlcoin witness transaction ID.");
     hash_newtype!(WtxidInternal, sha256::Hash, 32, doc="A groestlcoin witness transaction ID.");
     hash_newtype!(BlockHash, groestld::Hash, 32, doc="A groestlcoin block hash.");
-    hash_newtype!(Sighash, sha256::Hash, 32, doc="Hash of the transaction according to the signature algorithm");
+    hash_newtype!(Sighash, sha256::Hash, 32, doc="Hash of the transaction according to the signature algorithm", false);
    impl secp256k1::ThirtyTwoByteHash for Sighash {
         fn into_32(self) -> [u8; 32] {
             use hashes::Hash;
             *self.as_inner()
         }
     }
-    
+
     impl From<TxidInternal> for Txid {
         fn from(txid: TxidInternal) -> Self {
             Self::from_inner(txid.into_inner())
