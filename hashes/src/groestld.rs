@@ -19,7 +19,7 @@ use core::str;
 use core::ops::Index;
 use core::slice::SliceIndex;
 use groestl::{Groestl512, Digest};
-use crate::{Error, hex};
+use crate::{Error};
 
 crate::internal_macros::hash_type! {
     256,
@@ -102,7 +102,6 @@ mod tests {
     #[test]
     #[cfg(any(feature = "std", feature = "alloc"))]
     fn test() {
-        use crate::hex::FromHex;
 
         #[derive(Clone)]
         struct Test {
@@ -149,7 +148,7 @@ mod tests {
         for test in tests {
             // Hash through high-level API, check hex encoding/decoding
             let hash = groestld::Hash::hash(test.input.as_bytes());
-            assert_eq!(hash, groestld::Hash::from_hex(test.output_str).expect("parse hex"));
+            assert_eq!(hash, test.output_str.parse::<groestld::Hash>().expect("parse hex"));
             assert_eq!(&hash[..], &test.output[..]);
             assert_eq!(&hash.to_string(), &test.output_str);
 
