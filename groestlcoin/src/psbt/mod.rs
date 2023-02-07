@@ -11,7 +11,6 @@
 use std::collections::{HashMap, HashSet};
 
 use core::{fmt, cmp};
-use core::ops::Deref;
 
 use secp256k1::{Message, Secp256k1, Signing};
 use groestlcoin_internals::write_err;
@@ -266,7 +265,7 @@ impl PartiallySignedTransaction {
     ) -> Result<Vec<PublicKey>, SignError>
     where
         C: Signing,
-        T: Deref<Target=Transaction>,
+        T: Borrow<Transaction>,
         K: GetKey,
     {
         let msg_sighash_ty_res = self.sighash_ecdsa(input_index, cache);
@@ -309,7 +308,7 @@ impl PartiallySignedTransaction {
     /// Uses the [`EcdsaSighashType`] from this input if one is specified. If no sighash type is
     /// specified uses [`EcdsaSighashType::All`]. This function does not support scripts that
     /// contain `OP_CODESEPARATOR`.
-    pub fn sighash_ecdsa<T: Deref<Target=Transaction>>(
+    pub fn sighash_ecdsa<T: Borrow<Transaction>>(
         &self,
         input_index: usize,
         cache: &mut SighashCache<T>,
@@ -1733,15 +1732,24 @@ mod tests {
         // no previous output
         let mut t2 = t.clone();
         t2.inputs[0].non_witness_utxo = None;
-        assert_eq!(t2.fee(), Err(Error::MissingUtxo));
+        match t2.fee().unwrap_err() {
+            Error::MissingUtxo => {},
+            e => panic!("unexpected error: {:?}", e)
+        }
         //  negative fee
         let mut t3 = t.clone();
         t3.unsigned_tx.output[0].value = prev_output_val;
-        assert_eq!(t3.fee(), Err(Error::NegativeFee));
+        match t3.fee().unwrap_err() {
+            Error::NegativeFee => {},
+            e => panic!("unexpected error: {:?}", e)
+        }
         // overflow
         t.unsigned_tx.output[0].value = u64::max_value();
         t.unsigned_tx.output[1].value = u64::max_value();
-        assert_eq!(t.fee(), Err(Error::FeeOverflow));
+        match t.fee().unwrap_err() {
+            Error::FeeOverflow => {},
+            e => panic!("unexpected error: {:?}", e)
+        }
     }
 
     #[test]

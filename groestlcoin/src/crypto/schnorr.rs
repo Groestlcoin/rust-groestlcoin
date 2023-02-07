@@ -48,7 +48,7 @@ pub type UntweakedKeyPair = KeyPair;
 /// # Examples
 /// ```
 /// # #[cfg(feature = "rand-std")] {
-/// # use groestlcoin::schnorr::{TweakedKeyPair, TweakedPublicKey};
+/// # use groestlcoin::schnorr::{KeyPair, TweakedKeyPair, TweakedPublicKey};
 /// # use groestlcoin::secp256k1::{rand, Secp256k1};
 /// # let secp = Secp256k1::new();
 /// # let keypair = TweakedKeyPair::dangerous_assume_tweaked(KeyPair::new(&secp, &mut rand::thread_rng()));

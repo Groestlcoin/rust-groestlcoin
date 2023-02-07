@@ -1,23 +1,26 @@
 // SPDX-License-Identifier: CC0-1.0
 
-//! Generalized, efficient, signature hash implementation.
+//! Signature hash implementation (used in transaction signing).
 //!
-//! Implementation of the algorithm to compute the message to be signed according to
+//! Efficient implementation of the algorithm to compute the message to be signed according to
 //! [Bip341](https://github.com/bitcoin/bips/blob/150ab6f5c3aca9da05fccc5b435e9667853407f4/bip-0341.mediawiki),
 //! [Bip143](https://github.com/bitcoin/bips/blob/99701f68a88ce33b2d0838eb84e115cef505b4c2/bip-0143.mediawiki)
 //! and legacy (before Bip143).
 //!
+//! Computing signature hashes is required to sign a transaction and this module is designed to
+//! handle its complexity efficiently. Computing these hashes is as simple as creating
+//! [`SighashCache`] and calling its methods.
 
-use core::borrow::Borrow;
-use core::ops::{Deref, DerefMut};
+use core::borrow::{Borrow, BorrowMut};
 use core::{fmt, str};
 
-use crate::{io, Script, ScriptBuf, Transaction, TxIn, TxOut, Sequence, Sighash};
+use crate::{io, Script, ScriptBuf, Transaction, TxIn, TxOut, Sequence};
 use crate::blockdata::transaction::EncodeSigningDataResult;
 use crate::blockdata::witness::Witness;
 use crate::consensus::{encode, Encodable};
 use crate::error::impl_std_error;
 use crate::hashes::{sha256, Hash};
+use crate::hash_types::Sighash;
 use crate::prelude::*;
 use crate::taproot::{LeafVersion, TapLeafHash, TapSighashHash, TAPROOT_ANNEX_PREFIX};
 
@@ -32,9 +35,9 @@ pub(crate) const UINT256_ONE: [u8; 32] = [
 
 /// Efficiently calculates signature hash message for legacy, segwit and taproot inputs.
 #[derive(Debug)]
-pub struct SighashCache<T: Deref<Target = Transaction>> {
+pub struct SighashCache<T: Borrow<Transaction>> {
     /// Access to transaction required for transaction introspection. Moreover, type
-    /// `T: Deref<Target=Transaction>` allows us to use borrowed and mutable borrowed types,
+    /// `T: Borrow<Transaction>` allows us to use borrowed and mutable borrowed types,
     /// the latter in particular is necessary for [`SighashCache::witness_mut`].
     tx: T,
 
@@ -490,7 +493,7 @@ impl fmt::Display for SighashTypeParseError {
 
 impl_std_error!(SighashTypeParseError);
 
-impl<R: Deref<Target = Transaction>> SighashCache<R> {
+impl<R: Borrow<Transaction>> SighashCache<R> {
     /// Constructs a new `SighashCache` from an unsigned transaction.
     ///
     /// The sighash components are computed in a lazy manner when required. For the generated
@@ -498,6 +501,16 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
     /// witness.
     pub fn new(tx: R) -> Self {
         SighashCache { tx, common_cache: None, taproot_cache: None, segwit_cache: None }
+    }
+
+    /// Returns the reference to the cached transaction.
+    pub fn transaction(&self) -> &Transaction {
+        self.tx.borrow()
+    }
+
+    /// Destroys the cache and recovers the stored transaction.
+    pub fn into_transaction(self) -> R {
+        self.tx
     }
 
     /// Encodes the BIP341 signing data for any flag type into a given object implementing a
@@ -511,7 +524,7 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
         leaf_hash_code_separator: Option<(TapLeafHash, u32)>,
         sighash_type: SchnorrSighashType,
     ) -> Result<(), Error> {
-        prevouts.check_all(&self.tx)?;
+        prevouts.check_all(self.tx.borrow())?;
 
         let (sighash, anyone_can_pay) = sighash_type.split_anyonecanpay_flag();
 
@@ -524,10 +537,10 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
 
         // * Transaction Data:
         // nVersion (4): the nVersion of the transaction.
-        self.tx.version.consensus_encode(&mut writer)?;
+        self.tx.borrow().version.consensus_encode(&mut writer)?;
 
         // nLockTime (4): the nLockTime of the transaction.
-        self.tx.lock_time.consensus_encode(&mut writer)?;
+        self.tx.borrow().lock_time.consensus_encode(&mut writer)?;
 
         // If the hash_type & 0x80 does not equal SIGHASH_ANYONECANPAY:
         //     sha_prevouts (32): the SHA256 of the serialization of all input outpoints.
@@ -565,9 +578,9 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
         //      scriptPubKey (35): scriptPubKey of the previous output spent by this input, serialized as script inside CTxOut. Its size is always 35 bytes.
         //      nSequence (4): nSequence of this input.
         if anyone_can_pay {
-            let txin = &self.tx.input.get(input_index).ok_or(Error::IndexOutOfInputsBounds {
+            let txin = &self.tx.borrow().input.get(input_index).ok_or(Error::IndexOutOfInputsBounds {
                 index: input_index,
-                inputs_size: self.tx.input.len(),
+                inputs_size: self.tx.borrow().input.len(),
             })?;
             let previous_output = prevouts.get(input_index)?;
             txin.previous_output.consensus_encode(&mut writer)?;
@@ -594,11 +607,12 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
         if sighash == SchnorrSighashType::Single {
             let mut enc = sha256::Hash::engine();
             self.tx
+                .borrow()
                 .output
                 .get(input_index)
                 .ok_or(Error::SingleWithoutCorrespondingOutput {
                     index: input_index,
-                    outputs_size: self.tx.output.len(),
+                    outputs_size: self.tx.borrow().output.len(),
                 })?
                 .consensus_encode(&mut enc)?;
             let hash = sha256::Hash::from_engine(enc);
@@ -695,7 +709,7 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
 
         let (sighash, anyone_can_pay) = sighash_type.split_anyonecanpay_flag();
 
-        self.tx.version.consensus_encode(&mut writer)?;
+        self.tx.borrow().version.consensus_encode(&mut writer)?;
 
         if !anyone_can_pay {
             self.segwit_cache().prevouts.consensus_encode(&mut writer)?;
@@ -713,9 +727,9 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
         }
 
         {
-            let txin = &self.tx.input.get(input_index).ok_or(Error::IndexOutOfInputsBounds {
+            let txin = &self.tx.borrow().input.get(input_index).ok_or(Error::IndexOutOfInputsBounds {
                 index: input_index,
-                inputs_size: self.tx.input.len(),
+                inputs_size: self.tx.borrow().input.len(),
             })?;
 
             txin.previous_output.consensus_encode(&mut writer)?;
@@ -726,16 +740,16 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
 
         if sighash != EcdsaSighashType::Single && sighash != EcdsaSighashType::None {
             self.segwit_cache().outputs.consensus_encode(&mut writer)?;
-        } else if sighash == EcdsaSighashType::Single && input_index < self.tx.output.len() {
+        } else if sighash == EcdsaSighashType::Single && input_index < self.tx.borrow().output.len() {
             let mut single_enc = Sighash::engine();
-            self.tx.output[input_index].consensus_encode(&mut single_enc)?;
+            self.tx.borrow().output[input_index].consensus_encode(&mut single_enc)?;
             let hash = Sighash::from_engine(single_enc);
             writer.write_all(&hash[..])?;
         } else {
             writer.write_all(&zero_hash[..])?;
         }
 
-        self.tx.lock_time.consensus_encode(&mut writer)?;
+        self.tx.borrow().lock_time.consensus_encode(&mut writer)?;
         sighash_type.to_u32().consensus_encode(&mut writer)?;
         Ok(())
     }
@@ -788,15 +802,15 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
         script_pubkey: &Script,
         sighash_type: U,
     ) -> EncodeSigningDataResult<Error> {
-        if input_index >= self.tx.input.len() {
+        if input_index >= self.tx.borrow().input.len() {
             return EncodeSigningDataResult::WriteResult(Err(Error::IndexOutOfInputsBounds {
                 index: input_index,
-                inputs_size: self.tx.input.len(),
+                inputs_size: self.tx.borrow().input.len(),
             }));
         }
         let sighash_type: u32 = sighash_type.into();
 
-        if is_invalid_use_of_sighash_single(sighash_type, input_index, self.tx.output.len()) {
+        if is_invalid_use_of_sighash_single(sighash_type, input_index, self.tx.borrow().output.len()) {
             // We cannot correctly handle the SIGHASH_SINGLE bug here because usage of this function
             // will result in the data written to the writer being hashed, however the correct
             // handling of the SIGHASH_SINGLE bug is to return the 'one array' - either implement
@@ -882,7 +896,7 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
 
         EncodeSigningDataResult::WriteResult(
             encode_signing_data_to_inner(
-                &self.tx,
+                self.tx.borrow(),
                 writer,
                 input_index,
                 script_pubkey,
@@ -930,12 +944,12 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
 
     #[inline]
     fn common_cache(&mut self) -> &CommonCache {
-        Self::common_cache_minimal_borrow(&mut self.common_cache, &self.tx)
+        Self::common_cache_minimal_borrow(&mut self.common_cache, self.tx.borrow())
     }
 
     fn common_cache_minimal_borrow<'a>(
         common_cache: &'a mut Option<CommonCache>,
-        tx: &R,
+        tx: &Transaction,
     ) -> &'a CommonCache {
         common_cache.get_or_insert_with(|| {
             let mut enc_prevouts = sha256::Hash::engine();
@@ -960,7 +974,7 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
 
     fn segwit_cache(&mut self) -> &SegwitCache {
         let common_cache = &mut self.common_cache;
-        let tx = &self.tx;
+        let tx = self.tx.borrow();
         self.segwit_cache.get_or_insert_with(|| {
             let common_cache = Self::common_cache_minimal_borrow(common_cache, tx);
             SegwitCache {
@@ -988,7 +1002,7 @@ impl<R: Deref<Target = Transaction>> SighashCache<R> {
     }
 }
 
-impl<R: DerefMut<Target = Transaction>> SighashCache<R> {
+impl<R: BorrowMut<Transaction>> SighashCache<R> {
     /// When the `SighashCache` is initialized with a mutable reference to a transaction instead of
     /// a regular reference, this method is available to allow modification to the witnesses.
     ///
@@ -1009,7 +1023,7 @@ impl<R: DerefMut<Target = Transaction>> SighashCache<R> {
     /// }
     /// ```
     pub fn witness_mut(&mut self, input_index: usize) -> Option<&mut Witness> {
-        self.tx.input.get_mut(input_index).map(|i| &mut i.witness)
+        self.tx.borrow_mut().input.get_mut(input_index).map(|i| &mut i.witness)
     }
 }
 
