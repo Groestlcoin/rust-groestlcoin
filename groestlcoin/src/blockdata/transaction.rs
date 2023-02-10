@@ -34,6 +34,7 @@ use crate::hash_types::{Sighash, Txid, TxidInternal, Wtxid, WtxidInternal};
 use crate::VarInt;
 use crate::internal_macros::impl_consensus_encoding;
 use crate::parse::impl_parse_str_through_int;
+use super::Weight;
 
 #[cfg(doc)]
 use crate::sighash::{EcdsaSighashType, SchnorrSighashType};
@@ -835,8 +836,8 @@ impl Transaction {
     /// API. The unsigned transaction encoded within PSBT is always a non-segwit transaction
     /// and can therefore avoid this ambiguity.
     #[inline]
-    pub fn weight(&self) -> usize {
-        self.scaled_size(WITNESS_SCALE_FACTOR)
+    pub fn weight(&self) -> Weight {
+        Weight::from_wu(self.scaled_size(WITNESS_SCALE_FACTOR) as u64)
     }
 
     /// Returns the regular byte-wise consensus-serialized size of this transaction.
@@ -856,8 +857,8 @@ impl Transaction {
     /// [`policy`]: ../policy/mod.rs.html
     #[inline]
     pub fn vsize(&self) -> usize {
-        let weight = self.weight();
-        (weight + WITNESS_SCALE_FACTOR - 1) / WITNESS_SCALE_FACTOR
+        // No overflow because it's computed from data in memory
+        self.weight().to_vbytes_ceil() as usize
     }
 
     /// Returns the size of this transaction excluding the witness data.
@@ -1255,7 +1256,7 @@ mod tests {
                    "196aa0d232576dd6809e4e2d9c1110f805abd9b5a22e6cf1d8a4fff3f9b503ea".to_string());
         assert_eq!(format!("{:x}", realtx.wtxid()),
                    "196aa0d232576dd6809e4e2d9c1110f805abd9b5a22e6cf1d8a4fff3f9b503ea".to_string());
-        assert_eq!(realtx.weight(), tx_bytes.len()*WITNESS_SCALE_FACTOR);
+        assert_eq!(realtx.weight().to_wu() as usize, tx_bytes.len()*WITNESS_SCALE_FACTOR);
         assert_eq!(realtx.size(), tx_bytes.len());
         assert_eq!(realtx.vsize(), tx_bytes.len());
         assert_eq!(realtx.strippedsize(), tx_bytes.len());
@@ -1289,7 +1290,7 @@ mod tests {
                    "4ca6adf8b9ae5b25f002b8b6ecf67ce9afd337132debe65c65c27236ad64c975".to_string());
         assert_eq!(format!("{:x}", realtx.wtxid()),
                    "faabcb9e6b6b7314699abb16fdc0d3935cc85796e252e20a3e67f9f41a1c2ef5".to_string());
-        const EXPECTED_WEIGHT: usize = 442;
+        const EXPECTED_WEIGHT: Weight = Weight::from_wu(442);
         assert_eq!(realtx.weight(), EXPECTED_WEIGHT);
         assert_eq!(realtx.size(), tx_bytes.len());
         assert_eq!(realtx.vsize(), 111);
@@ -1298,12 +1299,12 @@ mod tests {
         //     weight = WITNESS_SCALE_FACTOR * stripped_size + witness_size
         // then,
         //     stripped_size = (weight - size) / (WITNESS_SCALE_FACTOR - 1)
-        let expected_strippedsize = (EXPECTED_WEIGHT - tx_bytes.len()) / (WITNESS_SCALE_FACTOR - 1);
+        let expected_strippedsize = (EXPECTED_WEIGHT.to_wu() as usize - tx_bytes.len()) / (WITNESS_SCALE_FACTOR - 1);
         assert_eq!(realtx.strippedsize(), expected_strippedsize);
         // Construct a transaction without the witness data.
         let mut tx_without_witness = realtx;
         tx_without_witness.input.iter_mut().for_each(|input| input.witness.clear());
-        assert_eq!(tx_without_witness.weight(), expected_strippedsize*WITNESS_SCALE_FACTOR);
+        assert_eq!(tx_without_witness.weight().to_wu() as usize, expected_strippedsize*WITNESS_SCALE_FACTOR);
         assert_eq!(tx_without_witness.size(), expected_strippedsize);
         assert_eq!(tx_without_witness.vsize(), expected_strippedsize);
         assert_eq!(tx_without_witness.strippedsize(), expected_strippedsize);
@@ -1408,7 +1409,7 @@ mod tests {
 
         assert_eq!(format!("{:x}", tx.wtxid()), "6ebfbaf6d9512a2904bcbbedbeb9d04ca2b608f66ae4933ecd7835bd05e54e5f");
         assert_eq!(format!("{:x}", tx.txid()), "fc218401180869a3ede31cb450b482c9ff754a6bf14ced786c195ede5c64b9b5");
-        assert_eq!(tx.weight(), 2718);
+        assert_eq!(tx.weight(), Weight::from_wu(2718));
 
         // non-segwit tx from my mempool
         let tx_bytes = hex!(
@@ -1440,7 +1441,7 @@ mod tests {
     fn test_segwit_tx_decode() {
         let tx_bytes = hex!("010000000001010000000000000000000000000000000000000000000000000000000000000000ffffffff3603da1b0e00045503bd5704c7dd8a0d0ced13bb5785010800000000000a636b706f6f6c122f4e696e6a61506f6f6c2f5345475749542fffffffff02b4e5a212000000001976a914876fbb82ec05caa6af7a3b5e5a983aae6c6cc6d688ac0000000000000000266a24aa21a9edf91c46b49eb8a29089980f02ee6b57e7d63d33b18b4fddac2bcd7db2a39837040120000000000000000000000000000000000000000000000000000000000000000000000000");
         let tx: Transaction = deserialize(&tx_bytes).unwrap();
-        assert_eq!(tx.weight(), 780);
+        assert_eq!(tx.weight(), Weight::from_wu(780));
         serde_round_trip!(tx);
 
         let consensus_encoded = serialize(&tx);
@@ -1599,7 +1600,7 @@ mod tests {
                 (false, "0100000001c336895d9fa674f8b1e294fd006b1ac8266939161600e04788c515089991b50a030000006a47304402204213769e823984b31dcb7104f2c99279e74249eacd4246dabcf2575f85b365aa02200c3ee89c84344ae326b637101a92448664a8d39a009c8ad5d147c752cbe112970121028b1b44b4903c9103c07d5a23e3c7cf7aeb0ba45ddbd2cfdce469ab197381f195fdffffff040000000000000000536a4c5058325bb7b7251cf9e36cac35d691bd37431eeea426d42cbdecca4db20794f9a4030e6cb5211fabf887642bcad98c9994430facb712da8ae5e12c9ae5ff314127d33665000bb26c0067000bb0bf00322a50c300000000000017a9145ca04fdc0a6d2f4e3f67cfeb97e438bb6287725f8750c30000000000001976a91423086a767de0143523e818d4273ddfe6d9e4bbcc88acc8465003000000001976a914c95cbacc416f757c65c942f9b6b8a20038b9b12988ac00000000"),
             ];
 
-        let empty_transaction_size = Transaction {
+        let empty_transaction_weight = Transaction {
             version: 0,
             lock_time: absolute::LockTime::ZERO,
             input: vec![],
@@ -1616,12 +1617,12 @@ mod tests {
             let tx: Transaction = deserialize(Vec::from_hex(tx).unwrap().as_slice()).unwrap();
             // The empty tx size doesn't include the segwit marker (`0001`), so, in case of segwit txs,
             // we have to manually add it ourselves
-            let segwit_marker_size = if *is_segwit { 2 } else { 0 };
-            let calculated_size = empty_transaction_size
-                + segwit_marker_size
+            let segwit_marker_weight = if *is_segwit { 2 } else { 0 };
+            let calculated_size = empty_transaction_weight.to_wu() as usize
+                + segwit_marker_weight
                 + tx.input.iter().fold(0, |sum, i| sum + txin_weight(i))
                 + tx.output.iter().fold(0, |sum, o| sum + o.weight());
-            assert_eq!(calculated_size, tx.weight());
+            assert_eq!(calculated_size, tx.weight().to_wu() as usize);
         }
     }
 }
