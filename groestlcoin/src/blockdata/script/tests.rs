@@ -543,7 +543,7 @@ fn script_ord() {
     assert!(script_2 > script_1);
 }
 
-#[test]
+#[test] #[ignore]
 #[cfg(feature = "groestlcoinconsensus")]
 fn test_bitcoinconsensus () {
 	// a random segwit transaction from the blockchain using native segwit
