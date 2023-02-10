@@ -218,24 +218,24 @@ pub enum Error {
     EarlyEndOfScript,
     /// Tried to read an array off the stack as a number when it was more than 4 bytes.
     NumericOverflow,
-    /// Error validating the script with bitcoinconsensus library.
-    #[cfg(feature = "bitcoinconsensus")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "bitcoinconsensus")))]
-    BitcoinConsensus(bitcoinconsensus::Error),
+    /// Error validating the script with groestlcoinconsensus library.
+    #[cfg(feature = "groestlcoinconsensus")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
+    BitcoinConsensus(groestlcoinconsensus::Error),
     /// Can not find the spent output.
     UnknownSpentOutput(OutPoint),
     /// Can not serialize the spending transaction.
     Serialization
 }
 
-// If bitcoinonsensus-std is off but bitcoinconsensus is present we patch the error type to
+// If bitcoinonsensus-std is off but groestlcoinconsensus is present we patch the error type to
 // implement `std::error::Error`.
-#[cfg(all(feature = "std", feature = "bitcoinconsensus", not(feature = "bitcoinconsensus-std")))]
+#[cfg(all(feature = "std", feature = "groestlcoinconsensus", not(feature = "groestlcoinconsensus-std")))]
 mod bitcoinconsensus_hack {
     use core::fmt;
 
     #[repr(transparent)]
-    pub(crate) struct Error(bitcoinconsensus::Error);
+    pub(crate) struct Error(groestlcoinconsensus::Error);
 
     impl fmt::Debug for Error {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -249,10 +249,10 @@ mod bitcoinconsensus_hack {
         }
     }
 
-    // bitcoinconsensus::Error has no sources at this time
+    // groestlcoinconsensus::Error has no sources at this time
     impl std::error::Error for Error {}
 
-    pub(crate) fn wrap_error(error: &bitcoinconsensus::Error) -> &Error {
+    pub(crate) fn wrap_error(error: &groestlcoinconsensus::Error) -> &Error {
         // Unfortunately, we cannot have the reference inside `Error` struct because of the 'static
         // bound on `source` return type, so we have to use unsafe to overcome the limitation.
         // SAFETY: the type is repr(transparent) and the lifetimes match
@@ -262,7 +262,7 @@ mod bitcoinconsensus_hack {
     }
 }
 
-#[cfg(not(all(feature = "std", feature = "bitcoinconsensus", not(feature = "bitcoinconsensus-std"))))]
+#[cfg(not(all(feature = "std", feature = "groestlcoinconsensus", not(feature = "groestlcoinconsensus-std"))))]
 mod bitcoinconsensus_hack {
     #[allow(unused_imports)] // conditionally used
     pub(crate) use core::convert::identity as wrap_error;
@@ -270,15 +270,15 @@ mod bitcoinconsensus_hack {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        #[cfg(feature = "bitcoinconsensus")]
-        use bitcoin_internals::write_err;
+        #[cfg(feature = "groestlcoinconsensus")]
+        use groestlcoin_internals::write_err;
 
         match *self {
             Error::NonMinimalPush => f.write_str("non-minimal datapush"),
             Error::EarlyEndOfScript => f.write_str("unexpected end of script"),
             Error::NumericOverflow => f.write_str("numeric overflow (number on stack larger than 4 bytes)"),
-            #[cfg(feature = "bitcoinconsensus")]
-            Error::BitcoinConsensus(ref e) => write_err!(f, "bitcoinconsensus verification failed"; bitcoinconsensus_hack::wrap_error(e)),
+            #[cfg(feature = "groestlcoinconsensus")]
+            Error::BitcoinConsensus(ref e) => write_err!(f, "groestlcoinconsensus verification failed"; bitcoinconsensus_hack::wrap_error(e)),
             Error::UnknownSpentOutput(ref point) => write!(f, "unknown spent output: {}", point),
             Error::Serialization => f.write_str("can not serialize the spending transaction in Transaction::verify()"),
         }
@@ -297,7 +297,7 @@ impl std::error::Error for Error {
             | NumericOverflow
             | UnknownSpentOutput(_)
             | Serialization => None,
-            #[cfg(feature = "bitcoinconsensus")]
+            #[cfg(feature = "groestlcoinconsensus")]
             BitcoinConsensus(ref e) => Some(bitcoinconsensus_hack::wrap_error(e)),
         }
     }
@@ -319,10 +319,10 @@ impl From<UintError> for Error {
     }
 }
 
-#[cfg(feature = "bitcoinconsensus")]
+#[cfg(feature = "groestlcoinconsensus")]
 #[doc(hidden)]
-impl From<bitcoinconsensus::Error> for Error {
-    fn from(err: bitcoinconsensus::Error) -> Error {
+impl From<groestlcoinconsensus::Error> for Error {
+    fn from(err: groestlcoinconsensus::Error) -> Error {
         Error::BitcoinConsensus(err)
     }
 }

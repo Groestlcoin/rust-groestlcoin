@@ -146,4 +146,4 @@ impl fmt::Display for Builder {
     }
 }
 
-bitcoin_internals::debug_from_display!(Builder);
+groestlcoin_internals::debug_from_display!(Builder);

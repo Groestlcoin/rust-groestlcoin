@@ -544,7 +544,7 @@ fn script_ord() {
 }
 
 #[test]
-#[cfg(feature = "bitcoinconsensus")]
+#[cfg(feature = "groestlcoinconsensus")]
 fn test_bitcoinconsensus () {
 	// a random segwit transaction from the blockchain using native segwit
 	let spent = Builder::from(hex!("0020701a8d401c84fb13e6baf169d59684e17abd9fa216c8cc5b9fc63d622ff8c58d")).into_script();
