@@ -3,16 +3,15 @@ name = "groestlcoin"
 version = "0.29.0"
 authors = ["Groestlcoin Developers <groestlcoin@gmail.com>"]
 license = "CC0-1.0"
-homepage = "https://github.com/Groestlcoin/rust-groestlcoin/"
 repository = "https://github.com/Groestlcoin/rust-groestlcoin/"
 documentation = "https://docs.rs/groestlcoin/"
-description = "General groestlcoin library for using and interoperating with Groestlcoin."
+description = "General purpose library for using and interoperating with Groestlcoin."
+categories = ["cryptography::cryptocurrencies"]
 keywords = [ "crypto", "groestlcoin" ]
 readme = "README.md"
-exclude = ["tests/"]
 edition = "2018"
+exclude = ["tests", "contrib"]
 
-# Please don't forget to add relevant features to docs.rs below
 [features]
 default = [ "std", "secp-recovery" ]
 rand-std = ["secp256k1/rand-std"]
@@ -28,10 +27,10 @@ groestlcoinconsensus-std = ["groestlcoinconsensus/std", "std"]
 # Instead no-std enables additional features required for this crate to be usable without std.
 # As a result, both can be enabled without conflict.
 std = ["secp256k1/std", "groestlcoin_hashes/std", "bech32/std", "groestlcoin-internals/std"]
-no-std = ["core2/alloc", "groestlcoin_hashes/alloc", "secp256k1/alloc"]
+no-std = ["core2", "groestlcoin_hashes/alloc", "groestlcoin_hashes/core2", "secp256k1/alloc"]
 
 [package.metadata.docs.rs]
-features = [ "std", "secp-recovery", "base64", "rand", "serde", "groestlcoinconsensus" ]
+all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
@@ -39,10 +38,10 @@ groestlcoin-internals = { path = "../internals" }
 bech32 = { version = "0.9.0", default-features = false }
 groestlcoin_hashes = { version = "0.11.0", default-features = false }
 secp256k1 = { version = "0.25.0", default-features = false } # do not use bitcoin-hashes feature
-core2 = { version = "0.3.0", optional = true, default-features = false }
 
 base64 = { version = "0.13.0", optional = true }
 groestlcoinconsensus = { version = "2.20.1-0.5.0", optional = true, default-features = false }
+core2 = { version = "0.3.0", default-features = false, features = ["alloc"], optional = true }
 # Do NOT use this as a feature! Use the `serde` feature instead.
 actual-serde = { package = "serde", version = "1.0.103", default-features = false, features = [ "derive", "alloc" ], optional = true }
 

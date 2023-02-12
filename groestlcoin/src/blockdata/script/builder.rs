@@ -7,8 +7,10 @@ use core::fmt;
 
 use secp256k1::XOnlyPublicKey;
 
+use crate::blockdata::locktime::absolute;
 use crate::blockdata::opcodes::{self, all::*};
 use crate::blockdata::script::{write_scriptint, opcode_to_verify, Script, ScriptBuf};
+use crate::blockdata::transaction::Sequence;
 use crate::key::PublicKey;
 use crate::prelude::*;
 
@@ -42,7 +44,7 @@ impl Builder {
         }
         // We can also special-case zero
         else if data == 0 {
-            self.push_opcode(opcodes::OP_FALSE)
+            self.push_opcode(opcodes::OP_0)
         }
         // Otherwise encode it as data
         else { self.push_int_non_minimal(data) }
@@ -104,6 +106,16 @@ impl Builder {
             },
             None => self.push_opcode(OP_VERIFY),
         }
+    }
+
+    /// Adds instructions to push an absolute lock time onto the stack.
+    pub fn push_lock_time(self, lock_time: absolute::LockTime) -> Builder {
+        self.push_int(lock_time.to_consensus_u32().into())
+    }
+
+    /// Adds instructions to push a sequence number onto the stack.
+    pub fn push_sequence(self, sequence: Sequence) -> Builder  {
+        self.push_int(sequence.to_consensus_u32().into())
     }
 
     /// Converts the `Builder` into `ScriptBuf`.

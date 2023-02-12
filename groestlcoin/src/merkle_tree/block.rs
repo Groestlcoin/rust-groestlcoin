@@ -49,45 +49,122 @@ use crate::consensus::encode::{self, Decodable, Encodable};
 use crate::hash_types::{TxMerkleNode, Txid};
 use crate::hashes::Hash;
 use crate::io;
-use crate::merkle_tree::MerkleBlockError::*;
 use crate::prelude::*;
+use self::MerkleBlockError::*;
 
-/// An error when verifying the merkle block.
-#[derive(Clone, PartialEq, Eq, Debug)]
-#[non_exhaustive]
-pub enum MerkleBlockError {
-    /// Merkle root in the header doesn't match to the root calculated from partial merkle tree.
-    MerkleRootMismatch,
-    /// Partial merkle tree contains no transactions.
-    NoTransactions,
-    /// There are too many transactions.
-    TooManyTransactions,
-    /// General format error.
-    BadFormat(String),
+/// Data structure that represents a block header paired to a partial merkle tree.
+///
+/// NOTE: This assumes that the given Block has *at least* 1 transaction. If the Block has 0 txs,
+/// it will hit an assertion.
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct MerkleBlock {
+    /// The block header
+    pub header: block::Header,
+    /// Transactions making up a partial merkle tree
+    pub txn: PartialMerkleTree,
 }
 
-impl fmt::Display for MerkleBlockError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::MerkleBlockError::*;
+impl MerkleBlock {
+    /// Create a MerkleBlock from a block, that contains proofs for specific txids.
+    ///
+    /// The `block` is a full block containing the header and transactions and `match_txids` is a
+    /// function that returns true for the ids that should be included in the partial merkle tree.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use groestlcoin::hash_types::Txid;
+    /// use groestlcoin::hashes::hex::FromHex;
+    /// use groestlcoin::{Block, MerkleBlock};
+    ///
+    /// // Block 3955536
+    /// let block_bytes = Vec::from_hex("00000020450e366ad9baf7d521a694807338c297ead7346a98f43c\
+    ///     051607000000000000caabd19248525c508c3c2a4c9565b955101d9e16f8bc86fa88eb37d1858a576c4b\
+    ///     ae00620255191a7481e74102010000000001010000000000000000000000000000000000000000000000\
+    ///     000000000000000000ffffffff1b03505b3c044bae006208a3020481518c50010841756a386572483400\
+    ///     00000002ba75cd1d0000000017a914875ff5ac568b44a58b7f71df71e6d8288725a9a787000000000000\
+    ///     0000266a24aa21a9edc35c83936b072117a46bba1ff64d5ab727b7aeee38588a31cc3079ae0ca2afb401\
+    ///     200000000000000000000000000000000000000000000000000000000000000000000000000200000000\
+    ///     0102fb64bfc922cd3bc89f8debf2b0e50c2f5119dcb1fcaf7b7eb339fd14251adcbd0100000000feffff\
+    ///     ff4402fc870d323a6fe72023d5d7d6805aa4888d371ec53f4f47734a4b6b6e82a50000000000feffffff\
+    ///     026216610200000000160014ba6e9bbd517e3211eaf7117357b2b893b0e0c1b19b509806000000001976\
+    ///     a914e133a6f4e2b52f2f0e2e0cacd8690c353dc6c36b88ac0247304402200e4ef473fc6a978298ebf8f1\
+    ///     fed412df8233a31f76bc455c98559fc4628ab74502205016b75d9dfa89983735ec28fc399b798b8255dd\
+    ///     0d8b3becd6ae1946806fefa901210266f32f6f88b244b0ab319e57aa02c472893b872caa219e7f48a1c2\
+    ///     d5f0e8b7b70247304402202915fcfc91eca87a1312be5a6cf18eac7353214f5e5725c152d18bd6431947\
+    ///     1c02207f51d690f5adcbfbdafb4417e966ce0496e696799ba685efe9aa14d10f528bbe01210264e733d2\
+    ///     386f25730c665e6f8f739e275a151b13f5133192aa60d64f656c051a4f5b3c00").unwrap();
 
-        match *self {
-            MerkleRootMismatch => write!(f, "merkle header root doesn't match to the root calculated from the partial merkle tree"),
-            NoTransactions => write!(f, "partial merkle tree contains no transactions"),
-            TooManyTransactions => write!(f, "too many transactions"),
-            BadFormat(ref s) => write!(f, "general format error: {}", s),
+    /// let block: Block = groestlcoin::consensus::deserialize(&block_bytes).unwrap();
+    ///
+    /// // Create a merkle block containing a single transaction
+    /// let txid = "5a122f0ce6973325e60d687163cddbcb0979e6c11188ab787fdaf3f8b200f918".parse::<Txid>().unwrap();
+    /// let match_txids: Vec<Txid> = vec![txid].into_iter().collect();
+    /// let mb = MerkleBlock::from_block_with_predicate(&block, |t| match_txids.contains(t));
+    ///
+    /// // Authenticate and extract matched transaction ids
+    /// let mut matches: Vec<Txid> = vec![];
+    /// let mut index: Vec<u32> = vec![];
+    /// assert!(mb.extract_matches(&mut matches, &mut index).is_ok());
+    /// assert_eq!(txid, matches[0]);
+    /// ```
+    pub fn from_block_with_predicate<F>(block: &Block, match_txids: F) -> Self
+    where
+        F: Fn(&Txid) -> bool,
+    {
+        let block_txids: Vec<_> = block.txdata.iter().map(Transaction::txid).collect();
+        Self::from_header_txids_with_predicate(&block.header, &block_txids, match_txids)
+    }
+
+    /// Create a MerkleBlock from the block's header and txids, that contain proofs for specific txids.
+    ///
+    /// The `header` is the block header, `block_txids` is the full list of txids included in the block and
+    /// `match_txids` is a function that returns true for the ids that should be included in the partial merkle tree.
+    pub fn from_header_txids_with_predicate<F>(
+        header: &block::Header,
+        block_txids: &[Txid],
+        match_txids: F,
+    ) -> Self
+    where
+        F: Fn(&Txid) -> bool,
+    {
+        let matches: Vec<bool> = block_txids.iter().map(match_txids).collect();
+
+        let pmt = PartialMerkleTree::from_txids(block_txids, &matches);
+        MerkleBlock { header: *header, txn: pmt }
+    }
+
+    /// Extract the matching txid's represented by this partial merkle tree
+    /// and their respective indices within the partial tree.
+    /// returns Ok(()) on success, or error in case of failure
+    pub fn extract_matches(
+        &self,
+        matches: &mut Vec<Txid>,
+        indexes: &mut Vec<u32>,
+    ) -> Result<(), MerkleBlockError> {
+        let merkle_root = self.txn.extract_matches(matches, indexes)?;
+
+        if merkle_root.eq(&self.header.merkle_root) {
+            Ok(())
+        } else {
+            Err(MerkleRootMismatch)
         }
     }
 }
 
-#[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
-impl std::error::Error for MerkleBlockError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        use self::MerkleBlockError::*;
+impl Encodable for MerkleBlock {
+    fn consensus_encode<W: io::Write + ?Sized>(&self, w: &mut W) -> Result<usize, io::Error> {
+        let len = self.header.consensus_encode(w)? + self.txn.consensus_encode(w)?;
+        Ok(len)
+    }
+}
 
-        match *self {
-            MerkleRootMismatch | NoTransactions | TooManyTransactions | BadFormat(_) => None,
-        }
+impl Decodable for MerkleBlock {
+    fn consensus_decode<R: io::Read + ?Sized>(r: &mut R) -> Result<Self, encode::Error> {
+        Ok(MerkleBlock {
+            header: Decodable::consensus_decode(r)?,
+            txn: Decodable::consensus_decode(r)?,
+        })
     }
 }
 
@@ -387,103 +464,42 @@ impl Decodable for PartialMerkleTree {
     }
 }
 
-/// Data structure that represents a block header paired to a partial merkle tree.
-///
-/// NOTE: This assumes that the given Block has *at least* 1 transaction. If the Block has 0 txs,
-/// it will hit an assertion.
-#[derive(PartialEq, Eq, Clone, Debug)]
-pub struct MerkleBlock {
-    /// The block header
-    pub header: block::Header,
-    /// Transactions making up a partial merkle tree
-    pub txn: PartialMerkleTree,
+/// An error when verifying the merkle block.
+#[derive(Clone, PartialEq, Eq, Debug)]
+#[non_exhaustive]
+pub enum MerkleBlockError {
+    /// Merkle root in the header doesn't match to the root calculated from partial merkle tree.
+    MerkleRootMismatch,
+    /// Partial merkle tree contains no transactions.
+    NoTransactions,
+    /// There are too many transactions.
+    TooManyTransactions,
+    /// General format error.
+    BadFormat(String),
 }
 
-impl MerkleBlock {
-    /// Create a MerkleBlock from a block, that contains proofs for specific txids.
-    ///
-    /// The `block` is a full block containing the header and transactions and `match_txids` is a
-    /// function that returns true for the ids that should be included in the partial merkle tree.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use groestlcoin::hash_types::Txid;
-    /// use groestlcoin::hashes::hex::FromHex;
-    /// use groestlcoin::{Block, MerkleBlock};
-    ///
-    /// // Block 3955536
-    /// let block_bytes = Vec::from_hex("00000020450e366ad9baf7d521a694807338c297ead7346a98f43c051607000000000000caabd19248525c508c3c2a4c9565b955101d9e16f8bc86fa88eb37d1858a576c4bae00620255191a7481e74102010000000001010000000000000000000000000000000000000000000000000000000000000000ffffffff1b03505b3c044bae006208a3020481518c50010841756a38657248340000000002ba75cd1d0000000017a914875ff5ac568b44a58b7f71df71e6d8288725a9a7870000000000000000266a24aa21a9edc35c83936b072117a46bba1ff64d5ab727b7aeee38588a31cc3079ae0ca2afb4012000000000000000000000000000000000000000000000000000000000000000000000000002000000000102fb64bfc922cd3bc89f8debf2b0e50c2f5119dcb1fcaf7b7eb339fd14251adcbd0100000000feffffff4402fc870d323a6fe72023d5d7d6805aa4888d371ec53f4f47734a4b6b6e82a50000000000feffffff026216610200000000160014ba6e9bbd517e3211eaf7117357b2b893b0e0c1b19b509806000000001976a914e133a6f4e2b52f2f0e2e0cacd8690c353dc6c36b88ac0247304402200e4ef473fc6a978298ebf8f1fed412df8233a31f76bc455c98559fc4628ab74502205016b75d9dfa89983735ec28fc399b798b8255dd0d8b3becd6ae1946806fefa901210266f32f6f88b244b0ab319e57aa02c472893b872caa219e7f48a1c2d5f0e8b7b70247304402202915fcfc91eca87a1312be5a6cf18eac7353214f5e5725c152d18bd64319471c02207f51d690f5adcbfbdafb4417e966ce0496e696799ba685efe9aa14d10f528bbe01210264e733d2386f25730c665e6f8f739e275a151b13f5133192aa60d64f656c051a4f5b3c00").unwrap();
-    /// let block: Block = groestlcoin::consensus::deserialize(&block_bytes).unwrap();
-    ///
-    /// // Create a merkle block containing a single transaction
-    /// let txid = "5a122f0ce6973325e60d687163cddbcb0979e6c11188ab787fdaf3f8b200f918".parse::<Txid>().unwrap();
-    /// let match_txids: Vec<Txid> = vec![txid].into_iter().collect();
-    /// let mb = MerkleBlock::from_block_with_predicate(&block, |t| match_txids.contains(t));
-    ///
-    /// // Authenticate and extract matched transaction ids
-    /// let mut matches: Vec<Txid> = vec![];
-    /// let mut index: Vec<u32> = vec![];
-    /// assert!(mb.extract_matches(&mut matches, &mut index).is_ok());
-    /// assert_eq!(txid, matches[0]);
-    /// ```
-    pub fn from_block_with_predicate<F>(block: &Block, match_txids: F) -> Self
-    where
-        F: Fn(&Txid) -> bool,
-    {
-        let block_txids: Vec<_> = block.txdata.iter().map(Transaction::txid).collect();
-        Self::from_header_txids_with_predicate(&block.header, &block_txids, match_txids)
-    }
+impl fmt::Display for MerkleBlockError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::MerkleBlockError::*;
 
-    /// Create a MerkleBlock from the block's header and txids, that contain proofs for specific txids.
-    ///
-    /// The `header` is the block header, `block_txids` is the full list of txids included in the block and
-    /// `match_txids` is a function that returns true for the ids that should be included in the partial merkle tree.
-    pub fn from_header_txids_with_predicate<F>(
-        header: &block::Header,
-        block_txids: &[Txid],
-        match_txids: F,
-    ) -> Self
-    where
-        F: Fn(&Txid) -> bool,
-    {
-        let matches: Vec<bool> = block_txids.iter().map(match_txids).collect();
-
-        let pmt = PartialMerkleTree::from_txids(block_txids, &matches);
-        MerkleBlock { header: *header, txn: pmt }
-    }
-
-    /// Extract the matching txid's represented by this partial merkle tree
-    /// and their respective indices within the partial tree.
-    /// returns Ok(()) on success, or error in case of failure
-    pub fn extract_matches(
-        &self,
-        matches: &mut Vec<Txid>,
-        indexes: &mut Vec<u32>,
-    ) -> Result<(), MerkleBlockError> {
-        let merkle_root = self.txn.extract_matches(matches, indexes)?;
-
-        if merkle_root.eq(&self.header.merkle_root) {
-            Ok(())
-        } else {
-            Err(MerkleRootMismatch)
+        match *self {
+            MerkleRootMismatch => write!(f, "merkle header root doesn't match to the root calculated from the partial merkle tree"),
+            NoTransactions => write!(f, "partial merkle tree contains no transactions"),
+            TooManyTransactions => write!(f, "too many transactions"),
+            BadFormat(ref s) => write!(f, "general format error: {}", s),
         }
     }
 }
 
-impl Encodable for MerkleBlock {
-    fn consensus_encode<W: io::Write + ?Sized>(&self, w: &mut W) -> Result<usize, io::Error> {
-        let len = self.header.consensus_encode(w)? + self.txn.consensus_encode(w)?;
-        Ok(len)
-    }
-}
+#[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+impl std::error::Error for MerkleBlockError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        use self::MerkleBlockError::*;
 
-impl Decodable for MerkleBlock {
-    fn consensus_decode<R: io::Read + ?Sized>(r: &mut R) -> Result<Self, encode::Error> {
-        Ok(MerkleBlock {
-            header: Decodable::consensus_decode(r)?,
-            txn: Decodable::consensus_decode(r)?,
-        })
+        match *self {
+            MerkleRootMismatch | NoTransactions | TooManyTransactions | BadFormat(_) => None,
+        }
     }
 }
 
@@ -501,21 +517,18 @@ mod tests {
     use crate::internal_macros::hex;
     use crate::{Block, Txid};
 
-    /// accepts `pmt_test_$num`
-    #[cfg(feature = "rand-std")]
-    fn pmt_test_from_name(name: &str) { pmt_test(name[9..].parse().unwrap()) }
-
     #[cfg(feature = "rand-std")]
     macro_rules! pmt_tests {
-    ($($name:ident),* $(,)?) => {
-         $(
-        #[test]
-        fn $name() {
-            pmt_test_from_name(stringify!($name));
+        ($($name:ident),* $(,)?) => {
+            $(
+                #[test]
+                fn $name() {
+                    pmt_test_from_name(stringify!($name));
+                }
+            )*
         }
-         )*
     }
-}
+
     #[cfg(feature = "rand-std")]
     pmt_tests!(
         pmt_test_1,
@@ -531,6 +544,10 @@ mod tests {
         pmt_test_1000,
         pmt_test_4095
     );
+
+    /// Parses the transaction count out of `name` with form: `pmt_test_$num`.
+    #[cfg(feature = "rand-std")]
+    fn pmt_test_from_name(name: &str) { pmt_test(name[9..].parse().unwrap()) }
 
     #[cfg(feature = "rand-std")]
     fn pmt_test(tx_count: usize) {
@@ -630,21 +647,16 @@ mod tests {
     fn merkleblock_serialization() {
         // Got it by running the rpc call
         // `gettxoutproof '["220ebc64e21abece964927322cba69180ed853bb187fbc6923bac7d010b9d87a"]'`
-        const MB_HEX: &str =
-            "0000002063280a27a86a2bf9c5e3ba174690c316bdbc12945a73a863650d000000000000d4aefe8dcb7164\
-            00868f87660cc7e59d2d5372121240801f5428a43ae735f66247af00625c331b1a3a8aee650400000003b0e\
-            1f8e96bbde499c4564a1442643b203794e432c2c4ecfaaaf066b7772e3768d73d6edbe1b980a2f0d02dd612\
-            f6f076296308c386274e2517e1acd82849c5d01cd7ef8c0ab37f5ea8ecc95c9db52e406e4a0fde8741ea8ce\
-            4b78224aa1e6a1c010b";
+        let mb_hex = include_str!("../../tests/data/merkle_block.hex");
 
-        let mb: MerkleBlock = deserialize(&hex!(MB_HEX)).unwrap();
+        let mb: MerkleBlock = deserialize(&hex!(mb_hex)).unwrap();
         assert_eq!(get_block_3955537().block_hash(), mb.header.block_hash());
         assert_eq!(
             mb.header.merkle_root,
             mb.txn.extract_matches(&mut vec![], &mut vec![]).unwrap()
         );
         // Serialize again and check that it matches the original bytes
-        assert_eq!(MB_HEX, serialize(&mb).to_lower_hex_string().as_str());
+        assert_eq!(mb_hex, serialize(&mb).to_lower_hex_string().as_str());
     }
 
     /// Create a CMerkleBlock using a list of txids which will be found in the
@@ -726,52 +738,8 @@ mod tests {
     /// Returns a real block (0000000000000f20f063e2e0b1dd2f028db56840242db8324acf92286e8850fb)
     /// with 4 txs.
     fn get_block_3955537() -> Block {
-        const BLOCK_HEX: &str =
-            "0000002063280a27a86a2bf9c5e3ba174690c316bdbc12945a73a863650d000000000000d4aefe8dcb7164\
-            00868f87660cc7e59d2d5372121240801f5428a43ae735f66247af00625c331b1a3a8aee650401000000000\
-            1010000000000000000000000000000000000000000000000000000000000000000ffffffff2003515b3c04\
-            48af00620817d6e2c74d0300000d2f537570724e6f76612e63632f00000000020000000000000000266a24a\
-            a21a9edfddd9cc99b0154352e9ea6d5f12c359ffca1ae5cda7d75d1285f3521e37ea4d9c1b4cd1d00000000\
-            1976a91450510d0b8964947df969382852dfd93e4391cfff88ac01200000000000000000000000000000000\
-            0000000000000000000000000000000000000000002000000000102653e3ac69bf8f0d6a48385968aa413ec\
-            cfbd4cf01769d6fec374506830265cf70100000017160014f62e5f53ba42b8d0949720da1eebbdbc14be185\
-            7feffffff53ba0f2224ee366e4f17db23ff8dafa14aeb8eaca5b9d2e4eb0a24a75e610f2600000000171600\
-            14f62e5f53ba42b8d0949720da1eebbdbc14be1857feffffff0200e46c3a030300001976a91421ae19e60f5\
-            ddaa8ce047e6aaa64e0043adca63a88ac20a921fa14050000160014c67b6462c2159f531e9f8b4f945c389c\
-            f8685572024730440220295453d1a0f82884aafd20cf1f73108fc8018268f702af7f690e9ff951e7d10c022\
-            0596715e0485de9da833b38bbbf99180c6dca29716c2bb9be8afd89ab89f8ab170121034b09677b822055fc\
-            7ad90ec5ee75cd06574a8bd8700373fd8d6e857b613f7a080247304402203eec21f1b1dd5990b4084f7ddcd\
-            9d5bfaa959213f1678f110ede5fda247331c6022049795b56f701d6c940538b0a883085cce8b47f36335340\
-            038e4c62c3469b696f0121034b09677b822055fc7ad90ec5ee75cd06574a8bd8700373fd8d6e857b613f7a0\
-            8505b3c0002000000000105426664063a845eb297793696c3c961d37e8310e1d9975ef86b711c50911cff0c\
-            0000000000feffffffea23ec05f81afd16621bc9742f11d8a321a804a916d2ae1eb14ca0ff91b8bbe502000\
-            00000feffffff4402fc870d323a6fe72023d5d7d6805aa4888d371ec53f4f47734a4b6b6e82a50100000000\
-            feffffff7aeff72e233d5b122de9d45036c80a07b664e646cde14cabbfbb5dfa992d327c0000000000fefff\
-            fffea23ec05f81afd16621bc9742f11d8a321a804a916d2ae1eb14ca0ff91b8bbe5010000006a4730440220\
-            26e21ecdc31c6436f882c41d7a2a02827ec989f8a5f40a23f87266d36877c486022033099b8c581a4f2f21e\
-            f5a618a33b90003ac772dc839a198235a412db4a559fa012103f4d68cf98ee844a188cea91cc8faac380452\
-            464348672245500298922fd6b7f8feffffff0282e75a0400000000160014ba2b993d8c1e6c564c3184c59b8\
-            1b1a8fc87e1fc34e85ca4000000001976a914fcad3abf614562d224c6cc8b0e00d2fa9016404388ac024730\
-            440220339b2118a41f6574fdf0fd61e9b92f08164bc828d4f3792a52ab48ddb6ebf2e802202006b70f568d4\
-            f4b8b80e45b73142485064272520c977a091efe33f44b0dacdc0121036fa3008d0a4a94682d42cb1f455db2\
-            0042b1c9a675d3c3bf980cc94ec5b335470247304402206cd9a3b5e0edd770f489d941ec4ebb5a9448956ca\
-            c12b1783c0e029bca64629d02202bfe07b23c57f44852bf3bc065921d9769a59b7e83b1f008fbc05ca10439\
-            112b0121031ee015822703f39f60a24adefd0e62bf3031e979cafb5ced086f466a5471ce360247304402204\
-            ffb11c8f73e75d96a18498d86c9a9183f49bfd4d10bb5eb3a8cad881536b2e6022058d972d9bdffd179f75a\
-            0660b9cd1af321991c12d356f12bc0ea6681d4e5d0100121031ee015822703f39f60a24adefd0e62bf3031e\
-            979cafb5ced086f466a5471ce360247304402200b70640eaa4eebc29c841d118305699ac77ee504d9a7d1ea\
-            3f7a05420f08a4740220756725f39148bcaee454b8b90b5ca71e6d71bca0c5f67db38c542b77e344818c012\
-            1031fe7edb0947516e8473fe597d7939c01632980cbdf58a31e165996f14a2a6b4800505b3c000200000000\
-            0102985f8c7314abd2358afe05bf45b1eeaf2d371e5754b3797fd4ee19651056b6970100000017160014187\
-            af46a71950196b4665b766f4523f169e6fd4bfeffffff1c863414458d41676e30e8d2b225c599105a1a76c2\
-            9a79173140036b5c9f2b640100000017160014187af46a71950196b4665b766f4523f169e6fd4bfeffffff0\
-            259dd4e3b0000000017a9143d3c9cda9d76d184e6cfa6d250839626c897a1d08770d84b0000000000160014\
-            b2164058e5fb9a8844de8f86a5bf3f3f560edcc80247304402202add298df69cc13f596593f92f2af3f003a\
-            c700706282c52ca02f0863afcdbbf02207777816b8b1570846241a449425fb2eeadef846f26348fd5fc947d\
-            534cd7b5e401210251ffb811aaf0ddfb5c19ca56db4d04be3e71a7f3565178420b9c051f59355fc50247304\
-            4022063e1d9da6fe2e9ba958701f98cd9a4268410594abbc6e8112b410895ef29d3f4022059f74ebcf6f805\
-            01d464e8d76a8ae5251f2270889d2db881f0f22883511e880301210251ffb811aaf0ddfb5c19ca56db4d04b\
-            e3e71a7f3565178420b9c051f59355fc5505b3c00";
-        deserialize(&hex!(BLOCK_HEX)).unwrap()
+        use crate::hashes::hex::FromHex;
+        let block_hex = include_str!("../../tests/data/block_3955537.hex");
+        deserialize(&Vec::from_hex(block_hex).unwrap()).unwrap()
     }
 }
