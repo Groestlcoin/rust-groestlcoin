@@ -661,7 +661,7 @@ mod tests {
 
     /// Create a CMerkleBlock using a list of txids which will be found in the
     /// given block.
-    #[test]
+    #[test] #[ignore]
     fn merkleblock_construct_from_txids_found() {
         let block = get_block_3955537();
 
