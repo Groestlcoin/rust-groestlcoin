@@ -100,7 +100,7 @@ mod tests {
     use crate::{groestld, Hash, HashEngine};
 
     #[test]
-    #[cfg(any(feature = "std", feature = "alloc"))]
+    #[cfg(feature = "alloc")]
     fn test() {
 
         #[derive(Clone)]
