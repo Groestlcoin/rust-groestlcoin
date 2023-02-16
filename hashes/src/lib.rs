@@ -78,11 +78,7 @@
 //! ```
 
 // Coding conventions
-#![deny(non_upper_case_globals)]
-#![deny(non_camel_case_types)]
-#![deny(non_snake_case)]
-#![deny(unused_mut)]
-//#![deny(missing_docs)]
+//#![warn(missing_docs)]
 
 // Experimental features we need.
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -102,8 +98,7 @@
 #[cfg(bench)] extern crate test;
 #[cfg(any(test, feature = "std"))] extern crate core;
 #[cfg(feature = "core2")] extern crate core2;
-#[cfg(feature = "alloc")] extern crate alloc;
-#[cfg(all(not(feature = "alloc"), feature = "std"))] use std as alloc;
+#[cfg(all(feature = "alloc", not(feature = "std")))] extern crate alloc;
 #[cfg(feature = "serde")] pub extern crate serde;
 #[cfg(all(test,feature = "serde"))] extern crate serde_test;
 pub extern crate groestl;

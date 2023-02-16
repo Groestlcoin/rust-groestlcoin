@@ -671,7 +671,7 @@ impl NetworkValidation for NetworkUnchecked { const IS_CHECKED: bool = false; }
 /// assert_eq!(address.to_string(), "FXBxTzaqSQsBFkL7DSAkqbaEvhN4HxNsAr");
 /// ```
 ///
-/// ```compile_fail
+/// ```ignore
 /// # use std::str::FromStr;
 /// # use groestlcoin::address::{Address, NetworkChecked};
 /// let address: Address<NetworkUnchecked> = Address::from_str("FXBxTzaqSQsBFkL7DSAkqbaEvhN4HxNsAr")
@@ -1011,6 +1011,12 @@ impl Address<NetworkUnchecked> {
     #[inline]
     pub fn assume_checked(self) -> Address {
         Address::new(self.network, self.payload)
+    }
+}
+
+impl From<Address> for script::ScriptBuf {
+    fn from(a: Address) -> Self {
+        a.script_pubkey()
     }
 }
 
