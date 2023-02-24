@@ -30,15 +30,16 @@ use groestlcoin::bip32::{ChildNumber, ExtendedPrivKey, ExtendedPubKey, KeySource
 use groestlcoin::blockdata::locktime::{absolute, relative};
 use groestlcoin::blockdata::witness::Witness;
 use groestlcoin::consensus::encode::deserialize;
+use groestlcoin::crypto::key::UntweakedPublicKey;
+use groestlcoin::crypto::{ecdsa, taproot};
 use groestlcoin::hashes::hex::FromHex;
 use groestlcoin::hashes::{hash160, ripemd160, sha256, sha256d, Hash};
 use groestlcoin::psbt::raw::{self, Key, Pair, ProprietaryKey};
 use groestlcoin::psbt::{Input, Output, Psbt, PsbtSighashType};
-use groestlcoin::schnorr::{self, UntweakedPublicKey};
-use groestlcoin::sighash::{EcdsaSighashType, SchnorrSighashType};
+use groestlcoin::sighash::{EcdsaSighashType, TapSighashType};
 use groestlcoin::taproot::{ControlBlock, LeafVersion, TaprootBuilder, TaprootSpendInfo};
 use groestlcoin::{
-    ecdsa, Address, Block, Network, OutPoint, PrivateKey, PublicKey, ScriptBuf, Sequence, Target,
+    Address, Block, Network, OutPoint, PrivateKey, PublicKey, ScriptBuf, Sequence, Target,
     Transaction, TxIn, TxOut, Txid, Work,
 };
 use secp256k1::Secp256k1;
@@ -339,15 +340,15 @@ fn serde_regression_proprietary_key() {
 }
 
 #[test]
-fn serde_regression_schnorr_sig() {
-    let s = include_str!("data/serde/schnorr_sig_hex");
-    let sig = schnorr::Signature {
+fn serde_regression_taproot_sig() {
+    let s = include_str!("data/serde/taproot_sig_hex");
+    let sig = taproot::Signature {
         sig: secp256k1::schnorr::Signature::from_str(s.trim()).unwrap(),
-        hash_ty: SchnorrSighashType::All,
+        hash_ty: TapSighashType::All,
     };
 
     let got = serialize(&sig).unwrap();
-    let want = include_bytes!("data/serde/schnorr_sig_bincode") as &[_];
+    let want = include_bytes!("data/serde/taproot_sig_bincode") as &[_];
     assert_eq!(got, want)
 }
 
