@@ -149,11 +149,11 @@ impl Network {
     /// # Examples
     ///
     /// ```rust
-    /// use bitcoin::network::constants::Network;
-    /// use bitcoin::blockdata::constants::ChainHash;
+    /// use groestlcoin::network::constants::Network;
+    /// use groestlcoin::blockdata::constants::ChainHash;
     ///
-    /// let network = Network::Bitcoin;
-    /// assert_eq!(network.chain_hash(), ChainHash::BITCOIN);
+    /// let network = Network::Groestlcoin;
+    /// assert_eq!(network.chain_hash(), ChainHash::GROESTLCOIN);
     /// ```
     pub fn chain_hash(self) -> ChainHash {
         ChainHash::using_genesis_block(self)
@@ -164,11 +164,11 @@ impl Network {
     /// # Examples
     ///
     /// ```rust
-    /// use bitcoin::network::constants::Network;
-    /// use bitcoin::blockdata::constants::ChainHash;
+    /// use groestlcoin::network::constants::Network;
+    /// use groestlcoin::blockdata::constants::ChainHash;
     /// use std::convert::TryFrom;
     ///
-    /// assert_eq!(Ok(Network::Bitcoin), Network::try_from(ChainHash::BITCOIN));
+    /// assert_eq!(Ok(Network::Groestlcoin), Network::try_from(ChainHash::GROESTLCOIN));
     /// ```
     pub fn from_chain_hash(chain_hash: ChainHash) -> Option<Network> { Network::try_from(chain_hash).ok() }
 }
@@ -234,7 +234,7 @@ impl TryFrom<ChainHash> for Network {
     fn try_from(chain_hash: ChainHash) -> Result<Self, Self::Error> {
         match chain_hash {
             // Note: any new network entries must be matched against here.
-            ChainHash::BITCOIN => Ok(Network::Bitcoin),
+            ChainHash::GROESTLCOIN => Ok(Network::Groestlcoin),
             ChainHash::TESTNET => Ok(Network::Testnet),
             ChainHash::SIGNET => Ok(Network::Signet),
             ChainHash::REGTEST => Ok(Network::Regtest),
