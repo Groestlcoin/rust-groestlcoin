@@ -34,7 +34,7 @@ use crate::crypto::sighash::LegacySighash;
 use crate::hash_types::{Txid, TxidInternal, Wtxid, WtxidInternal};
 use crate::VarInt;
 use crate::internal_macros::impl_consensus_encoding;
-use crate::parse::impl_parse_str_through_int;
+use crate::parse::impl_parse_str_from_int_infallible;
 use super::Weight;
 
 #[cfg(doc)]
@@ -500,7 +500,7 @@ impl fmt::UpperHex for Sequence {
     }
 }
 
-impl_parse_str_through_int!(Sequence);
+impl_parse_str_from_int_infallible!(Sequence, u32, from_consensus);
 
 /// Groestlcoin transaction output.
 ///
@@ -1274,11 +1274,12 @@ pub struct InputWeightPrediction {
 
 impl InputWeightPrediction {
     /// Computes the prediction for a single input.
-    pub fn new<I>(input_script_len: usize, witness_element_lengths: I) -> Self
-        where I: IntoIterator<Item = usize>,
+    pub fn new<T>(input_script_len: usize, witness_element_lengths: T) -> Self
+        where T :IntoIterator, T::Item:Borrow<usize>,
     {
         let (count, total_size) = witness_element_lengths.into_iter()
             .fold((0, 0), |(count, total_size), elem_len| {
+                let elem_len = *elem_len.borrow();
                 let elem_size = elem_len + VarInt(elem_len as u64).len();
                 (count + 1, total_size + elem_size)
             });

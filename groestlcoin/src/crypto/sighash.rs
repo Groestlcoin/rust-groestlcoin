@@ -43,7 +43,7 @@ pub(crate) const MIDSTATE_TAPSIGHASH: [u8; 32] = [
 macro_rules! impl_thirty_two_byte_hash {
     ($ty:ident) => {
         impl secp256k1::ThirtyTwoByteHash for $ty {
-            fn into_32(self) -> [u8; 32] { self.into_inner() }
+            fn into_32(self) -> [u8; 32] { self.to_byte_array() }
         }
     }
 }
@@ -680,7 +680,7 @@ impl<R: Borrow<Transaction>> SighashCache<R> {
         //         ss += bytes([0])
         //         ss += struct.pack("<i", codeseparator_pos)
         if let Some((hash, code_separator_pos)) = leaf_hash_code_separator {
-            hash.into_inner().consensus_encode(&mut writer)?;
+            hash.as_byte_array().consensus_encode(&mut writer)?;
             KEY_VERSION_0.consensus_encode(&mut writer)?;
             code_separator_pos.consensus_encode(&mut writer)?;
         }
@@ -992,7 +992,7 @@ impl<R: Borrow<Transaction>> SighashCache<R> {
             .legacy_encode_signing_data_to(&mut enc, input_index, script_pubkey, sighash_type)
             .is_sighash_single_bug()?
         {
-            Ok(LegacySighash::from_inner(UINT256_ONE))
+            Ok(LegacySighash::from_byte_array(UINT256_ONE))
         } else {
             Ok(LegacySighash::from_engine(enc))
         }
@@ -1204,7 +1204,7 @@ mod tests {
         let mut enc = TapSighash::engine();
         enc.input(&bytes);
         let hash = TapSighash::from_engine(enc);
-        assert_eq!(expected, hash.into_inner());
+        assert_eq!(expected, hash.to_byte_array());
     }
 
     #[test]
@@ -1438,7 +1438,7 @@ mod tests {
             .taproot_signature_hash(input_index, &prevouts, annex, leaf_hash, sighash_type)
             .unwrap();
         let expected = Vec::from_hex(expected_hash).unwrap();
-        assert_eq!(expected, hash.into_inner());
+        assert_eq!(expected, hash.to_byte_array());
     }
 
     #[cfg(feature = "serde")]
@@ -1699,15 +1699,15 @@ mod tests {
         let cache = cache.segwit_cache();
         // Parse hex into Vec because BIP143 test vector displays forwards but our sha256d::Hash displays backwards.
         assert_eq!(
-            cache.prevouts.into_inner(),
+            cache.prevouts.as_byte_array(),
             &Vec::from_hex("c771f7ed8ee6224d08700833d1c6d31e7a1f6b7a3840c4e186c22136e8c9a6ed").unwrap()[..],
         );
         assert_eq!(
-            cache.sequences.into_inner(),
+            cache.sequences.as_byte_array(),
             &Vec::from_hex("b258c7ef98e1770484c86e4023c5b7361eb8e02e56b6fb7233af17ebe9eb017e").unwrap()[..],
         );
         assert_eq!(
-            cache.outputs.into_inner(),
+            cache.outputs.as_byte_array(),
             &Vec::from_hex("48f88af72cd8cc9af8cbeb53b6c60b20b4a074dcd5be578cbc279311c7d72ea9").unwrap()[..],
         );
     }
@@ -1735,15 +1735,15 @@ mod tests {
         let cache = cache.segwit_cache();
         // Parse hex into Vec because BIP143 test vector displays forwards but our sha256d::Hash displays backwards.
         assert_eq!(
-            cache.prevouts.into_inner(),
+            cache.prevouts.as_byte_array(),
             &Vec::from_hex("cddf06e3e7cc7c2b515aa8960e7ee526ffe975f30a421ca092075ade5cf47533").unwrap()[..],
         );
         assert_eq!(
-            cache.sequences.into_inner(),
+            cache.sequences.as_byte_array(),
             &Vec::from_hex("b4248c210a2905b94345e1a8414d0e12efcfb2f4f0f2397159a71283397a0ccd").unwrap()[..],
         );
         assert_eq!(
-            cache.outputs.into_inner(),
+            cache.outputs.as_byte_array(),
             &Vec::from_hex("324d2443ed14b2ca1e7af61aba2d7fa517c5b8feb6433106b67a653a98b5c1a1").unwrap()[..],
         );
     }
@@ -1776,15 +1776,15 @@ mod tests {
         let cache = cache.segwit_cache();
         // Parse hex into Vec because BIP143 test vector displays forwards but our sha256d::Hash displays backwards.
         assert_eq!(
-            cache.prevouts.into_inner(),
+            cache.prevouts.as_byte_array(),
             &Vec::from_hex("1f1f6dc580200b32c0579c35acc3f5e54045e46fe1b6e6d3dbe75e3ad9e5125d").unwrap()[..],
         );
         assert_eq!(
-            cache.sequences.into_inner(),
+            cache.sequences.as_byte_array(),
             &Vec::from_hex("ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e").unwrap()[..],
         );
         assert_eq!(
-            cache.outputs.into_inner(),
+            cache.outputs.as_byte_array(),
             &Vec::from_hex("691738022230671f6f97f0f6343ac62568f82a3e02bfb20dba155d509480c523").unwrap()[..],
         );
     }

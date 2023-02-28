@@ -82,11 +82,10 @@ use groestlcoin::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedP
 use groestlcoin::consensus::encode;
 use groestlcoin::constants::COIN_VALUE;
 use groestlcoin::crypto::taproot;
-use groestlcoin::hashes::Hash;
 use groestlcoin::key::{TapTweak, XOnlyPublicKey};
 use groestlcoin::opcodes::all::{OP_CHECKSIG, OP_CLTV, OP_DROP};
 use groestlcoin::psbt::{self, Input, Output, Psbt, PsbtSighashType};
-use groestlcoin::secp256k1::{Message, Secp256k1};
+use groestlcoin::secp256k1::Secp256k1;
 use groestlcoin::sighash::{self, TapSighashType, SighashCache};
 use groestlcoin::taproot::{
     LeafVersion, TapLeafHash, TapSighash, TaprootBuilder, TaprootSpendInfo,
@@ -745,7 +744,7 @@ fn sign_psbt_taproot(
         Some(_) => keypair, // no tweak for script spend
     };
 
-    let sig = secp.sign_schnorr(&Message::from_slice(&hash.into_inner()[..]).unwrap(), &keypair);
+    let sig = secp.sign_schnorr(&hash.into(), &keypair);
 
     let final_signature = taproot::Signature { sig, hash_ty };
 
