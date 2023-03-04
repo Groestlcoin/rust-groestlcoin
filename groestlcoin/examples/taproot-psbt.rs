@@ -81,15 +81,12 @@ use std::str::FromStr;
 use groestlcoin::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use groestlcoin::consensus::encode;
 use groestlcoin::constants::COIN_VALUE;
-use groestlcoin::crypto::taproot;
 use groestlcoin::key::{TapTweak, XOnlyPublicKey};
 use groestlcoin::opcodes::all::{OP_CHECKSIG, OP_CLTV, OP_DROP};
 use groestlcoin::psbt::{self, Input, Output, Psbt, PsbtSighashType};
 use groestlcoin::secp256k1::Secp256k1;
-use groestlcoin::sighash::{self, TapSighashType, SighashCache};
-use groestlcoin::taproot::{
-    LeafVersion, TapLeafHash, TapSighash, TaprootBuilder, TaprootSpendInfo,
-};
+use groestlcoin::sighash::{self, SighashCache, TapSighash, TapSighashType};
+use groestlcoin::taproot::{self, LeafVersion, TapLeafHash, TaprootBuilder, TaprootSpendInfo};
 use groestlcoin::{
     absolute, script, Address, Amount, Network, OutPoint, ScriptBuf, Transaction, TxIn, TxOut,  Witness,
 };

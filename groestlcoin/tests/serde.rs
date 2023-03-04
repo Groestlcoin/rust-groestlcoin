@@ -23,6 +23,7 @@
 #![cfg(feature = "serde")]
 
 use std::collections::BTreeMap;
+use std::convert::TryFrom;
 use std::str::FromStr;
 
 use bincode::serialize;
@@ -30,19 +31,16 @@ use groestlcoin::bip32::{ChildNumber, ExtendedPrivKey, ExtendedPubKey, KeySource
 use groestlcoin::blockdata::locktime::{absolute, relative};
 use groestlcoin::blockdata::witness::Witness;
 use groestlcoin::consensus::encode::deserialize;
-use groestlcoin::crypto::key::UntweakedPublicKey;
-use groestlcoin::crypto::{ecdsa, taproot};
 use groestlcoin::hashes::hex::FromHex;
 use groestlcoin::hashes::{hash160, ripemd160, sha256, sha256d, Hash};
 use groestlcoin::psbt::raw::{self, Key, Pair, ProprietaryKey};
 use groestlcoin::psbt::{Input, Output, Psbt, PsbtSighashType};
 use groestlcoin::sighash::{EcdsaSighashType, TapSighashType};
-use groestlcoin::taproot::{ControlBlock, LeafVersion, TaprootBuilder, TaprootSpendInfo};
+use groestlcoin::taproot::{self, ControlBlock, LeafVersion, TaprootBuilder, TapTree};
 use groestlcoin::{
-    Address, Block, Network, OutPoint, PrivateKey, PublicKey, ScriptBuf, Sequence, Target,
+    ecdsa, Address, Block, Network, OutPoint, PrivateKey, PublicKey, ScriptBuf, Sequence, Target,
     Transaction, TxIn, TxOut, Txid, Work,
 };
-use secp256k1::Secp256k1;
 
 /// Implicitly does regression test for `BlockHeader` also.
 #[test]
@@ -353,36 +351,15 @@ fn serde_regression_taproot_sig() {
 }
 
 #[test]
-fn serde_regression_taproot_builder() {
+fn serde_regression_taptree() {
     let ver = LeafVersion::from_consensus(0).unwrap();
     let script = ScriptBuf::from(vec![0u8, 1u8, 2u8]);
-    let builder = TaprootBuilder::new().add_leaf_with_ver(1, script, ver).unwrap();
+    let mut builder = TaprootBuilder::new().add_leaf_with_ver(1, script.clone(), ver).unwrap();
+    builder = builder.add_leaf(1, script).unwrap();
+    let tree = TapTree::try_from(builder).unwrap();
 
-    let got = serialize(&builder).unwrap();
-    let want = include_bytes!("data/serde/taproot_builder_bincode") as &[_];
-    assert_eq!(got, want)
-}
-
-#[test]
-fn serde_regression_taproot_spend_info() {
-    let secp = Secp256k1::verification_only();
-    let internal_key = UntweakedPublicKey::from_str(
-        "93c7378d96518a75448821c4f7c8f4bae7ce60f804d03d1f0628dd5dd0f5de51",
-    )
-    .unwrap();
-
-    let script_weights = vec![
-        (10, ScriptBuf::from_hex("51").unwrap()), // semantics of script don't matter for this test
-        (20, ScriptBuf::from_hex("52").unwrap()),
-        (20, ScriptBuf::from_hex("53").unwrap()),
-        (30, ScriptBuf::from_hex("54").unwrap()),
-        (19, ScriptBuf::from_hex("55").unwrap()),
-    ];
-    let tree_info =
-        TaprootSpendInfo::with_huffman_tree(&secp, internal_key, script_weights).unwrap();
-
-    let got = serialize(&tree_info).unwrap();
-    let want = include_bytes!("data/serde/taproot_spend_info_bincode") as &[_];
+    let got = serialize(&tree).unwrap();
+    let want = include_bytes!("data/serde/taptree_bincode") as &[_];
     assert_eq!(got, want)
 }
 

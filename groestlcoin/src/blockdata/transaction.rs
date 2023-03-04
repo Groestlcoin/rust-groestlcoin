@@ -589,8 +589,8 @@ impl<E> EncodeSigningDataResult<E> {
     ///
     /// ```rust
     /// # use groestlcoin::consensus::deserialize;
+    /// # use groestlcoin::sighash::{LegacySighash, SighashCache};
     /// # use groestlcoin::Transaction;
-    /// # use groestlcoin::crypto::sighash::{LegacySighash, SighashCache};
     /// # use groestlcoin_hashes::{Hash, hex::FromHex};
     /// # let mut writer = LegacySighash::engine();
     /// # let input_index = 0;
