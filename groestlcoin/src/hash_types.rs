@@ -65,12 +65,12 @@ mod newtypes {
         /// byte order when converted to a hex string via [`std::fmt::Display`] trait operations.
         /// See [`hashes::Hash::DISPLAY_BACKWARD`] for more details.
         pub struct Txid(sha256d::Hash);
-
+        /// use single sha256 for transactions
         pub struct TxidInternal(sha256::Hash);
 
         /// A bitcoin witness transaction ID.
         pub struct Wtxid(sha256d::Hash);
-
+        /// use single sha256 for transactions
         pub struct WtxidInternal(sha256::Hash);
 
         /// A bitcoin block hash.
@@ -126,7 +126,7 @@ mod newtypes {
 
     impl From<BlockHash> for sha256d::Hash {
         fn from(blockid: BlockHash) -> Self {
-            Self::from(sha256d::Hash::from_byte_array(blockid.to_raw_hash().to_byte_array()))
+            sha256d::Hash::from_byte_array(blockid.to_raw_hash().to_byte_array())
         }
     }
 }
