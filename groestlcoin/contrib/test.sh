@@ -12,10 +12,15 @@ fi
 cargo --version
 rustc --version
 
-# Work out if we are using a nightly toolchain.
+# Some tests require certain toolchain types.
 NIGHTLY=false
+STABLE=true
 if cargo --version | grep nightly; then
+    STABLE=false
     NIGHTLY=true
+fi
+if cargo --version | grep beta; then
+    STABLE=false
 fi
 
 # Pin dependencies as required if we are using MSRV toolchain.
