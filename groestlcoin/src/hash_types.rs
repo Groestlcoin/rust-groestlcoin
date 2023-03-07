@@ -67,30 +67,14 @@ mod newtypes {
         pub struct Txid(sha256d::Hash);
 
         pub struct TxidInternal(sha256::Hash);
-        impl From<TxidInternal> for Txid {
-            fn from(txid: TxidInternal) -> Self {
-                Self::from_inner(txid.into_inner())
-            }
-        }
 
         /// A bitcoin witness transaction ID.
         pub struct Wtxid(sha256d::Hash);
 
         pub struct WtxidInternal(sha256::Hash);
-        impl From<WtxidInternal> for Wtxid {
-            fn from(txid: WtxidInternal) -> Self {
-                Self::from_inner(txid.into_inner())
-            }
-        }
 
         /// A bitcoin block hash.
         pub struct BlockHash(groestld::Hash);
-
-        impl From<BlockHash> for sha256d::Hash {
-            fn from(blockid: BlockHash) -> Self {
-                Self::from_inner(blockid.into_inner())
-            }
-        }
 
         /// A hash of a public key.
         pub struct PubkeyHash(hash160::Hash);
@@ -127,4 +111,22 @@ mod newtypes {
     impl_hashencode!(FilterHeader);
 
     impl_asref_push_bytes!(PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash);
+
+    impl From<TxidInternal> for Txid {
+        fn from(txid: TxidInternal) -> Self {
+            Self::from(sha256d::Hash::from_byte_array(txid.to_raw_hash().to_byte_array()))
+        }
+    }
+
+    impl From<WtxidInternal> for Wtxid {
+        fn from(txid: WtxidInternal) -> Self {
+            Self::from(txid)
+        }
+    }
+
+    impl From<BlockHash> for sha256d::Hash {
+        fn from(blockid: BlockHash) -> Self {
+            Self::from(sha256d::Hash::from_byte_array(blockid.to_raw_hash().to_byte_array()))
+        }
+    }
 }
