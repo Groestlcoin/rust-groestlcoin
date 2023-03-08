@@ -120,7 +120,7 @@ mod newtypes {
 
     impl From<WtxidInternal> for Wtxid {
         fn from(txid: WtxidInternal) -> Self {
-            Self::from(txid)
+            Self::from(sha256d::Hash::from_byte_array(txid.to_raw_hash().to_byte_array()))
         }
     }
 
