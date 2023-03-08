@@ -12,10 +12,21 @@ fi
 cargo --version
 rustc --version
 
-# Work out if we are using a nightly toolchain.
+# Some tests require certain toolchain types.
 NIGHTLY=false
+STABLE=true
 if cargo --version | grep nightly; then
+    STABLE=false
     NIGHTLY=true
+fi
+if cargo --version | grep beta; then
+    STABLE=false
+fi
+
+# Pin dependencies as required if we are using MSRV toolchain.
+if cargo --version | grep "1\.41"; then
+    # 1.0.108 uses `matches!` macro so does not work with Rust 1.41.1, bad `syn` no biscuit.
+    cargo update -p syn --precise 1.0.107
 fi
 
 # We should not have any duplicate dependencies. This catches mistakes made upgrading dependencies

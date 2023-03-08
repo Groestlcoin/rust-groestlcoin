@@ -6,8 +6,10 @@
 //! according to the BIP-174 specification.
 //!
 
+use core::convert::TryFrom;
 use core::convert::TryInto;
 
+use crate::VarInt;
 use crate::prelude::*;
 
 use crate::io;
@@ -16,15 +18,16 @@ use crate::blockdata::script::ScriptBuf;
 use crate::blockdata::witness::Witness;
 use crate::blockdata::transaction::{Transaction, TxOut};
 use crate::consensus::encode::{self, serialize, Decodable, Encodable, deserialize_partial};
+use crate::taproot::TapTree;
 use secp256k1::{self, XOnlyPublicKey};
 use crate::bip32::{ChildNumber, Fingerprint, KeySource};
 use crate::hashes::{hash160, ripemd160, sha256, sha256d, Hash};
-use crate::crypto::{ecdsa, schnorr};
+use crate::crypto::{ecdsa, taproot};
 use crate::psbt::{Error, PartiallySignedTransaction};
 use crate::taproot::{TapNodeHash, TapLeafHash, ControlBlock, LeafVersion};
 use crate::crypto::key::PublicKey;
 
-use super::map::{Map, Input, Output, TapTree, PsbtSighashType};
+use super::map::{Map, Input, Output, PsbtSighashType};
 use super::Psbt;
 
 use crate::taproot::TaprootBuilder;
@@ -283,24 +286,24 @@ impl Deserialize for XOnlyPublicKey {
     }
 }
 
-impl Serialize for schnorr::Signature  {
+impl Serialize for taproot::Signature  {
     fn serialize(&self) -> Vec<u8> {
         self.to_vec()
     }
 }
 
-impl Deserialize for schnorr::Signature {
+impl Deserialize for taproot::Signature {
     fn deserialize(bytes: &[u8]) -> Result<Self, Error> {
-        schnorr::Signature::from_slice(bytes)
+        taproot::Signature::from_slice(bytes)
             .map_err(|e| match e {
-                schnorr::Error::InvalidSighashType(flag) => {
+                taproot::Error::InvalidSighashType(flag) => {
                     Error::NonStandardSighashType(flag as u32)
                 }
-                schnorr::Error::InvalidSignatureSize(_) => {
-                    Error::InvalidSchnorrSignature(e)
+                taproot::Error::InvalidSignatureSize(_) => {
+                    Error::InvalidTaprootSignature(e)
                 }
-                schnorr::Error::Secp256k1(..) => {
-                    Error::InvalidSchnorrSignature(e)
+                taproot::Error::Secp256k1(..) => {
+                    Error::InvalidTaprootSignature(e)
                 }
             })
     }
@@ -309,9 +312,9 @@ impl Deserialize for schnorr::Signature {
 impl Serialize for (XOnlyPublicKey, TapLeafHash) {
     fn serialize(&self) -> Vec<u8> {
         let ser_pk = self.0.serialize();
-        let mut buf = Vec::with_capacity(ser_pk.len() + self.1.as_inner().len());
+        let mut buf = Vec::with_capacity(ser_pk.len() + self.1.as_byte_array().len());
         buf.extend(&ser_pk);
-        buf.extend(self.1.as_inner());
+        buf.extend(self.1.as_byte_array());
         buf
     }
 }
@@ -384,23 +387,22 @@ impl Deserialize for (Vec<TapLeafHash>, KeySource) {
 
 impl Serialize for TapTree {
     fn serialize(&self) -> Vec<u8> {
-        match (self.0.branch().len(), self.0.branch().last()) {
-            (1, Some(Some(root))) => {
-                let mut buf = Vec::new();
-                for leaf_info in root.leaves.iter() {
-                    // # Cast Safety:
-                    //
-                    // TaprootMerkleBranch can only have len atmost 128(TAPROOT_CONTROL_MAX_NODE_COUNT).
-                    // safe to cast from usize to u8
-                    buf.push(leaf_info.merkle_branch().as_inner().len() as u8);
-                    buf.push(leaf_info.leaf_version().to_consensus());
-                    leaf_info.script().consensus_encode(&mut buf).expect("Vecs dont err");
-                }
-                buf
-            }
-        // This should be unreachable as we Taptree is already finalized
-            _ => unreachable!(),
+        let capacity = self.script_leaves().map(|l| {
+            l.script().len() + VarInt(l.script().len() as u64).len() // script version
+            + 1 // merkle branch
+            + 1 // leaf version
+        }).sum::<usize>();
+        let mut buf = Vec::with_capacity(capacity);
+        for leaf_info in self.script_leaves() {
+            // # Cast Safety:
+            //
+            // TaprootMerkleBranch can only have len atmost 128(TAPROOT_CONTROL_MAX_NODE_COUNT).
+            // safe to cast from usize to u8
+            buf.push(leaf_info.merkle_branch().len() as u8);
+            buf.push(leaf_info.version().to_consensus());
+            leaf_info.script().consensus_encode(&mut buf).expect("Vecs dont err");
         }
+        buf
     }
 }
 
@@ -419,11 +421,7 @@ impl Deserialize for TapTree {
             builder = builder.add_leaf_with_ver(*depth, script, leaf_version)
                 .map_err(|_| Error::Taproot("Tree not in DFS order"))?;
         }
-        if builder.is_finalizable() && !builder.has_hidden_nodes() {
-            Ok(TapTree(builder))
-        } else {
-            Err(Error::Taproot("Incomplete taproot Tree"))
-        }
+        TapTree::try_from(builder).map_err(Error::TapTree)
     }
 }
 

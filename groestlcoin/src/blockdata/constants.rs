@@ -8,13 +8,11 @@
 //! single transaction.
 //!
 
-use crate::prelude::*;
-
 use core::default::Default;
 
 use groestlcoin_internals::impl_array_newtype;
+use hex_lit::hex;
 
-use crate::hashes::hex::{self, HexIterator};
 use crate::hashes::{Hash, sha256d};
 use crate::blockdata::script;
 use crate::blockdata::opcodes::all::*;
@@ -56,6 +54,8 @@ pub const MAX_SCRIPT_ELEMENT_SIZE: usize = 520;
 pub const SUBSIDY_HALVING_INTERVAL: u32 = 210_000;
 /// Maximum allowed value for an integer in Script.
 pub const MAX_SCRIPTNUM_VALUE: u32 = 0x80000000; // 2^31
+/// Number of blocks needed for an output from a coinbase transaction to be spendable.
+pub const COINBASE_MATURITY: u32 = 121;
 
 /// The maximum value allowed in an output (useful for sanity checking,
 /// since keeping everything below this value should prevent overflows
@@ -85,11 +85,9 @@ fn bitcoin_genesis_tx() -> Transaction {
     });
 
     // Outputs
-    let script_bytes: Result<Vec<u8>, hex::Error> =
-        HexIterator::new("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f").unwrap()
-            .collect();
+    let script_bytes = hex!("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f");
     let out_script = script::Builder::new()
-        .push_slice(script_bytes.unwrap().as_slice())
+        .push_slice(script_bytes)
         .push_opcode(OP_CHECKSIG)
         .into_script();
     ret.output.push(TxOut {
@@ -171,7 +169,7 @@ impl_bytes_newtype!(ChainHash, 32);
 impl ChainHash {
     // Mainnet value can be verified at https://github.com/lightning/bolts/blob/master/00-introduction.md
     /// `ChainHash` for mainnet groestlcoin.
-    pub const BITCOIN: Self = Self([35, 144, 99, 59, 112, 240, 98, 203, 58, 61, 104, 20, 182, 126, 41, 168, 13, 157, 117, 129, 219, 11, 204, 73, 77, 89, 124, 146, 197, 10, 0, 0]);
+    pub const GROESTLCOIN: Self = Self([35, 144, 99, 59, 112, 240, 98, 203, 58, 61, 104, 20, 182, 126, 41, 168, 13, 157, 117, 129, 219, 11, 204, 73, 77, 89, 124, 146, 197, 10, 0, 0]);
     /// `ChainHash` for testnet groestlcoin.
     pub const TESTNET: Self = Self([54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99, 193, 110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0]);
     /// `ChainHash` for signet groestlcoin.
@@ -184,7 +182,7 @@ impl ChainHash {
     /// See [BOLT 0](https://github.com/lightning/bolts/blob/ffeece3dab1c52efdb9b53ae476539320fa44938/00-introduction.md#chain_hash)
     /// for specification.
     pub const fn using_genesis_block(network: Network) -> Self {
-        let hashes = [Self::BITCOIN, Self::TESTNET, Self::SIGNET, Self::REGTEST];
+        let hashes = [Self::GROESTLCOIN, Self::TESTNET, Self::SIGNET, Self::REGTEST];
         hashes[network as usize]
     }
 }
@@ -264,7 +262,7 @@ mod test {
         // The genesis block hash is a double-groestl and it is displayed backwards.
         let genesis_hash = genesis_block(network).block_hash();
         // We abuse the sha256 hash here so we get a LowerHex impl that does not print the hex backwards.
-        let hash = sha256::Hash::from_slice(&genesis_hash.into_inner()).unwrap();
+        let hash = sha256::Hash::from_slice(genesis_hash.as_byte_array()).unwrap();
         let want = format!("{:02x}", hash);
 
         let chain_hash = ChainHash::using_genesis_block(network);

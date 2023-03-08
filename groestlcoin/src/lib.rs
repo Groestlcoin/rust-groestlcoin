@@ -37,7 +37,6 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 // Coding conventions
 #![warn(missing_docs)]
-
 // Instead of littering the codebase for non-fuzzing code just globally allow.
 #![cfg_attr(fuzzing, allow(dead_code, unused_imports))]
 
@@ -92,14 +91,14 @@ pub mod bip158;
 pub mod bip32;
 pub mod blockdata;
 pub mod consensus;
-pub mod crypto;
+// Private until we either make this a crate or flatten it - still to be decided.
+pub(crate) mod crypto;
 pub mod error;
 pub mod hash_types;
 pub mod merkle_tree;
 pub mod policy;
 pub mod pow;
 pub mod psbt;
-pub mod sighash;
 pub mod sign_message;
 pub mod string;
 pub mod taproot;
@@ -121,16 +120,20 @@ use core2::io;
 pub use crate::address::{Address, AddressType};
 pub use crate::amount::{Amount, Denomination, SignedAmount};
 pub use crate::blockdata::block::{self, Block};
+pub use crate::blockdata::fee_rate::FeeRate;
 pub use crate::blockdata::locktime::{self, absolute, relative};
 pub use crate::blockdata::script::{self, Script, ScriptBuf};
 pub use crate::blockdata::transaction::{self, OutPoint, Sequence, Transaction, TxIn, TxOut};
+pub use crate::blockdata::weight::Weight;
 pub use crate::blockdata::witness::{self, Witness};
 pub use crate::blockdata::{constants, opcodes};
 pub use crate::consensus::encode::VarInt;
 pub use crate::crypto::key::{self, PrivateKey, PublicKey};
-pub use crate::crypto::{ecdsa, schnorr};
+pub use crate::crypto::{ecdsa, sighash};
 pub use crate::error::Error;
-pub use crate::hash_types::{Txid, Wtxid, BlockHash, PubkeyHash,  ScriptHash, WPubkeyHash, WScriptHash};
+pub use crate::hash_types::{
+    BlockHash, PubkeyHash, ScriptHash, Txid, WPubkeyHash, WScriptHash, Wtxid,
+};
 pub use crate::merkle_tree::MerkleBlock;
 pub use crate::network::constants::Network;
 pub use crate::pow::{CompactTarget, Target, Work};

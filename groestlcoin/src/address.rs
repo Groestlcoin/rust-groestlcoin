@@ -27,7 +27,7 @@
 //! groestlcoin = { version = "...", features = ["rand-std"] }
 //! ```
 
-use core::convert::TryFrom;
+use core::convert::{TryFrom, TryInto};
 use core::fmt;
 use core::marker::PhantomData;
 use core::str::FromStr;
@@ -43,9 +43,10 @@ use crate::blockdata::constants::{
 };
 use crate::blockdata::opcodes;
 use crate::blockdata::opcodes::all::*;
-use crate::blockdata::script::{self, Instruction, Script, ScriptBuf};
-use crate::crypto::key::PublicKey;
-use crate::crypto::schnorr::{TapTweak, TweakedPublicKey, UntweakedPublicKey};
+use crate::blockdata::script::{
+    self, Instruction, PushBytes, PushBytesBuf, PushBytesErrorReport, Script, ScriptBuf,
+};
+use crate::crypto::key::{PublicKey, TapTweak, TweakedPublicKey, UntweakedPublicKey};
 use crate::error::ParseIntError;
 use crate::hash_types::{PubkeyHash, ScriptHash};
 use crate::hashes::{sha256, Hash, HashEngine};
@@ -93,8 +94,10 @@ pub enum Error {
         /// Network that was required.
         required: Network,
         /// Network on which the address was found to be valid.
-        found: Network
-    }
+        found: Network,
+        /// The address itself
+        address: Address<NetworkUnchecked>,
+    },
 }
 
 impl fmt::Display for Error {
@@ -113,7 +116,11 @@ impl fmt::Display for Error {
             Error::ExcessiveScriptSize => write!(f, "script size exceed 520 bytes"),
             Error::UnrecognizedScript => write!(f, "script is not a p2pkh, p2sh or witness program"),
             Error::UnknownAddressType(ref s) => write!(f, "unknown address type: '{}' is either invalid or not supported in rust-groestlcoin", s),
-	    Error::NetworkValidation { required, found } => write!(f, "address's network {} is different from required {}", found, required),
+            Error::NetworkValidation { required, found, ref address } => {
+                write!(f, "address ")?;
+                address.fmt_internal(f)?; // Using fmt_internal in order to remove the "Address<NetworkUnchecked>(..)" wrapper
+                write!(f, " belongs to network {} which is different from required {}", found, required)
+            }
         }
     }
 }
@@ -402,12 +409,19 @@ pub struct WitnessProgram {
     /// The witness program version.
     version: WitnessVersion,
     /// The witness program. (Between 2 and 40 bytes)
-    program: Vec<u8>,
+    program: PushBytesBuf,
 }
 
 impl WitnessProgram {
     /// Creates a new witness program.
-    pub fn new(version: WitnessVersion, program: Vec<u8>) -> Result<Self, Error> {
+    pub fn new<P>(version: WitnessVersion, program: P) -> Result<Self, Error>
+    where
+        P: TryInto<PushBytesBuf>,
+        <P as TryInto<PushBytesBuf>>::Error: PushBytesErrorReport,
+    {
+        let program = program
+            .try_into()
+            .map_err(|error| Error::InvalidWitnessProgramLength(error.input_len()))?;
         if program.len() < 2 || program.len() > 40 {
             return Err(Error::InvalidWitnessProgramLength(program.len()));
         }
@@ -420,34 +434,28 @@ impl WitnessProgram {
     }
 
     /// Returns the witness program version.
-    pub fn version(&self) -> WitnessVersion {
-        self.version
-    }
+    pub fn version(&self) -> WitnessVersion { self.version }
 
     /// Returns the witness program.
-    pub fn program(&self) -> &[u8] {
-        &self.program
-    }
+    pub fn program(&self) -> &PushBytes { &self.program }
 }
 
 impl Payload {
     /// Constructs a [Payload] from an output script (`scriptPubkey`).
     pub fn from_script(script: &Script) -> Result<Payload, Error> {
         Ok(if script.is_p2pkh() {
-            let mut hash_inner = [0u8; 20];
-            hash_inner.copy_from_slice(&script.as_bytes()[3..23]);
-            Payload::PubkeyHash(PubkeyHash::from_inner(hash_inner))
+            let bytes = script.as_bytes()[3..23].try_into().expect("statically 20B long");
+            Payload::PubkeyHash(PubkeyHash::from_byte_array(bytes))
         } else if script.is_p2sh() {
-            let mut hash_inner = [0u8; 20];
-            hash_inner.copy_from_slice(&script.as_bytes()[2..22]);
-            Payload::ScriptHash(ScriptHash::from_inner(hash_inner))
+            let bytes = script.as_bytes()[2..22].try_into().expect("statically 20B long");
+            Payload::ScriptHash(ScriptHash::from_byte_array(bytes))
         } else if script.is_witness_program() {
             let opcode = script.first_opcode().expect("witness_version guarantees len() > 4");
 
-            let witness_program = WitnessProgram::new(
-                WitnessVersion::try_from(opcode)?,
-                script.as_bytes()[2..].to_vec(),
-            )?;
+            let witness_program = script.as_bytes()[2..].to_vec();
+
+            let witness_program =
+                WitnessProgram::new(WitnessVersion::try_from(opcode)?, witness_program)?;
             Payload::WitnessProgram(witness_program)
         } else {
             return Err(Error::UnrecognizedScript);
@@ -459,8 +467,21 @@ impl Payload {
         match *self {
             Payload::PubkeyHash(ref hash) => ScriptBuf::new_p2pkh(hash),
             Payload::ScriptHash(ref hash) => ScriptBuf::new_p2sh(hash),
-            Payload::WitnessProgram(ref prog) =>
-                ScriptBuf::new_witness_program(prog)
+            Payload::WitnessProgram(ref prog) => ScriptBuf::new_witness_program(prog),
+        }
+    }
+
+    /// Returns true if the address creates a particular script
+    /// This function doesn't make any allocations.
+    pub fn matches_script_pubkey(&self, script: &Script) -> bool {
+        match *self {
+            Payload::PubkeyHash(ref hash) if script.is_p2pkh() =>
+                &script.as_bytes()[3..23] == <PubkeyHash as AsRef<[u8; 20]>>::as_ref(hash),
+            Payload::ScriptHash(ref hash) if script.is_p2sh() =>
+                &script.as_bytes()[2..22] == <ScriptHash as AsRef<[u8; 20]>>::as_ref(hash),
+            Payload::WitnessProgram(ref prog) if script.is_witness_program() =>
+                &script.as_bytes()[2..] == prog.program.as_bytes(),
+            Payload::PubkeyHash(_) | Payload::ScriptHash(_) | Payload::WitnessProgram(_) => false,
         }
     }
 
@@ -481,7 +502,7 @@ impl Payload {
     pub fn p2wpkh(pk: &PublicKey) -> Result<Payload, Error> {
         let prog = WitnessProgram::new(
             WitnessVersion::V0,
-            pk.wpubkey_hash().ok_or(Error::UncompressedPubkey)?.into_inner().to_vec()
+            pk.wpubkey_hash().ok_or(Error::UncompressedPubkey)?,
         )?;
         Ok(Payload::WitnessProgram(prog))
     }
@@ -490,24 +511,21 @@ impl Payload {
     pub fn p2shwpkh(pk: &PublicKey) -> Result<Payload, Error> {
         let builder = script::Builder::new()
             .push_int(0)
-            .push_slice(pk.wpubkey_hash().ok_or(Error::UncompressedPubkey)?.as_ref());
+            .push_slice(pk.wpubkey_hash().ok_or(Error::UncompressedPubkey)?);
 
         Ok(Payload::ScriptHash(builder.into_script().script_hash()))
     }
 
     /// Create a witness pay to script hash payload.
     pub fn p2wsh(script: &Script) -> Payload {
-        let prog = WitnessProgram::new(
-            WitnessVersion::V0,
-            script.wscript_hash().as_inner().to_vec()
-        ).expect("wscript_hash has len 32 compatible with segwitv0");
+        let prog = WitnessProgram::new(WitnessVersion::V0, script.wscript_hash())
+            .expect("wscript_hash has len 32 compatible with segwitv0");
         Payload::WitnessProgram(prog)
     }
 
     /// Create a pay to script payload that embeds a witness pay to script hash address
     pub fn p2shwsh(script: &Script) -> Payload {
-        let ws =
-            script::Builder::new().push_int(0).push_slice(script.wscript_hash().as_ref()).into_script();
+        let ws = script::Builder::new().push_int(0).push_slice(script.wscript_hash()).into_script();
 
         Payload::ScriptHash(ws.script_hash())
     }
@@ -519,10 +537,8 @@ impl Payload {
         merkle_root: Option<TapNodeHash>,
     ) -> Payload {
         let (output_key, _parity) = internal_key.tap_tweak(secp, merkle_root);
-        let prog = WitnessProgram::new(
-            WitnessVersion::V1,
-            output_key.to_inner().serialize().to_vec()
-        ).expect("taproot output key has len 32 <= 40");
+        let prog = WitnessProgram::new(WitnessVersion::V1, output_key.to_inner().serialize())
+            .expect("taproot output key has len 32 <= 40");
         Payload::WitnessProgram(prog)
     }
 
@@ -530,10 +546,8 @@ impl Payload {
     ///
     /// This method is not recommended for use and [Payload::p2tr()] should be used where possible.
     pub fn p2tr_tweaked(output_key: TweakedPublicKey) -> Payload {
-        let prog = WitnessProgram::new(
-            WitnessVersion::V1,
-            output_key.to_inner().serialize().to_vec()
-        ).expect("taproot output key has len 32 <= 40");
+        let prog = WitnessProgram::new(WitnessVersion::V1, output_key.to_inner().serialize())
+            .expect("taproot output key has len 32 <= 40");
         Payload::WitnessProgram(prog)
     }
 
@@ -543,7 +557,7 @@ impl Payload {
         match self {
             Payload::ScriptHash(hash) => hash.as_ref(),
             Payload::PubkeyHash(hash) => hash.as_ref(),
-            Payload::WitnessProgram(prog) => prog.program(),
+            Payload::WitnessProgram(prog) => prog.program().as_bytes(),
         }
     }
 }
@@ -588,7 +602,7 @@ impl<'a> fmt::Display for AddressEncoding<'a> {
                 let mut bech32_writer =
                     bech32::Bech32Writer::new(self.bech32_hrp, version.bech32_variant(), writer)?;
                 bech32::WriteBase32::write_u5(&mut bech32_writer, version.into())?;
-                bech32::ToBase32::write_base32(&prog, &mut bech32_writer)
+                bech32::ToBase32::write_base32(&prog.as_bytes(), &mut bech32_writer)
             }
         }
     }
@@ -617,8 +631,12 @@ pub enum NetworkChecked {}
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum NetworkUnchecked {}
 
-impl NetworkValidation for NetworkChecked { const IS_CHECKED: bool = true; }
-impl NetworkValidation for NetworkUnchecked { const IS_CHECKED: bool = false; }
+impl NetworkValidation for NetworkChecked {
+    const IS_CHECKED: bool = true;
+}
+impl NetworkValidation for NetworkUnchecked {
+    const IS_CHECKED: bool = false;
+}
 
 /// A Bitcoin address.
 ///
@@ -765,7 +783,9 @@ impl<V: NetworkValidation> Address<V> {
                     WitnessVersion::V0 => match prog.program().len() {
                         20 => Some(AddressType::P2wpkh),
                         32 => Some(AddressType::P2wsh),
-                        _ => unreachable!("Address creation invariant violation: invalid program length")
+                        _ => unreachable!(
+                            "Address creation invariant violation: invalid program length"
+                        ),
                     },
                     WitnessVersion::V1 if prog.program().len() == 32 => Some(AddressType::P2tr),
                     _ => None,
@@ -801,7 +821,7 @@ impl<V: NetworkValidation> Address<V> {
     /// marker type of the address.
     #[inline]
     pub fn new(network: Network, payload: Payload) -> Address<V> {
-	Address { network, payload, _validation: PhantomData }
+        Address { network, payload, _validation: PhantomData }
     }
 }
 
@@ -878,9 +898,7 @@ impl Address {
     /// # Returns
     /// None if unknown, non-standard or related to the future witness version.
     #[inline]
-    pub fn address_type(&self) -> Option<AddressType> {
-	self.address_type_internal()
-    }
+    pub fn address_type(&self) -> Option<AddressType> { self.address_type_internal() }
 
     /// Checks whether or not the address is following Bitcoin standardness rules when
     /// *spending* from this address. *NOT* to be called by senders.
@@ -937,9 +955,9 @@ impl Address {
         let payload = self.payload.inner_prog_as_bytes();
         let xonly_pubkey = XOnlyPublicKey::from(pubkey.inner);
 
-        (*pubkey_hash.as_inner() == *payload)
+        (*pubkey_hash.as_byte_array() == *payload)
             || (xonly_pubkey.serialize() == *payload)
-            || (*segwit_redeem_hash(&pubkey_hash).as_inner() == *payload)
+            || (*segwit_redeem_hash(&pubkey_hash).as_byte_array() == *payload)
     }
 
     /// Returns true if the supplied xonly public key can be used to derive the address.
@@ -949,6 +967,12 @@ impl Address {
     pub fn is_related_to_xonly_pubkey(&self, xonly_pubkey: &XOnlyPublicKey) -> bool {
         let payload = self.payload.inner_prog_as_bytes();
         payload == xonly_pubkey.serialize()
+    }
+
+    /// Returns true if the address creates a particular script
+    /// This function doesn't make any allocations.
+    pub fn matches_script_pubkey(&self, script_pubkey: &Script) -> bool {
+        self.payload.matches_script_pubkey(script_pubkey)
     }
 }
 
@@ -998,7 +1022,7 @@ impl Address<NetworkUnchecked> {
         if self.is_valid_for_network(required) {
             Ok(self.assume_checked())
         } else {
-            Err(Error::NetworkValidation { found: self.network, required })
+            Err(Error::NetworkValidation { found: self.network, required, address: self })
         }
     }
 
@@ -1009,15 +1033,11 @@ impl Address<NetworkUnchecked> {
     /// For details about this mechanism, see section [*Parsing addresses*](Address#parsing-addresses)
     /// on [`Address`].
     #[inline]
-    pub fn assume_checked(self) -> Address {
-        Address::new(self.network, self.payload)
-    }
+    pub fn assume_checked(self) -> Address { Address::new(self.network, self.payload) }
 }
 
 impl From<Address> for script::ScriptBuf {
-    fn from(a: Address) -> Self {
-        a.script_pubkey()
-    }
+    fn from(a: Address) -> Self { a.script_pubkey() }
 }
 
 // Alternate formatting `{:#}` is used to return uppercase version of bech32 addresses which should
@@ -1135,11 +1155,11 @@ fn segwit_redeem_hash(pubkey_hash: &PubkeyHash) -> crate::hashes::hash160::Hash 
 mod tests {
     use core::str::FromStr;
 
+    use hex_lit::hex;
     use secp256k1::XOnlyPublicKey;
 
     use super::*;
     use crate::crypto::key::PublicKey;
-    use crate::internal_macros::hex;
     use crate::network::constants::Network::{Groestlcoin, Testnet};
 
     fn roundtrips(addr: &Address) {
@@ -1159,14 +1179,18 @@ mod tests {
         #[cfg(feature = "serde")]
         {
             let ser = serde_json::to_string(addr).expect("failed to serialize address");
-            let back: Address<NetworkUnchecked> = serde_json::from_str(&ser).expect("failed to deserialize address");
+            let back: Address<NetworkUnchecked> =
+                serde_json::from_str(&ser).expect("failed to deserialize address");
             assert_eq!(back.assume_checked(), *addr, "serde round-trip failed for {}", addr)
         }
     }
 
     #[test]
     fn test_p2pkh_address_58() {
-        let addr = Address::new(Groestlcoin, Payload::PubkeyHash("162c5ea71c0b23f5b9022ef047c4a86470a5b070".parse().unwrap()));
+        let addr = Address::new(
+            Groestlcoin,
+            Payload::PubkeyHash("162c5ea71c0b23f5b9022ef047c4a86470a5b070".parse().unwrap()),
+        );
 
         assert_eq!(
             addr.script_pubkey(),
@@ -1183,7 +1207,9 @@ mod tests {
         let addr = Address::p2pkh(&key, Groestlcoin);
         assert_eq!(&addr.to_string(), "FtUCfuND9WBN2pLEnKeSx3mURaJ4iQdado");
 
-        let key = "03df154ebfcf29d29cc10d5c2565018bce2d9edbab267c31d2caf44a63056cf99f".parse::<PublicKey>().unwrap();
+        let key = "03df154ebfcf29d29cc10d5c2565018bce2d9edbab267c31d2caf44a63056cf99f"
+            .parse::<PublicKey>()
+            .unwrap();
         let addr = Address::p2pkh(&key, Testnet);
         assert_eq!(&addr.to_string(), "mqkhEMH6NCeYjFybv7pvFC22MFeaH9jnTv");
         assert_eq!(addr.address_type(), Some(AddressType::P2pkh));
@@ -1192,7 +1218,10 @@ mod tests {
 
     #[test]
     fn test_p2sh_address_58() {
-        let addr = Address::new(Groestlcoin, Payload::ScriptHash("162c5ea71c0b23f5b9022ef047c4a86470a5b070".parse().unwrap()));
+        let addr = Address::new(
+            Groestlcoin,
+            Payload::ScriptHash("162c5ea71c0b23f5b9022ef047c4a86470a5b070".parse().unwrap()),
+        );
 
         assert_eq!(
             addr.script_pubkey(),
@@ -1220,8 +1249,10 @@ mod tests {
 
     #[test]
     fn test_p2wpkh() {
-        // stolen from Groestlcoin transaction: b3c8c2b6cfc335abbcb2c7823a8453f55d64b2b5125a9a61e8737230cdb8ce20
-        let mut key = "033bc8c83c52df5712229a2f72206d90192366c36428cb0c12b6af98324d97bfbc".parse::<PublicKey>().unwrap();
+        // stolen from Bitcoin transaction: b3c8c2b6cfc335abbcb2c7823a8453f55d64b2b5125a9a61e8737230cdb8ce20
+        let mut key = "033bc8c83c52df5712229a2f72206d90192366c36428cb0c12b6af98324d97bfbc"
+            .parse::<PublicKey>()
+            .unwrap();
         let addr = Address::p2wpkh(&key, Groestlcoin).unwrap();
         assert_eq!(&addr.to_string(), "grs1qvzvkjn4q3nszqxrv3nraga2r822xjty3e8sh90");
         assert_eq!(addr.address_type(), Some(AddressType::P2wpkh));
@@ -1247,8 +1278,10 @@ mod tests {
 
     #[test]
     fn test_p2shwpkh() {
-        // stolen from Groestlcoin transaction: ad3fd9c6b52e752ba21425435ff3dd361d6ac271531fc1d2144843a9f550ad01
-        let mut key = "026c468be64d22761c30cd2f12cbc7de255d592d7904b1bab07236897cc4c2e766".parse::<PublicKey>().unwrap();
+        // stolen from Bitcoin transaction: ad3fd9c6b52e752ba21425435ff3dd361d6ac271531fc1d2144843a9f550ad01
+        let mut key = "026c468be64d22761c30cd2f12cbc7de255d592d7904b1bab07236897cc4c2e766"
+            .parse::<PublicKey>()
+            .unwrap();
         let addr = Address::p2shwpkh(&key, Groestlcoin).unwrap();
         assert_eq!(&addr.to_string(), "3QBRmWNqqBGme9er7fMkGqtZtp4gn5WwDf");
         assert_eq!(addr.address_type(), Some(AddressType::P2sh));
@@ -1275,7 +1308,7 @@ mod tests {
         let program = hex!(
             "654f6ea368e0acdfd92976b7c2103a1b26313f430654f6ea368e0acdfd92976b7c2103a1b26313f4"
         );
-        let witness_prog = WitnessProgram::new(WitnessVersion::V13, program).unwrap();
+        let witness_prog = WitnessProgram::new(WitnessVersion::V13, program.to_vec()).unwrap();
         let addr = Address::new(Groestlcoin, Payload::WitnessProgram(witness_prog));
         roundtrips(&addr);
     }
@@ -1284,19 +1317,24 @@ mod tests {
     fn test_address_debug() {
         // This is not really testing output of Debug but the ability and proper functioning
         // of Debug derivation on structs generic in NetworkValidation.
-        #[derive(Debug)] #[allow(unused)]
-        struct Test<V: NetworkValidation> { address: Address<V> }
+        #[derive(Debug)]
+        #[allow(unused)]
+        struct Test<V: NetworkValidation> {
+            address: Address<V>,
+        }
 
         let addr_str = "33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32";
         let unchecked = Address::from_str(addr_str).unwrap();
 
         assert_eq!(
             format!("{:?}", Test { address: unchecked.clone() }),
-            format!("Test {{ address: Address<NetworkUnchecked>({}) }}", addr_str));
+            format!("Test {{ address: Address<NetworkUnchecked>({}) }}", addr_str)
+        );
 
         assert_eq!(
             format!("{:?}", Test { address: unchecked.assume_checked() }),
-            format!("Test {{ address: {} }}", addr_str));
+            format!("Test {{ address: {} }}", addr_str)
+        );
     }
 
     #[test]
@@ -1411,7 +1449,8 @@ mod tests {
     fn test_json_serialize() {
         use serde_json;
 
-        let addr = Address::from_str("FXBxTzaqSQsBFkL7DSAkqbaEvhN4HxNsAr").unwrap().assume_checked();
+        let addr =
+            Address::from_str("FXBxTzaqSQsBFkL7DSAkqbaEvhN4HxNsAr").unwrap().assume_checked();
         let json = serde_json::to_value(&addr).unwrap();
         assert_eq!(
             json,
@@ -1424,7 +1463,8 @@ mod tests {
             ScriptBuf::from_hex("76a914162c5ea71c0b23f5b9022ef047c4a86470a5b07088ac").unwrap()
         );
 
-        let addr = Address::from_str("33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32").unwrap().assume_checked();
+        let addr =
+            Address::from_str("33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32").unwrap().assume_checked();
         let json = serde_json::to_value(&addr).unwrap();
         assert_eq!(
             json,
@@ -1450,7 +1490,8 @@ mod tests {
 
         let addr =
             Address::from_str("tgrs1qw4z3xrtgx4f6w7akwpp2xa0gupmkv4yauemmm9")
-                .unwrap().assume_checked();
+                .unwrap()
+                .assume_checked();
         let json = serde_json::to_value(&addr).unwrap();
         assert_eq!(
             json,
@@ -1462,10 +1503,15 @@ mod tests {
         assert_eq!(addr.to_string(), into.to_string());
         assert_eq!(
             into.script_pubkey(),
-            ScriptBuf::from_hex("00147545130d683553a77bb67042a375e8e07766549d").unwrap()
+            ScriptBuf::from_hex(
+                "00147545130d683553a77bb67042a375e8e07766549d"
+            )
+            .unwrap()
         );
 
-        let addr = Address::from_str("grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h").unwrap().assume_checked();
+        let addr = Address::from_str("grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h")
+            .unwrap()
+            .assume_checked();
         let json = serde_json::to_value(&addr).unwrap();
         assert_eq!(
             json,
@@ -1484,7 +1530,8 @@ mod tests {
         for el in
             ["FXBxTzaqSQsBFkL7DSAkqbaEvhN4HxNsAr", "33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32"].iter()
         {
-            let addr = Address::from_str(el).unwrap().require_network(Network::Groestlcoin).expect("mainnet");
+            let addr =
+                Address::from_str(el).unwrap().require_network(Network::Groestlcoin).expect("mainnet");
             assert_eq!(addr.to_qr_uri(), format!("groestlcoin:{}", el));
         }
 
@@ -1506,10 +1553,15 @@ mod tests {
             Payload::ScriptHash(ScriptHash::all_zeros()),
         ];
         let segwit_payload = (0..=16)
-            .map(|version| Payload::WitnessProgram(WitnessProgram::new(
-                WitnessVersion::try_from(version).unwrap(),
-                vec![0xab; 32], // Choose 32 to make test case valid for all witness versions(including v0)
-            ).unwrap()))
+            .map(|version| {
+                Payload::WitnessProgram(
+                    WitnessProgram::new(
+                        WitnessVersion::try_from(version).unwrap(),
+                        vec![0xab; 32], // Choose 32 to make test case valid for all witness versions(including v0)
+                    )
+                    .unwrap(),
+                )
+            })
             .collect::<Vec<_>>();
 
         const LEGACY_EQUIVALENCE_CLASSES: &[&[Network]] =
@@ -1695,9 +1747,12 @@ mod tests {
     #[test]
     fn test_fail_address_from_script() {
         let bad_p2wpkh = ScriptBuf::from_hex("0014dbc5b0a8f9d4353b4b54c3db48846bb15abfec").unwrap();
-        let bad_p2wsh =
-            ScriptBuf::from_hex("00202d4fa2eb233d008cc83206fa2f4f2e60199000f5b857a835e3172323385623").unwrap();
-        let invalid_segwitv0_script = ScriptBuf::from_hex("001161458e330389cd0437ee9fe3641d70cc18").unwrap();
+        let bad_p2wsh = ScriptBuf::from_hex(
+            "00202d4fa2eb233d008cc83206fa2f4f2e60199000f5b857a835e3172323385623",
+        )
+        .unwrap();
+        let invalid_segwitv0_script =
+            ScriptBuf::from_hex("001161458e330389cd0437ee9fe3641d70cc18").unwrap();
         let expected = Err(Error::UnrecognizedScript);
 
         assert_eq!(Address::from_script(&bad_p2wpkh, Network::Groestlcoin), expected);
@@ -1719,5 +1774,27 @@ mod tests {
         let got = AddressType::from_str("invalid");
         let want = Err(Error::UnknownAddressType("invalid".to_string()));
         assert_eq!(got, want);
+    }
+
+    #[test] #[ignore]
+    fn test_matches_script_pubkey() {
+        let addresses = [
+            "1QJVDzdqb1VpbDK7uDeyVXy9mR27CJiyhY",
+            "1J4LVanjHMu3JkXbVrahNuQCTGCRRgfWWx",
+            "33iFwdLuRpW1uK1RTRqsoi8rR4NpDzk66k",
+            "3QBRmWNqqBGme9er7fMkGqtZtp4gjMFxhE",
+            "bc1zw508d6qejxtdg4y5r3zarvaryvaxxpcs",
+            "bc1qvzvkjn4q3nszqxrv3nraga2r822xjty3ykvkuw",
+            "bc1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr",
+            "bc1pgllnmtxs0g058qz7c6qgaqq4qknwrqj9z7rqn9e2dzhmcfmhlu4sfadf5e",
+        ];
+        for addr in &addresses {
+            let addr = Address::from_str(addr).unwrap().require_network(Network::Groestlcoin).unwrap();
+            for another in &addresses {
+                let another =
+                    Address::from_str(another).unwrap().require_network(Network::Groestlcoin).unwrap();
+                assert_eq!(addr.matches_script_pubkey(&another.script_pubkey()), addr == another);
+            }
+        }
     }
 }

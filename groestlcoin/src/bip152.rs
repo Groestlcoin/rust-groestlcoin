@@ -221,8 +221,8 @@ impl HeaderAndShortIds {
             } else {
                 short_ids.push(ShortId::with_siphash_keys(
                     &match version {
-                        1 => tx.txid().as_hash(),
-                        2 => tx.wtxid().as_hash(),
+                        1 => tx.txid().to_raw_hash(),
+                        2 => tx.wtxid().to_raw_hash(),
                         _ => unreachable!(),
                     },
                     siphash_keys,
@@ -375,8 +375,8 @@ mod test {
     use super::*;
     use crate::blockdata::locktime::absolute;
     use crate::consensus::encode::{deserialize, serialize};
-    use crate::hashes::hex::FromHex;
     use crate::hash_types::TxMerkleNode;
+    use crate::hashes::hex::FromHex;
     use crate::{
         CompactTarget, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Witness,
     };

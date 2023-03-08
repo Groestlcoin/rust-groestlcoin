@@ -8,4 +8,6 @@
 
 pub mod ecdsa;
 pub mod key;
-pub mod schnorr;
+pub mod sighash;
+// Contents re-exported in `groestlcoin::taproot`.
+pub(crate) mod taproot;

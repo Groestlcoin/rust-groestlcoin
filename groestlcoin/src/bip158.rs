@@ -170,7 +170,7 @@ pub struct BlockFilterWriter<'a, W> {
 impl<'a, W: io::Write> BlockFilterWriter<'a, W> {
     /// Creates a new [`BlockFilterWriter`] from `block`.
     pub fn new(writer: &'a mut W, block: &'a Block) -> BlockFilterWriter<'a, W> {
-        let block_hash_as_int = block.block_hash().into_inner();
+        let block_hash_as_int = block.block_hash().to_byte_array();
         let k0 = u64::from_le_bytes(block_hash_as_int[0..8].try_into().expect("8 byte slice"));
         let k1 = u64::from_le_bytes(block_hash_as_int[8..16].try_into().expect("8 byte slice"));
         let writer = GcsFilterWriter::new(writer, k0, k1, M, P);
@@ -225,7 +225,7 @@ pub struct BlockFilterReader {
 impl BlockFilterReader {
     /// Creates a new [`BlockFilterReader`] from `block_hash`.
     pub fn new(block_hash: &BlockHash) -> BlockFilterReader {
-        let block_hash_as_int = block_hash.into_inner();
+        let block_hash_as_int = block_hash.to_byte_array();
         let k0 = u64::from_le_bytes(block_hash_as_int[0..8].try_into().expect("8 byte slice"));
         let k1 = u64::from_le_bytes(block_hash_as_int[8..16].try_into().expect("8 byte slice"));
         BlockFilterReader { reader: GcsFilterReader::new(k0, k1, M, P) }
@@ -561,8 +561,8 @@ mod test {
     use super::*;
     use crate::consensus::encode::deserialize;
     use crate::hash_types::BlockHash;
-    use crate::ScriptBuf;
     use crate::internal_macros::hex;
+    use crate::ScriptBuf;
 
     #[test] #[ignore]
     fn test_blockfilters() {
@@ -572,8 +572,7 @@ mod test {
         let testdata = serde_json::from_str::<Value>(data).unwrap().as_array().unwrap().clone();
         for t in testdata.iter().skip(1) {
             let block_hash = t.get(1).unwrap().as_str().unwrap().parse::<BlockHash>().unwrap();
-            let block: Block =
-                deserialize(&hex!(t.get(2).unwrap().as_str().unwrap())).unwrap();
+            let block: Block = deserialize(&hex!(t.get(2).unwrap().as_str().unwrap())).unwrap();
             assert_eq!(block.block_hash(), block_hash);
             let scripts = t.get(3).unwrap().as_array().unwrap();
             let previous_filter_header =

@@ -81,18 +81,15 @@ use std::str::FromStr;
 use groestlcoin::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use groestlcoin::consensus::encode;
 use groestlcoin::constants::COIN_VALUE;
-use groestlcoin::hashes::Hash;
-use groestlcoin::key::XOnlyPublicKey;
+use groestlcoin::key::{TapTweak, XOnlyPublicKey};
 use groestlcoin::opcodes::all::{OP_CHECKSIG, OP_CLTV, OP_DROP};
 use groestlcoin::psbt::{self, Input, Output, Psbt, PsbtSighashType};
-use groestlcoin::schnorr::{self, TapTweak};
-use groestlcoin::secp256k1::{Message, Secp256k1};
-use groestlcoin::sighash::{self, SchnorrSighashType, SighashCache};
-use groestlcoin::taproot::{
-    LeafVersion, TapLeafHash, TapSighashHash, TaprootBuilder, TaprootSpendInfo,
-};
+use groestlcoin::secp256k1::Secp256k1;
+use groestlcoin::sighash::{self, SighashCache, TapSighash, TapSighashType};
+use groestlcoin::taproot::{self, LeafVersion, TapLeafHash, TaprootBuilder, TaprootSpendInfo};
 use groestlcoin::{
-    absolute, script, Address, Amount, Network, OutPoint, ScriptBuf, Transaction, TxIn, TxOut, Witness,
+    absolute, script, Address, Amount, Network, OutPoint, ScriptBuf, Transaction, TxIn, TxOut,
+    Witness,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -104,10 +101,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Just some addresses for outputs from our wallets. Not really important.
     let to_address =
         Address::from_str("grsrt1p0p3rvwww0v9znrclp00uneq8ytre9kj922v8fxhnezm3mgsmn9usyt7nyn")?
-	.require_network(Network::Regtest)?;
+            .require_network(Network::Regtest)?;
     let change_address =
         Address::from_str("grsrt1pz449kexzydh2kaypatup5ultru3ej284t6eguhnkn6wkhswt0l7qcsacn3")?
-	.require_network(Network::Regtest)?;
+            .require_network(Network::Regtest)?;
     let amount_to_send_in_sats = COIN_VALUE;
     let change_amount = UTXO_1
         .amount_in_sats
@@ -237,10 +234,7 @@ fn generate_bip86_key_spend_tx(
         version: 2,
         lock_time: absolute::LockTime::ZERO,
         input: vec![TxIn {
-            previous_output: OutPoint {
-                txid: input_utxo.txid.parse()?,
-                vout: input_utxo.vout,
-            },
+            previous_output: OutPoint { txid: input_utxo.txid.parse()?, vout: input_utxo.vout },
             script_sig: ScriptBuf::new(),
             sequence: groestlcoin::Sequence(0xFFFFFFFF), // Ignore nSequence.
             witness: Witness::default(),
@@ -283,8 +277,8 @@ fn generate_bip86_key_spend_tx(
         |(vout, input)| {
             let hash_ty = input
                 .sighash_type
-                .and_then(|psbt_sighash_type| psbt_sighash_type.schnorr_hash_ty().ok())
-                .unwrap_or(SchnorrSighashType::All);
+                .and_then(|psbt_sighash_type| psbt_sighash_type.taproot_hash_ty().ok())
+                .unwrap_or(TapSighashType::All);
             let hash = SighashCache::new(&unsigned_tx).taproot_key_spend_signature_hash(
                 vout,
                 &sighash::Prevouts::All(&[TxOut {
@@ -300,7 +294,7 @@ fn generate_bip86_key_spend_tx(
                 .ok_or("Missing taproot key origin")?;
 
             let secret_key = master_xpriv.derive_priv(secp, &derivation_path)?.to_priv().inner;
-            sign_psbt_schnorr(
+            sign_psbt_taproot(
                 &secret_key,
                 input.tap_internal_key.unwrap(),
                 None,
@@ -367,7 +361,10 @@ impl BenefactorWallet {
         })
     }
 
-    fn time_lock_script(locktime: absolute::LockTime, beneficiary_key: XOnlyPublicKey) -> ScriptBuf {
+    fn time_lock_script(
+        locktime: absolute::LockTime,
+        beneficiary_key: XOnlyPublicKey,
+    ) -> ScriptBuf {
         script::Builder::new()
             .push_int(locktime.to_consensus_u32() as i64)
             .push_opcode(OP_CLTV)
@@ -518,8 +515,8 @@ impl BenefactorWallet {
 
             let hash_ty = input
                 .sighash_type
-                .and_then(|psbt_sighash_type| psbt_sighash_type.schnorr_hash_ty().ok())
-                .unwrap_or(SchnorrSighashType::All);
+                .and_then(|psbt_sighash_type| psbt_sighash_type.taproot_hash_ty().ok())
+                .unwrap_or(TapSighashType::All);
             let hash = SighashCache::new(&psbt.unsigned_tx).taproot_key_spend_signature_hash(
                 0,
                 &sighash::Prevouts::All(&[TxOut {
@@ -536,7 +533,7 @@ impl BenefactorWallet {
                     .ok_or("Missing taproot key origin")?;
                 let secret_key =
                     self.master_xpriv.derive_priv(&self.secp, &derivation_path)?.to_priv().inner;
-                sign_psbt_schnorr(
+                sign_psbt_taproot(
                     &secret_key,
                     spend_info.internal_key(),
                     None,
@@ -660,7 +657,7 @@ impl BeneficiaryWallet {
             let secret_key =
                 self.master_xpriv.derive_priv(&self.secp, &derivation_path)?.to_priv().inner;
             for lh in leaf_hashes {
-                let hash_ty = SchnorrSighashType::All;
+                let hash_ty = TapSighashType::All;
                 let hash = SighashCache::new(&unsigned_tx).taproot_script_spend_signature_hash(
                     0,
                     &sighash::Prevouts::All(&[TxOut {
@@ -670,7 +667,7 @@ impl BeneficiaryWallet {
                     *lh,
                     hash_ty,
                 )?;
-                sign_psbt_schnorr(
+                sign_psbt_taproot(
                     &secret_key,
                     *x_only_pubkey,
                     Some(*lh),
@@ -730,13 +727,13 @@ impl BeneficiaryWallet {
 // licenses.
 
 // Calling this with `leaf_hash` = `None` will sign for key-spend
-fn sign_psbt_schnorr(
+fn sign_psbt_taproot(
     secret_key: &secp256k1::SecretKey,
     pubkey: XOnlyPublicKey,
     leaf_hash: Option<TapLeafHash>,
     psbt_input: &mut psbt::Input,
-    hash: TapSighashHash,
-    hash_ty: SchnorrSighashType,
+    hash: TapSighash,
+    hash_ty: TapSighashType,
     secp: &Secp256k1<secp256k1::All>,
 ) {
     let keypair = secp256k1::KeyPair::from_seckey_slice(secp, secret_key.as_ref()).unwrap();
@@ -745,9 +742,9 @@ fn sign_psbt_schnorr(
         Some(_) => keypair, // no tweak for script spend
     };
 
-    let sig = secp.sign_schnorr(&Message::from_slice(&hash.into_inner()[..]).unwrap(), &keypair);
+    let sig = secp.sign_schnorr(&hash.into(), &keypair);
 
-    let final_signature = schnorr::Signature { sig, hash_ty };
+    let final_signature = taproot::Signature { sig, hash_ty };
 
     if let Some(lh) = leaf_hash {
         psbt_input.tap_script_sigs.insert((pubkey, lh), final_signature);

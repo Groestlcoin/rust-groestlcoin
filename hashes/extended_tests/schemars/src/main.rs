@@ -125,7 +125,7 @@ mod tests {
         impl sha256t::Tag for TestHashTag {
             fn engine() -> sha256::HashEngine {
                 // The TapRoot TapLeaf midstate.
-                let midstate = sha256::Midstate::from_inner(TEST_MIDSTATE);
+                let midstate = sha256::Midstate::from_byte_array(TEST_MIDSTATE);
                 sha256::HashEngine::from_midstate(midstate, 64)
             }
         }
@@ -139,7 +139,7 @@ mod tests {
             TEST_MIDSTATE,
             64,
             doc = "test hash",
-            true
+            backward
         );
         static HASH_BYTES: [u8; 32] = [
             0xef, 0x53, 0x7f, 0x25, 0xc8, 0x95, 0xbf, 0xa7, 0x82, 0x52, 0x65, 0x29, 0xa9, 0xb6,

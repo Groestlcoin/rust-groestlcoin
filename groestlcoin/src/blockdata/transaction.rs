@@ -30,14 +30,15 @@ use crate::blockdata::witness::Witness;
 use crate::blockdata::locktime::absolute::{self, Height, Time};
 use crate::blockdata::locktime::relative;
 use crate::consensus::{encode, Decodable, Encodable};
-use crate::hash_types::{Sighash, Txid, TxidInternal, Wtxid, WtxidInternal};
+use crate::crypto::sighash::LegacySighash;
+use crate::hash_types::{Txid, TxidInternal, Wtxid, WtxidInternal};
 use crate::VarInt;
 use crate::internal_macros::impl_consensus_encoding;
-use crate::parse::impl_parse_str_through_int;
+use crate::parse::impl_parse_str_from_int_infallible;
 use super::Weight;
 
 #[cfg(doc)]
-use crate::sighash::{EcdsaSighashType, SchnorrSighashType};
+use crate::sighash::{EcdsaSighashType, TapSighashType};
 
 /// A reference to a transaction output.
 ///
@@ -499,7 +500,7 @@ impl fmt::UpperHex for Sequence {
     }
 }
 
-impl_parse_str_through_int!(Sequence);
+impl_parse_str_from_int_infallible!(Sequence, u32, from_consensus);
 
 /// Groestlcoin transaction output.
 ///
@@ -588,17 +589,18 @@ impl<E> EncodeSigningDataResult<E> {
     ///
     /// ```rust
     /// # use groestlcoin::consensus::deserialize;
+    /// # use groestlcoin::sighash::{LegacySighash, SighashCache};
     /// # use groestlcoin::Transaction;
-    /// # use groestlcoin::hash_types::Sighash;
     /// # use groestlcoin_hashes::{Hash, hex::FromHex};
-    /// # let mut writer = Sighash::engine();
+    /// # let mut writer = LegacySighash::engine();
     /// # let input_index = 0;
     /// # let script_pubkey = groestlcoin::ScriptBuf::new();
     /// # let sighash_u32 = 0u32;
     /// # const SOME_TX: &'static str = "0100000001a15d57094aa7a21a28cb20b59aab8fc7d1149a3bdbcddba9c622e4f5f6a99ece010000006c493046022100f93bb0e7d8db7bd46e40132d1f8242026e045f03a0efe71bbb8e3f475e970d790221009337cd7f1f929f00cc6ff01f03729b069a7c21b59b1736ddfee5db5946c5da8c0121033b9b137ee87d5a812d6f506efdd37f0affa7ffc310711c06c7f3e097c9447c52ffffffff0100e1f505000000001976a9140389035a9225b3839e2bbf32d826a1e222031fd888ac00000000";
     /// # let raw_tx = Vec::from_hex(SOME_TX).unwrap();
     /// # let tx: Transaction = deserialize(&raw_tx).unwrap();
-    /// if tx.encode_signing_data_to(&mut writer, input_index, &script_pubkey, sighash_u32)
+    /// let cache = SighashCache::new(&tx);
+    /// if cache.legacy_encode_signing_data_to(&mut writer, input_index, &script_pubkey, sighash_u32)
     ///         .is_sighash_single_bug()
     ///         .expect("writer can't fail") {
     ///     // use a hash value of "1", instead of computing the actual hash due to SIGHASH_SINGLE bug
@@ -831,7 +833,7 @@ impl Transaction {
         input_index: usize,
         script_pubkey: &Script,
         sighash_u32: u32
-    ) -> Sighash {
+    ) -> LegacySighash {
         assert!(input_index < self.input.len());  // Panic on OOB, enables expect below.
 
         let cache = crate::sighash::SighashCache::new(self);
@@ -1271,12 +1273,65 @@ pub struct InputWeightPrediction {
 }
 
 impl InputWeightPrediction {
+    /// Input weight prediction corresponding to spending of P2WPKH output with the largest possible
+    /// DER-encoded signature.
+    ///
+    /// If the input in your transaction uses P2WPKH you can use this instead of
+    /// [`InputWeightPrediction::new`].
+    ///
+    /// This is useful when you **do not** use [signature grinding] and want to ensure you are not
+    /// under-paying. See [`ground_p2wpkh`](Self::ground_p2wpkh) if you do use signature grinding.
+    ///
+    /// [signature grinding]: https://bitcoin.stackexchange.com/questions/111660/what-is-signature-grinding
+    pub const P2WPKH_MAX: Self = InputWeightPrediction { script_size: 0, witness_size: 1 + 1 + 73 + 1 + 33 };
+
+    /// Input weight prediction corresponding to spending of taproot output using the key and
+    /// default sighash.
+    ///
+    /// If the input in your transaction uses Taproot key spend you can use this instead of
+    /// [`InputWeightPrediction::new`].
+    pub const P2TR_KEY_DEFAULT_SIGHASH: Self = InputWeightPrediction { script_size: 0, witness_size: 1 + 1 + 64 };
+
+    /// Input weight prediction corresponding to spending of taproot output using the key and
+    /// **non**-default sighash.
+    ///
+    /// If the input in your transaction uses Taproot key spend you can use this instead of
+    /// [`InputWeightPrediction::new`].
+    pub const P2TR_KEY_NON_DEFAULT_SIGHASH: Self = InputWeightPrediction { script_size: 0, witness_size: 1 + 1 + 65 };
+
+    /// Input weight prediction corresponding to spending of P2WPKH output using [signature
+    /// grinding].
+    ///
+    /// If the input in your transaction uses P2WPKH and you use signature grinding you can use this
+    /// instead of [`InputWeightPrediction::new`]. See [`P2WPKH_MAX`](Self::P2WPKH_MAX) if you don't
+    /// use signature grinding.
+    ///
+    /// Note: `bytes_to_grind` is usually `1` because of exponential cost of higher values.
+    ///
+    /// # Panics
+    ///
+    /// The funcion panics in const context and debug builds if `bytes_to_grind` is higher than 62.
+    ///
+    /// [signature grinding]: https://bitcoin.stackexchange.com/questions/111660/what-is-signature-grinding
+    pub const fn ground_p2wpkh(bytes_to_grind: usize) -> Self {
+        // Written to trigger const/debug panic for unreasonably high values.
+        let der_signature_size = 10 + (62 - bytes_to_grind);
+        let witness_size = 1 // length of element count varint
+            + 1 // length of element size varint (max signature length is 73B)
+            + der_signature_size
+            + 1 // sighash flag
+            + 1 // length of element size varint
+            + 33; // length of (always-compressed) public key
+        InputWeightPrediction { script_size: 0, witness_size }
+    }
+
     /// Computes the prediction for a single input.
-    pub fn new<I>(input_script_len: usize, witness_element_lengths: I) -> Self
-        where I: IntoIterator<Item = usize>,
+    pub fn new<T>(input_script_len: usize, witness_element_lengths: T) -> Self
+        where T :IntoIterator, T::Item:Borrow<usize>,
     {
         let (count, total_size) = witness_element_lengths.into_iter()
             .fold((0, 0), |(count, total_size), elem_len| {
+                let elem_len = *elem_len.borrow();
                 let elem_size = elem_len + VarInt(elem_len as u64).len();
                 (count + 1, total_size + elem_size)
             });

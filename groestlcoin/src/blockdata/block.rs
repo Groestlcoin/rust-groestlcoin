@@ -256,7 +256,7 @@ impl Block {
 
     /// Computes the transaction merkle root.
     pub fn compute_merkle_root(&self) -> Option<TxMerkleNode> {
-        let hashes = self.txdata.iter().map(|obj| obj.txid().as_hash());
+        let hashes = self.txdata.iter().map(|obj| obj.txid().to_raw_hash());
         merkle_tree::calculate_root(hashes).map(|h| h.into())
     }
 
@@ -273,9 +273,9 @@ impl Block {
         let hashes = self.txdata.iter().enumerate().map(|(i, t)| {
             if i == 0 {
                 // Replace the first hash with zeroes.
-                Wtxid::all_zeros().as_hash()
+                Wtxid::all_zeros().to_raw_hash()
             } else {
-                t.wtxid().as_hash()
+                t.wtxid().to_raw_hash()
             }
         });
         merkle_tree::calculate_root(hashes).map(|h| h.into())
@@ -333,7 +333,7 @@ impl Block {
         match push.map_err(|_| Bip34Error::NotPresent)? {
             script::Instruction::PushBytes(b) => {
                 // Check that the number is encoded in the minimal way.
-                let h = script::read_scriptint(b).map_err(|_e| Bip34Error::UnexpectedPush(b.to_vec()))?;
+                let h = script::read_scriptint(b.as_bytes()).map_err(|_e| Bip34Error::UnexpectedPush(b.as_bytes().to_vec()))?;
                 if h < 0 {
                     Err(Bip34Error::NegativeHeight)
                 } else {

@@ -28,6 +28,7 @@
 
 use core::borrow::{Borrow, BorrowMut};
 use core::convert::TryFrom;
+use core::fmt::Display;
 use core::str::FromStr;
 use core::{fmt, ops};
 
@@ -36,6 +37,7 @@ use groestlcoin_internals::{debug_from_display, write_err};
 use serde::{Deserialize, Serialize};
 
 use crate::consensus::encode::{self, Decodable, Encodable};
+use crate::constants::ChainHash;
 use crate::error::impl_std_error;
 use crate::hashes::hex::{Error, FromHex};
 use crate::io;
@@ -141,6 +143,34 @@ impl Network {
         };
         Ok(network)
     }
+
+    /// Return the network's chain hash (genesis block hash).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use groestlcoin::network::constants::Network;
+    /// use groestlcoin::blockdata::constants::ChainHash;
+    ///
+    /// let network = Network::Groestlcoin;
+    /// assert_eq!(network.chain_hash(), ChainHash::GROESTLCOIN);
+    /// ```
+    pub fn chain_hash(self) -> ChainHash { ChainHash::using_genesis_block(self) }
+
+    /// Creates a `Network` from the chain hash (genesis block hash).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use groestlcoin::network::constants::Network;
+    /// use groestlcoin::blockdata::constants::ChainHash;
+    /// use std::convert::TryFrom;
+    ///
+    /// assert_eq!(Ok(Network::Groestlcoin), Network::try_from(ChainHash::GROESTLCOIN));
+    /// ```
+    pub fn from_chain_hash(chain_hash: ChainHash) -> Option<Network> {
+        Network::try_from(chain_hash).ok()
+    }
 }
 
 /// An error in parsing network string.
@@ -183,6 +213,33 @@ impl fmt::Display for Network {
             Regtest => "regtest",
         };
         write!(f, "{}", s)
+    }
+}
+
+/// Error in parsing network from chain hash.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnknownChainHash(ChainHash);
+
+impl Display for UnknownChainHash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "unknown chain hash: {}", self.0)
+    }
+}
+
+impl_std_error!(UnknownChainHash);
+
+impl TryFrom<ChainHash> for Network {
+    type Error = UnknownChainHash;
+
+    fn try_from(chain_hash: ChainHash) -> Result<Self, Self::Error> {
+        match chain_hash {
+            // Note: any new network entries must be matched against here.
+            ChainHash::GROESTLCOIN => Ok(Network::Groestlcoin),
+            ChainHash::TESTNET => Ok(Network::Testnet),
+            ChainHash::SIGNET => Ok(Network::Signet),
+            //ChainHash::REGTEST => Ok(Network::Regtest),
+            _ => Err(UnknownChainHash(chain_hash)),
+        }
     }
 }
 
@@ -239,7 +296,7 @@ impl From<Network> for Magic {
     }
 }
 
-/// Error in parsing magic from string.
+/// Error in creating a Network from Magic bytes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnknownMagic(Magic);
 
