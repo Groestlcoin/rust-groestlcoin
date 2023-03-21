@@ -372,17 +372,21 @@ impl_int_encodable!(i64, read_i64, emit_i64);
 
 #[allow(clippy::len_without_is_empty)] // VarInt has on concept of 'is_empty'.
 impl VarInt {
-    /// Gets the length of this VarInt when encoded.
-    ///
-    /// Returns 1 for 0..=0xFC, 3 for 0xFD..=(2^16-1), 5 for 0x10000..=(2^32-1),
-    /// and 9 otherwise.
-    #[inline]
-    pub fn len(&self) -> usize {
-        match self.0 {
-            0..=0xFC             => { 1 }
-            0xFD..=0xFFFF        => { 3 }
-            0x10000..=0xFFFFFFFF => { 5 }
-            _                    => { 9 }
+    crate::internal_macros::maybe_const_fn! {
+        /// Gets the length of this VarInt when encoded.
+        ///
+        /// *Important: this method is only `const` in Rust 1.46 or higher!*
+        ///
+        /// Returns 1 for 0..=0xFC, 3 for 0xFD..=(2^16-1), 5 for 0x10000..=(2^32-1),
+        /// and 9 otherwise.
+        #[inline]
+        pub fn len(&self) -> usize {
+            match self.0 {
+                0..=0xFC             => { 1 }
+                0xFD..=0xFFFF        => { 3 }
+                0x10000..=0xFFFFFFFF => { 5 }
+                _                    => { 9 }
+            }
         }
     }
 }
@@ -726,6 +730,9 @@ impl<T: Encodable> Encodable for rc::Rc<T> {
     }
 }
 
+/// Note: This will fail to compile on old Rust for targets that don't support atomics
+#[cfg(any(not(rust_v_1_60), target_has_atomic = "ptr"))]
+#[cfg_attr(docsrs, doc(cfg(target_has_atomic = "ptr")))]
 impl<T: Encodable> Encodable for sync::Arc<T> {
     fn consensus_encode<W: io::Write + ?Sized>(&self, w: &mut W) -> Result<usize, io::Error> {
         (**self).consensus_encode(w)

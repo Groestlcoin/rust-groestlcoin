@@ -67,8 +67,11 @@ For more information please see `./CONTRIBUTING.md`.
 This library should always compile with any combination of features (minus
 `no-std`) on **Rust 1.41.1** or **Rust 1.47** with `no-std`.
 
-To build with the MSRV you will need to pin some dependencies, currently this is
-only `syn`, and can be achieved using `cargo update -p syn --precise 1.0.107`.
+To build with the MSRV you will need to pin some dependencies (also for `no-std`):
+```
+cargo update -p serde --precise 1.0.156
+cargo update -p syn --precise 1.0.107
+```
 
 ## Installing Rust
 
@@ -80,6 +83,10 @@ Generally this isn't a problem for `rust-groestlcoin` since we support much olde
 versions than the current stable one (see MSRV section).
 
 ## Building
+
+The cargo feature `std` is enabled by default. At least one of the features `std` or `no-std` or both must be enabled.
+
+Enabling the `no-std` feature does not disable `std`. To disable the `std` feature you must disable default features. The `no-std` feature only enables additional features required for this crate to be usable without `std`. Both can be enabled without conflict.
 
 The library can be built and tested using [`cargo`](https://github.com/rust-lang/cargo/):
 

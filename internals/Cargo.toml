@@ -1,10 +1,10 @@
 [package]
-name = "groestlcoin-internals"
+name = "groestlcoin-private"
 version = "0.1.0"
 authors = ["Groestlcoin Developers <groestlcoin@gmail.com>"]
 license = "CC0-1.0"
 repository = "https://github.com/Groestlcoin/rust-groestlcoin/"
-documentation = "https://docs.rs/groestlcoin-internals"
+documentation = "https://docs.rs/groestlcoin-private"
 description = "Internal types and macros used by rust-groestlcoin ecosystem"
 categories = ["cryptography::cryptocurrencies"]
 keywords = ["internal"]

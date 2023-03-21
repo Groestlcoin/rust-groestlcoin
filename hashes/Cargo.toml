@@ -26,7 +26,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [dependencies]
 groestl = { version = "0.10.0", default_features = false }
 
-internals = { path = "../internals", package = "groestlcoin-internals" }
+internals = { path = "../internals", package = "groestlcoin-private", version = "0.1.0" }
 
 core2 = { version = "0.3.0", default_features = false, optional = true }
 # Only enable this if you explicitly do not want to use "std", otherwise enable "serde-std".
