@@ -939,15 +939,15 @@ impl Address {
     /// Quoting BIP 173 "inside QR codes uppercase SHOULD be used, as those permit the use of
     /// alphanumeric mode, which is 45% more compact than the normal byte mode."
     ///
-    /// Note however that despite BIP21 explicitly stating that the `bitcoin:` prefix should be
+    /// Note however that despite BIP21 explicitly stating that the `groestlcoin:` prefix should be
     /// parsed as case-insensitive many wallets got this wrong and don't parse correctly.
     /// [See compatibility table.](https://github.com/btcpayserver/btcpayserver/issues/2110)
     ///
     /// If you want to avoid allocation you can use alternate display instead:
     /// ```
     /// # use core::fmt::Write;
-    /// # const ADDRESS: &str = "BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4";
-    /// # let address = ADDRESS.parse::<bitcoin::Address<_>>().unwrap().assume_checked();
+    /// # const ADDRESS: &str = "GRS1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7K3K4SJ5";
+    /// # let address = ADDRESS.parse::<groestlcoin::Address<_>>().unwrap().assume_checked();
     /// # let mut writer = String::new();
     /// # // magic trick to make error handling look better
     /// # (|| -> Result<(), core::fmt::Error> {
