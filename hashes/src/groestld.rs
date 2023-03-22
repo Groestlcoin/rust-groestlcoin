@@ -15,9 +15,10 @@
 //! # Groestl512d implementation (double Groestl512).
 //!
 
-use core::str;
 use core::ops::Index;
 use core::slice::SliceIndex;
+use core::str;
+
 use groestl::{Groestl512, Digest};
 use crate::{Error};
 
@@ -110,6 +111,7 @@ mod tests {
             output_str: &'static str,
         }
 
+        #[rustfmt::skip]
         let tests = vec![
             // Examples from wikipedia
             Test {
@@ -166,9 +168,10 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn sha256_serde() {
-        use serde_test::{Configure, Token, assert_tokens};
+        use serde_test::{assert_tokens, Configure, Token};
         //use {groestld, Hash};
 
+        #[rustfmt::skip]
         static HASH_BYTES: [u8; 32] = [
             0xef, 0x53, 0x7f, 0x25, 0xc8, 0x95, 0xbf, 0xa7,
             0x82, 0x52, 0x65, 0x29, 0xa9, 0xb6, 0x3d, 0x97,
@@ -178,7 +181,10 @@ mod tests {
 
         let hash = groestld::Hash::from_slice(&HASH_BYTES).expect("right number of bytes");
         assert_tokens(&hash.compact(), &[Token::BorrowedBytes(&HASH_BYTES[..])]);
-        assert_tokens(&hash.readable(), &[Token::Str("6cfb35868c4465b7c289d7d5641563aa973db6a929655282a7bf95c8257f53ef")]);
+        assert_tokens(
+            &hash.readable(),
+            &[Token::Str("6cfb35868c4465b7c289d7d5641563aa973db6a929655282a7bf95c8257f53ef")],
+        );
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -197,13 +203,13 @@ mod tests {
 mod benches {
     use test::Bencher;
 
-    use crate::{Hash, HashEngine, groestld};
+    use crate::{groestld, Hash, HashEngine};
 
     #[bench]
     pub fn groestl512_10(bh: &mut Bencher) {
         let mut engine = groestld::Hash::engine();
         let bytes = [1u8; 10];
-        bh.iter( || {
+        bh.iter(|| {
             engine.input(&bytes);
         });
         bh.bytes = bytes.len() as u64;
@@ -213,7 +219,7 @@ mod benches {
     pub fn groestl512_1k(bh: &mut Bencher) {
         let mut engine = groestld::Hash::engine();
         let bytes = [1u8; 1024];
-        bh.iter( || {
+        bh.iter(|| {
             engine.input(&bytes);
         });
         bh.bytes = bytes.len() as u64;
@@ -223,7 +229,7 @@ mod benches {
     pub fn groestl512_64k(bh: &mut Bencher) {
         let mut engine = groestld::Hash::engine();
         let bytes = [1u8; 65536];
-        bh.iter( || {
+        bh.iter(|| {
             engine.input(&bytes);
         });
         bh.bytes = bytes.len() as u64;
