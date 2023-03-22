@@ -14,15 +14,14 @@
 use core::borrow::{Borrow, BorrowMut};
 use core::{fmt, str};
 
-use crate::{io, Script, ScriptBuf, Transaction, TxIn, TxOut, Sequence};
 use crate::blockdata::transaction::EncodeSigningDataResult;
 use crate::blockdata::witness::Witness;
 use crate::consensus::{encode, Encodable};
 use crate::error::impl_std_error;
-use crate::hashes::{hash_newtype, sha256, sha256t_hash_newtype, sha256d, Hash};
-
+use crate::hashes::{hash_newtype, sha256, sha256d, sha256t_hash_newtype, Hash};
 use crate::prelude::*;
 use crate::taproot::{LeafVersion, TapLeafHash, TAPROOT_ANNEX_PREFIX};
+use crate::{io, Script, ScriptBuf, Sequence, Transaction, TxIn, TxOut};
 
 /// Used for signature hash for invalid use of SIGHASH_SINGLE.
 #[rustfmt::skip]
@@ -45,7 +44,7 @@ macro_rules! impl_thirty_two_byte_hash {
         impl secp256k1::ThirtyTwoByteHash for $ty {
             fn into_32(self) -> [u8; 32] { self.to_byte_array() }
         }
-    }
+    };
 }
 
 hash_newtype! {
@@ -61,10 +60,15 @@ hash_newtype! {
 impl_thirty_two_byte_hash!(LegacySighash);
 impl_thirty_two_byte_hash!(SegwitV0Sighash);
 
-sha256t_hash_newtype!(TapSighash, TapSighashTag, MIDSTATE_TAPSIGHASH, 64,
-    doc="Taproot-tagged hash with tag \"TapSighash\".
+sha256t_hash_newtype!(
+    TapSighash,
+    TapSighashTag,
+    MIDSTATE_TAPSIGHASH,
+    64,
+    doc = "Taproot-tagged hash with tag \"TapSighash\".
 
-This hash type is used for computing taproot signature hash.", forward
+This hash type is used for computing taproot signature hash.",
+    forward
 );
 
 impl_thirty_two_byte_hash!(TapSighash);
@@ -560,14 +564,10 @@ impl<R: Borrow<Transaction>> SighashCache<R> {
     }
 
     /// Returns the reference to the cached transaction.
-    pub fn transaction(&self) -> &Transaction {
-        self.tx.borrow()
-    }
+    pub fn transaction(&self) -> &Transaction { self.tx.borrow() }
 
     /// Destroys the cache and recovers the stored transaction.
-    pub fn into_transaction(self) -> R {
-        self.tx
-    }
+    pub fn into_transaction(self) -> R { self.tx }
 
     /// Encodes the BIP341 signing data for any flag type into a given object implementing a
     /// [`io::Write`] trait.
@@ -634,10 +634,11 @@ impl<R: Borrow<Transaction>> SighashCache<R> {
         //      scriptPubKey (35): scriptPubKey of the previous output spent by this input, serialized as script inside CTxOut. Its size is always 35 bytes.
         //      nSequence (4): nSequence of this input.
         if anyone_can_pay {
-            let txin = &self.tx.borrow().input.get(input_index).ok_or(Error::IndexOutOfInputsBounds {
-                index: input_index,
-                inputs_size: self.tx.borrow().input.len(),
-            })?;
+            let txin =
+                &self.tx.borrow().input.get(input_index).ok_or(Error::IndexOutOfInputsBounds {
+                    index: input_index,
+                    inputs_size: self.tx.borrow().input.len(),
+                })?;
             let previous_output = prevouts.get(input_index)?;
             txin.previous_output.consensus_encode(&mut writer)?;
             previous_output.value.consensus_encode(&mut writer)?;
@@ -783,10 +784,11 @@ impl<R: Borrow<Transaction>> SighashCache<R> {
         }
 
         {
-            let txin = &self.tx.borrow().input.get(input_index).ok_or(Error::IndexOutOfInputsBounds {
-                index: input_index,
-                inputs_size: self.tx.borrow().input.len(),
-            })?;
+            let txin =
+                &self.tx.borrow().input.get(input_index).ok_or(Error::IndexOutOfInputsBounds {
+                    index: input_index,
+                    inputs_size: self.tx.borrow().input.len(),
+                })?;
 
             txin.previous_output.consensus_encode(&mut writer)?;
             script_code.consensus_encode(&mut writer)?;
@@ -796,7 +798,8 @@ impl<R: Borrow<Transaction>> SighashCache<R> {
 
         if sighash != EcdsaSighashType::Single && sighash != EcdsaSighashType::None {
             self.segwit_cache().outputs.consensus_encode(&mut writer)?;
-        } else if sighash == EcdsaSighashType::Single && input_index < self.tx.borrow().output.len() {
+        } else if sighash == EcdsaSighashType::Single && input_index < self.tx.borrow().output.len()
+        {
             let mut single_enc = LegacySighash::engine();
             self.tx.borrow().output[input_index].consensus_encode(&mut single_enc)?;
             let hash = LegacySighash::from_engine(single_enc);
@@ -866,7 +869,11 @@ impl<R: Borrow<Transaction>> SighashCache<R> {
         }
         let sighash_type: u32 = sighash_type.into();
 
-        if is_invalid_use_of_sighash_single(sighash_type, input_index, self.tx.borrow().output.len()) {
+        if is_invalid_use_of_sighash_single(
+            sighash_type,
+            input_index,
+            self.tx.borrow().output.len(),
+        ) {
             // We cannot correctly handle the SIGHASH_SINGLE bug here because usage of this function
             // will result in the data written to the writer being hashed, however the correct
             // handling of the SIGHASH_SINGLE bug is to return the 'one array' - either implement
@@ -1199,8 +1206,7 @@ mod tests {
     #[test]
     fn test_tap_sighash_hash() {
         let bytes = hex!("00011b96877db45ffa23b307e9f0ac87b80ef9a80b4c5f0db3fbe734422453e83cc5576f3d542c5d4898fb2b696c15d43332534a7c1d1255fda38993545882df92c3e353ff6d36fbfadc4d168452afd8467f02fe53d71714fcea5dfe2ea759bd00185c4cb02bc76d42620393ca358a1a713f4997f9fc222911890afb3fe56c6a19b202df7bffdcfad08003821294279043746631b00e2dc5e52a111e213bbfe6ef09a19428d418dab0d50000000000");
-        let expected =
-            hex!("04e808aad07a40b3767a1442fead79af6ef7e7c9316d82dec409bb31e77699b0");
+        let expected = hex!("04e808aad07a40b3767a1442fead79af6ef7e7c9316d82dec409bb31e77699b0");
         let mut enc = TapSighash::engine();
         enc.input(&bytes);
         let hash = TapSighash::from_engine(enc);
@@ -1693,22 +1699,27 @@ mod tests {
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.segwit_signature_hash(1, &witness_script, value, EcdsaSighashType::All).unwrap(),
-            "d5ec9f04716c649e5ee176b16e69f836fe0f360d38166394ae19bcaaf5e1365b".parse::<SegwitV0Sighash>().unwrap(),
+            "d5ec9f04716c649e5ee176b16e69f836fe0f360d38166394ae19bcaaf5e1365b"
+                .parse::<SegwitV0Sighash>()
+                .unwrap(),
         );
 
         let cache = cache.segwit_cache();
         // Parse hex into Vec because BIP143 test vector displays forwards but our sha256d::Hash displays backwards.
         assert_eq!(
             cache.prevouts.as_byte_array(),
-            &Vec::from_hex("c771f7ed8ee6224d08700833d1c6d31e7a1f6b7a3840c4e186c22136e8c9a6ed").unwrap()[..],
+            &Vec::from_hex("c771f7ed8ee6224d08700833d1c6d31e7a1f6b7a3840c4e186c22136e8c9a6ed")
+                .unwrap()[..],
         );
         assert_eq!(
             cache.sequences.as_byte_array(),
-            &Vec::from_hex("b258c7ef98e1770484c86e4023c5b7361eb8e02e56b6fb7233af17ebe9eb017e").unwrap()[..],
+            &Vec::from_hex("b258c7ef98e1770484c86e4023c5b7361eb8e02e56b6fb7233af17ebe9eb017e")
+                .unwrap()[..],
         );
         assert_eq!(
             cache.outputs.as_byte_array(),
-            &Vec::from_hex("48f88af72cd8cc9af8cbeb53b6c60b20b4a074dcd5be578cbc279311c7d72ea9").unwrap()[..],
+            &Vec::from_hex("48f88af72cd8cc9af8cbeb53b6c60b20b4a074dcd5be578cbc279311c7d72ea9")
+                .unwrap()[..],
         );
     }
 
@@ -1729,33 +1740,38 @@ mod tests {
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.segwit_signature_hash(0, &witness_script, value, EcdsaSighashType::All).unwrap(),
-            "606521f5f0c6cf8caa0aa77c54b855d539e46848e9fce1ff6aa6172bf86aef7e".parse::<SegwitV0Sighash>().unwrap(),
+            "606521f5f0c6cf8caa0aa77c54b855d539e46848e9fce1ff6aa6172bf86aef7e"
+                .parse::<SegwitV0Sighash>()
+                .unwrap(),
         );
 
         let cache = cache.segwit_cache();
         // Parse hex into Vec because BIP143 test vector displays forwards but our sha256d::Hash displays backwards.
         assert_eq!(
             cache.prevouts.as_byte_array(),
-            &Vec::from_hex("cddf06e3e7cc7c2b515aa8960e7ee526ffe975f30a421ca092075ade5cf47533").unwrap()[..],
+            &Vec::from_hex("cddf06e3e7cc7c2b515aa8960e7ee526ffe975f30a421ca092075ade5cf47533")
+                .unwrap()[..],
         );
         assert_eq!(
             cache.sequences.as_byte_array(),
-            &Vec::from_hex("b4248c210a2905b94345e1a8414d0e12efcfb2f4f0f2397159a71283397a0ccd").unwrap()[..],
+            &Vec::from_hex("b4248c210a2905b94345e1a8414d0e12efcfb2f4f0f2397159a71283397a0ccd")
+                .unwrap()[..],
         );
         assert_eq!(
             cache.outputs.as_byte_array(),
-            &Vec::from_hex("324d2443ed14b2ca1e7af61aba2d7fa517c5b8feb6433106b67a653a98b5c1a1").unwrap()[..],
+            &Vec::from_hex("324d2443ed14b2ca1e7af61aba2d7fa517c5b8feb6433106b67a653a98b5c1a1")
+                .unwrap()[..],
         );
     }
 
     #[test]
     fn bip143_p2wsh_nested_in_p2sh() {
-        let tx = deserialize::<Transaction>(
-            &hex!(
+        let tx = deserialize::<Transaction>(&hex!(
             "010000000136641869ca081e70f394c6948e8af409e18b619df2ed74aa106c1ca29787b96e0100000000\
              ffffffff0200e9a435000000001976a914389ffce9cd9ae88dcc0631e88a821ffdbe9bfe2688acc0832f\
-             05000000001976a9147480a33f950689af511e6e84c138dbbd3c3ee41588ac00000000"),
-        ).unwrap();
+             05000000001976a9147480a33f950689af511e6e84c138dbbd3c3ee41588ac00000000"
+        ))
+        .unwrap();
 
         let witness_script = ScriptBuf::from_hex(
             "56210307b8ae49ac90a048e9b53357a2354b3334e9c8bee813ecb98e99a7e07e8c3ba32103b28f0c28\
@@ -1763,29 +1779,35 @@ mod tests {
              9781957b8c0ac1dfe69f492580ca4195f50376ba4a21033400f6afecb833092a9a21cfdf1ed1376e58\
              c5d1f47de74683123987e967a8f42103a6d48b1131e94ba04d9737d61acdaa1322008af9602b3b1486\
              2c07a1789aac162102d8b661b0b3302ee2f162b09e07a55ad5dfbe673a9f01d9f0c19617681024306b\
-             56ae"
-        ).unwrap();
+             56ae",
+        )
+        .unwrap();
         let value = 987654321;
 
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.segwit_signature_hash(0, &witness_script, value, EcdsaSighashType::All).unwrap(),
-            "c3d0810930ab0047ef54095e82cae9e654316596f55646f5309ba48774b8b5ee".parse::<SegwitV0Sighash>().unwrap(),
+            "c3d0810930ab0047ef54095e82cae9e654316596f55646f5309ba48774b8b5ee"
+                .parse::<SegwitV0Sighash>()
+                .unwrap(),
         );
 
         let cache = cache.segwit_cache();
         // Parse hex into Vec because BIP143 test vector displays forwards but our sha256d::Hash displays backwards.
         assert_eq!(
             cache.prevouts.as_byte_array(),
-            &Vec::from_hex("1f1f6dc580200b32c0579c35acc3f5e54045e46fe1b6e6d3dbe75e3ad9e5125d").unwrap()[..],
+            &Vec::from_hex("1f1f6dc580200b32c0579c35acc3f5e54045e46fe1b6e6d3dbe75e3ad9e5125d")
+                .unwrap()[..],
         );
         assert_eq!(
             cache.sequences.as_byte_array(),
-            &Vec::from_hex("ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e").unwrap()[..],
+            &Vec::from_hex("ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e")
+                .unwrap()[..],
         );
         assert_eq!(
             cache.outputs.as_byte_array(),
-            &Vec::from_hex("691738022230671f6f97f0f6343ac62568f82a3e02bfb20dba155d509480c523").unwrap()[..],
+            &Vec::from_hex("691738022230671f6f97f0f6343ac62568f82a3e02bfb20dba155d509480c523")
+                .unwrap()[..],
         );
     }
 }

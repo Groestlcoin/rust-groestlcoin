@@ -1,6 +1,6 @@
 [package]
 name = "groestlcoin"
-version = "0.29.0"
+version = "0.30.0"
 authors = ["Groestlcoin Developers <groestlcoin@gmail.com>"]
 license = "CC0-1.0"
 repository = "https://github.com/Groestlcoin/rust-groestlcoin/"
@@ -8,7 +8,7 @@ documentation = "https://docs.rs/groestlcoin/"
 description = "General purpose library for using and interoperating with Groestlcoin."
 categories = ["cryptography::cryptocurrencies"]
 keywords = [ "crypto", "groestlcoin" ]
-readme = "README.md"
+readme = "../README.md"
 edition = "2018"
 exclude = ["tests", "contrib"]
 

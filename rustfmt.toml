@@ -1,13 +1,4 @@
-# Eventually this shoud be: ignore = []
-ignore = [
-       "groestlcoin/src/blockdata",
-       "groestlcoin/src/consensus",
-       "groestlcoin/src/crypto",
-       "groestlcoin/src/psbt",
-       "groestlcoin/src/util",
-       "hashes",
-]
-
+ignore = []
 hard_tabs = false
 tab_spaces = 4
 newline_style = "Auto"

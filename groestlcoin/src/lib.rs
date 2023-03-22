@@ -64,9 +64,6 @@ pub extern crate groestlcoin_hashes as hashes;
 #[cfg(feature = "groestlcoinconsensus")]
 #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
 pub extern crate groestlcoinconsensus;
-#[cfg(feature = "hashbrown")]
-#[cfg_attr(docsrs, doc(cfg(feature = "hashbrown")))]
-pub extern crate hashbrown;
 pub extern crate secp256k1;
 
 #[cfg(feature = "serde")]

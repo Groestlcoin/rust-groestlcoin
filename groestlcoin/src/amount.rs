@@ -21,6 +21,7 @@ use crate::prelude::*;
 /// # use groestlcoin::Amount;
 ///
 /// assert_eq!(Amount::from_str("1 GRS").unwrap(), Amount::from_sat(100_000_000));
+/// assert_eq!(Amount::from_str("1 cGRS").unwrap(), Amount::from_sat(1_000_000));
 /// assert_eq!(Amount::from_str("1 mGRS").unwrap(), Amount::from_sat(100_000));
 /// assert_eq!(Amount::from_str("1 uGRS").unwrap(), Amount::from_sat(100));
 /// assert_eq!(Amount::from_str("10 nGRS").unwrap(), Amount::from_sat(1));
@@ -29,9 +30,12 @@ use crate::prelude::*;
 /// assert_eq!(Amount::from_str("1000 mgros").unwrap(), Amount::from_sat(1));
 /// ```
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[non_exhaustive]
 pub enum Denomination {
     /// GRS
     Bitcoin,
+    /// cGRS
+    CentiBitcoin,
     /// mGRS
     MilliBitcoin,
     /// uGRS
@@ -53,6 +57,7 @@ impl Denomination {
     fn precision(self) -> i8 {
         match self {
             Denomination::Bitcoin => -8,
+            Denomination::CentiBitcoin => -6,
             Denomination::MilliBitcoin => -5,
             Denomination::MicroBitcoin => -2,
             Denomination::NanoBitcoin => 1,
@@ -67,6 +72,7 @@ impl Denomination {
     fn as_str(self) -> &'static str {
         match self {
             Denomination::Bitcoin => "GRS",
+            Denomination::CentiBitcoin => "cGRS",
             Denomination::MilliBitcoin => "mGRS",
             Denomination::MicroBitcoin => "uGRS",
             Denomination::NanoBitcoin => "nGRS",
@@ -112,6 +118,10 @@ impl FromStr for Denomination {
 fn denomination_from_str(mut s: &str) -> Option<Denomination> {
     if s.eq_ignore_ascii_case("GRS") {
         return Some(Denomination::Bitcoin);
+    }
+
+    if s.eq_ignore_ascii_case("cGRS") {
+        return Some(Denomination::CentiBitcoin);
     }
 
     if s.eq_ignore_ascii_case("mGRS") {

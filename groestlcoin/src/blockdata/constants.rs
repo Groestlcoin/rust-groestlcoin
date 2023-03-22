@@ -13,16 +13,16 @@ use core::default::Default;
 use groestlcoin_internals::impl_array_newtype;
 use hex_lit::hex;
 
-use crate::hashes::{Hash, sha256d};
-use crate::blockdata::script;
-use crate::blockdata::opcodes::all::*;
-use crate::blockdata::locktime::absolute;
-use crate::blockdata::transaction::{OutPoint, Transaction, TxOut, TxIn, Sequence};
 use crate::blockdata::block::{self, Block};
+use crate::blockdata::locktime::absolute;
+use crate::blockdata::opcodes::all::*;
+use crate::blockdata::script;
+use crate::blockdata::transaction::{OutPoint, Sequence, Transaction, TxIn, TxOut};
 use crate::blockdata::witness::Witness;
+use crate::hashes::{sha256d, Hash};
+use crate::internal_macros::impl_bytes_newtype;
 use crate::network::constants::Network;
 use crate::pow::CompactTarget;
-use crate::internal_macros::impl_bytes_newtype;
 
 /// How many gros are in "one groestlcoin".
 pub const COIN_VALUE: u64 = 100_000_000;
@@ -73,10 +73,11 @@ fn bitcoin_genesis_tx() -> Transaction {
     };
 
     // Inputs
-    let in_script = script::Builder::new().push_int(486604799)
-                                          .push_int_non_minimal(4)
-                                          .push_slice(b"Pressure must be put on Vladimir Putin over Crimea")
-                                          .into_script();
+    let in_script = script::Builder::new()
+        .push_int(486604799)
+        .push_int_non_minimal(4)
+        .push_slice(b"Pressure must be put on Vladimir Putin over Crimea")
+        .into_script();
     ret.input.push(TxIn {
         previous_output: OutPoint::null(),
         script_sig: in_script,
@@ -86,14 +87,9 @@ fn bitcoin_genesis_tx() -> Transaction {
 
     // Outputs
     let script_bytes = hex!("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f");
-    let out_script = script::Builder::new()
-        .push_slice(script_bytes)
-        .push_opcode(OP_CHECKSIG)
-        .into_script();
-    ret.output.push(TxOut {
-        value: 0,
-        script_pubkey: out_script
-    });
+    let out_script =
+        script::Builder::new().push_slice(script_bytes).push_opcode(OP_CHECKSIG).into_script();
+    ret.output.push(TxOut { value: 0 * COIN_VALUE, script_pubkey: out_script });
 
     // end
     ret
@@ -105,58 +101,50 @@ pub fn genesis_block(network: Network) -> Block {
     let hash: sha256d::Hash = txdata[0].txid().into();
     let merkle_root = hash.into();
     match network {
-        Network::Groestlcoin => {
-            Block {
-                header: block::Header {
-                    version: block::Version::ONE,
-                    prev_blockhash: Hash::all_zeros(),
-                    merkle_root,
-                    time: 1395342829,
-                    bits: CompactTarget::from_consensus(0x1e0fffff),
-                    nonce: 220035
-                },
-                txdata,
-            }
-        }
-        Network::Testnet => {
-            Block {
-                header: block::Header {
-                    version: block::Version::THREE,
-                    prev_blockhash: Hash::all_zeros(),
-                    merkle_root,
-                    time: 1440000002,
-                    bits: CompactTarget::from_consensus(0x1e00ffff),
-                    nonce: 6556309
-                },
-                txdata,
-            }
-        }
-        Network::Signet => {
-            Block {
-                header: block::Header {
-                    version: block::Version::THREE,
-                    prev_blockhash: Hash::all_zeros(),
-                    merkle_root,
-                    time: 1606082400,
-                    bits: CompactTarget::from_consensus(0x1e00ffff),
-                    nonce: 14675970
-                },
-                txdata,
-            }
-        }
-        Network::Regtest => {
-            Block {
-                header: block::Header {
-                    version: block::Version::THREE,
-                    prev_blockhash: Hash::all_zeros(),
-                    merkle_root,
-                    time: 1440000002,
-                    bits: CompactTarget::from_consensus(0x1e00ffff),
-                    nonce: 6556309
-                },
-                txdata,
-            }
-        }
+        Network::Groestlcoin => Block {
+            header: block::Header {
+                version: block::Version::ONE,
+                prev_blockhash: Hash::all_zeros(),
+                merkle_root,
+                time: 1395342829,
+                bits: CompactTarget::from_consensus(0x1e0fffff),
+                nonce: 220035,
+            },
+            txdata,
+        },
+        Network::Testnet => Block {
+            header: block::Header {
+                version: block::Version::THREE,
+                prev_blockhash: Hash::all_zeros(),
+                merkle_root,
+                time: 1440000002,
+                bits: CompactTarget::from_consensus(0x1e00ffff),
+                nonce: 6556309,
+            },
+            txdata,
+        },
+        Network::Signet => Block {
+            header: block::Header {
+                version: block::Version::THREE,
+                prev_blockhash: Hash::all_zeros(),
+                merkle_root,
+                time: 1606082400,
+                bits: CompactTarget::from_consensus(0x1e00ffff),
+                nonce: 14675970,
+            },
+            txdata,
+        },
+        Network::Regtest => Block {
+            header: block::Header {
+                version: block::Version::THREE,
+                prev_blockhash: Hash::all_zeros(),
+                merkle_root,
+                time: 1440000002,
+                bits: CompactTarget::from_consensus(0x1e00ffff),
+                nonce: 6556309,
+            },
+            txdata,
+        },
     }
 }
 
@@ -169,13 +157,25 @@ impl_bytes_newtype!(ChainHash, 32);
 impl ChainHash {
     // Mainnet value can be verified at https://github.com/lightning/bolts/blob/master/00-introduction.md
     /// `ChainHash` for mainnet groestlcoin.
-    pub const GROESTLCOIN: Self = Self([35, 144, 99, 59, 112, 240, 98, 203, 58, 61, 104, 20, 182, 126, 41, 168, 13, 157, 117, 129, 219, 11, 204, 73, 77, 89, 124, 146, 197, 10, 0, 0]);
+    pub const GROESTLCOIN: Self = Self([
+        35, 144, 99, 59, 112, 240, 98, 203, 58, 61, 104, 20, 182, 126, 41, 168, 13, 157, 117,
+        129, 219, 11, 204, 73, 77, 89, 124, 146, 197, 10, 0, 0,
+    ]);
     /// `ChainHash` for testnet groestlcoin.
-    pub const TESTNET: Self = Self([54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99, 193, 110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0]);
+    pub const TESTNET: Self = Self([
+        54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99,
+        193, 110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0,
+    ]);
     /// `ChainHash` for signet groestlcoin.
-    pub const SIGNET: Self = Self([49, 171, 20, 187, 146, 53, 242, 162, 235, 108, 135, 123, 81, 175, 87, 67, 37, 140, 129, 231, 233, 205, 198, 147, 121, 162, 162, 202, 127, 0, 0, 0]);
+    pub const SIGNET: Self = Self([
+        49, 171, 20, 187, 146, 53, 242, 162, 235, 108, 135, 123, 81, 175, 87, 67, 37, 140, 129,
+        231, 233, 205, 198, 147, 121, 162, 162, 202, 127, 0, 0, 0,
+    ]);
     /// `ChainHash` for regtest groestlcoin.
-    pub const REGTEST: Self = Self([54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99, 193, 110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0]);
+    pub const REGTEST: Self = Self([
+        54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99,
+        193, 110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0,
+    ]);
 
     /// Returns the hash of the `network` genesis block for use as a chain hash.
     ///
@@ -190,10 +190,10 @@ impl ChainHash {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::network::constants::Network;
-    use crate::consensus::encode::serialize;
     use crate::blockdata::locktime::absolute;
+    use crate::consensus::encode::serialize;
     use crate::internal_macros::hex;
+    use crate::network::constants::Network;
 
     #[test]
     fn bitcoin_genesis_first_transaction() {
@@ -213,7 +213,10 @@ mod test {
         assert_eq!(gen.output[0].value, 0);
         assert_eq!(gen.lock_time, absolute::LockTime::ZERO);
 
-        assert_eq!(gen.wtxid().to_string(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
+        assert_eq!(
+            gen.wtxid().to_string(),
+            "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb"
+        );
     }
 
     #[test]
@@ -222,12 +225,18 @@ mod test {
 
         assert_eq!(gen.header.version, block::Version::ONE);
         assert_eq!(gen.header.prev_blockhash, Hash::all_zeros());
-        assert_eq!(gen.header.merkle_root.to_string(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
+        assert_eq!(
+            gen.header.merkle_root.to_string(),
+            "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb"
+        );
 
         assert_eq!(gen.header.time, 1395342829);
         assert_eq!(gen.header.bits, CompactTarget::from_consensus(0x1e0fffff));
         assert_eq!(gen.header.nonce, 220035);
-        assert_eq!(gen.header.block_hash().to_string(), "00000ac5927c594d49cc0bdb81759d0da8297eb614683d3acb62f0703b639023");
+        assert_eq!(
+            gen.header.block_hash().to_string(),
+            "00000ac5927c594d49cc0bdb81759d0da8297eb614683d3acb62f0703b639023"
+        );
     }
 
     #[test]
@@ -235,11 +244,17 @@ mod test {
         let gen = genesis_block(Network::Testnet);
         assert_eq!(gen.header.version, block::Version::THREE);
         assert_eq!(gen.header.prev_blockhash, Hash::all_zeros());
-        assert_eq!(gen.header.merkle_root.to_string(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
+        assert_eq!(
+            gen.header.merkle_root.to_string(),
+            "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb"
+        );
         assert_eq!(gen.header.time, 1440000002);
         assert_eq!(gen.header.bits, CompactTarget::from_consensus(0x1e00ffff));
         assert_eq!(gen.header.nonce, 6556309);
-        assert_eq!(gen.header.block_hash().to_string(), "000000ffbb50fc9898cdd36ec163e6ba23230164c0052a28876255b7dcf2cd36");
+        assert_eq!(
+            gen.header.block_hash().to_string(),
+            "000000ffbb50fc9898cdd36ec163e6ba23230164c0052a28876255b7dcf2cd36"
+        );
     }
 
     #[test]
@@ -247,11 +262,17 @@ mod test {
         let gen = genesis_block(Network::Signet);
         assert_eq!(gen.header.version, block::Version::THREE);
         assert_eq!(gen.header.prev_blockhash, Hash::all_zeros());
-        assert_eq!(gen.header.merkle_root.to_string(), "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb");
+        assert_eq!(
+            gen.header.merkle_root.to_string(),
+            "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb"
+        );
         assert_eq!(gen.header.time, 1606082400);
         assert_eq!(gen.header.bits, CompactTarget::from_consensus(0x1e00ffff));
         assert_eq!(gen.header.nonce, 14675970);
-        assert_eq!(gen.header.block_hash().to_string(), "0000007fcaa2a27993c6cde9e7818c254357af517b876ceba2f23592bb14ab31");
+        assert_eq!(
+            gen.header.block_hash().to_string(),
+            "0000007fcaa2a27993c6cde9e7818c254357af517b876ceba2f23592bb14ab31"
+        );
     }
 
     // The *_chain_hash tests are sanity/regression tests, they verify that the const byte array
@@ -271,12 +292,13 @@ mod test {
         // Compare strings because the spec specifically states how the chain hash must encode to hex.
         assert_eq!(got, want);
 
+        #[allow(unreachable_patterns)] // This is specifically trying to catch later added variants.
         match network {
             Network::Groestlcoin => {},
             Network::Testnet => {},
             Network::Signet => {},
             Network::Regtest => {},
-            // Update ChainHash::using_genesis_block and chain_hash_genesis_block with new variants.
+            _ => panic!("Update ChainHash::using_genesis_block and chain_hash_genesis_block with new variants"),
         }
     }
 
