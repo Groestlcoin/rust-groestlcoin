@@ -832,7 +832,7 @@ mod tests {
     use crate::blockdata::witness::Witness;
     use crate::hashes::{hash160, ripemd160, sha256, Hash};
     use crate::internal_macros::hex;
-    use crate::network::constants::Network::Bitcoin;
+    use crate::network::constants::Network::Groestlcoin;
     use crate::psbt::map::{Input, Output};
     use crate::psbt::raw;
     use crate::psbt::serialize::{Deserialize, Serialize};
