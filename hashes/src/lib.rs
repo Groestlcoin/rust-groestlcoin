@@ -97,13 +97,13 @@ extern crate alloc;
 extern crate core;
 #[cfg(feature = "core2")]
 extern crate core2;
+pub extern crate groestl;
 #[cfg(feature = "serde")]
 pub extern crate serde;
 #[cfg(all(test, feature = "serde"))]
 extern crate serde_test;
 #[cfg(bench)]
 extern crate test;
-pub extern crate groestl;
 
 #[doc(hidden)]
 pub mod _export {
@@ -123,6 +123,7 @@ mod util;
 pub mod serde_macros;
 pub mod cmp;
 pub mod error;
+pub mod groestld;
 pub mod hash160;
 pub mod hex;
 pub mod hmac;
@@ -136,7 +137,6 @@ pub mod sha256t;
 pub mod sha512;
 pub mod sha512_256;
 pub mod siphash24;
-pub mod groestld;
 
 use core::{borrow, fmt, hash, ops};
 

@@ -23,7 +23,7 @@ use std::io;
 #[cfg(not(feature = "std"))]
 use core2::io;
 
-use crate::{hmac, ripemd160, sha1, sha256, sha512, siphash24, HashEngine, groestld};
+use crate::{groestld, hmac, ripemd160, sha1, sha256, sha512, siphash24, HashEngine};
 
 impl io::Write for sha1::HashEngine {
     fn flush(&mut self) -> io::Result<()> { Ok(()) }

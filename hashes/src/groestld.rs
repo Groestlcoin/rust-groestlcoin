@@ -19,7 +19,8 @@ use core::ops::Index;
 use core::slice::SliceIndex;
 use core::str;
 
-use groestl::{Groestl512, Digest};
+use groestl::{Digest, Groestl512};
+
 use crate::{Error};
 
 crate::internal_macros::hash_type! {
@@ -37,12 +38,7 @@ pub struct HashEngine {
 }
 
 impl Default for HashEngine {
-    fn default() -> Self {
-        HashEngine {
-            hasher: Groestl512::new(),
-            length: 0,
-        }
-    }
+    fn default() -> Self { HashEngine { hasher: Groestl512::new(), length: 0 } }
 }
 
 // This will handle a single Groestl512 hash
@@ -70,13 +66,8 @@ impl crate::HashEngine for HashEngine {
         self.length += inp.len()
     }
 
-    fn n_bytes_hashed(&self) -> usize {
-        self.length
-    }
+    fn n_bytes_hashed(&self) -> usize { self.length }
 }
-
-
-
 
 fn from_engine(e: HashEngine) -> Hash {
     let first = e.hasher.finalize();
@@ -95,7 +86,6 @@ fn from_engine(e: HashEngine) -> Hash {
     Hash(ret)
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::{groestld, Hash, HashEngine};
@@ -103,7 +93,6 @@ mod tests {
     #[test]
     #[cfg(feature = "alloc")]
     fn test() {
-
         #[derive(Clone)]
         struct Test {
             input: &'static str,
@@ -190,12 +179,10 @@ mod tests {
     #[cfg(target_arch = "wasm32")]
     mod wasm_tests {
         extern crate wasm_bindgen_test;
-        use super::*;
         use self::wasm_bindgen_test::*;
+        use super::*;
         #[wasm_bindgen_test]
-        fn groestld_tests() {
-            test();
-        }
+        fn groestld_tests() { test(); }
     }
 }
 
@@ -234,5 +221,4 @@ mod benches {
         });
         bh.bytes = bytes.len() as u64;
     }
-
 }
