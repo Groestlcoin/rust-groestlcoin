@@ -448,7 +448,7 @@ mod tests {
             real_decode.block_hash()
         );
         assert_eq!(real_decode.header.difficulty(), 82);
-        assert_eq!(real_decode.header.difficulty_float(), 1.0);
+        assert_eq!(real_decode.header.difficulty_float(), 82.1582444920006);
         // [test] TODO: check the transaction data
 
         assert_eq!(real_decode.size(), some_block.len());
