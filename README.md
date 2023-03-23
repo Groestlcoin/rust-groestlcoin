@@ -6,6 +6,16 @@
 Library with support for de/serialization, parsing and executing on data
 structures and network messages related to Groestlcoin.
 
+  <p>
+    <a href="https://crates.io/crates/groestlcoin"><img alt="Crate Info" src="https://img.shields.io/crates/v/groestlcoin.svg"/></a>
+    <a href="https://github.com/Groestlcoin/rust-groestlcoin/blob/master/LICENSE"><img alt="CC0 1.0 Universal Licensed" src="https://img.shields.io/badge/license-CC0--1.0-blue.svg"/></a>
+    <a href="https://github.com/Groestlcoin/rust-groestlcoin/actions?query=workflow%3AContinuous%20integration"><img alt="CI Status" src="https://github.com/Groestlcoin/rust-groestlcoin/workflows/Continuous%20integration/badge.svg"></a>
+    <a href="https://docs.rs/groestlcoin"><img alt="API Docs" src="https://img.shields.io/badge/docs.rs-groestlcoin-green"/></a>
+    <a href="https://blog.rust-lang.org/2020/02/27/Rust-1.48.0.html"><img alt="Rustc Version 1.48.0+" src="https://img.shields.io/badge/rustc-1.48.0%2B-lightgrey.svg"/></a>
+    <a href="https://gnusha.org/groestlcoin-rust/"><img alt="Chat on IRC" src="https://img.shields.io/badge/irc-%23groestlcoin%20on%20libera.chat-blue"></a>
+    <a href="https://github.com/model-checking/kani"><imp alt="kani" src="https://github.com/rust-bitcoin/rust-bitcoin/actions/workflows/kani.yaml/badge.svg"></a>
+  </p>
+</div>
 
 [Documentation](https://docs.rs/groestlcoin/)
 
@@ -64,10 +74,9 @@ For more information please see `./CONTRIBUTING.md`.
 
 ## Minimum Supported Rust Version (MSRV)
 
-This library should always compile with any combination of features (minus
-`no-std`) on **Rust 1.41.1** or **Rust 1.47** with `no-std`.
+This library should always compile with any combination of features on **Rust 1.48.0**.
 
-To build with the MSRV you will need to pin some dependencies (also for `no-std`):
+To build with the MSRV you will need to pin some dependencies:
 ```
 cargo update -p serde --precise 1.0.156
 cargo update -p syn --precise 1.0.107
