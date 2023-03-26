@@ -513,7 +513,7 @@ mod test {
     use std::net::Ipv4Addr;
 
     use hashes::groestld;
-    use hashes::sha256d::Hash;
+    use hashes::sha256d;
     use hashes::Hash as HashTrait;
 
     use super::message_network::{Reject, RejectReason, VersionMessage};
@@ -537,9 +537,7 @@ mod test {
 
     fn groestl_hash(slice: [u8;32]) -> groestld::Hash { groestld::Hash::from_slice(&slice).unwrap() }
 
-    //fn sha256_hash(slice: [u8;32]) -> sha256::Hash { sha256::Hash::from_slice(&slice).unwrap() }
-
-    //fn hash(slice: [u8;32]) -> sha256::Hash { sha256::Hash::from_slice(&slice).unwrap() }
+    //fn hash(slice: [u8; 32]) -> Hash { Hash::from_slice(&slice).unwrap() }
 
     #[test]
     fn full_round_ser_der_raw_network_message_test() {
