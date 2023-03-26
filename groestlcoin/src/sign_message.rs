@@ -7,11 +7,12 @@
 //! library is used with the `secp-recovery` feature.
 //!
 
+use hashes::{sha256, Hash, HashEngine};
+
 #[cfg(feature = "secp-recovery")]
 #[cfg_attr(docsrs, doc(cfg(feature = "secp-recovery")))]
 pub use self::message_signing::{MessageSignature, MessageSignatureError};
 use crate::consensus::{encode, Encodable};
-use crate::hashes::{sha256, Hash, HashEngine};
 
 /// The prefix for signed messages using Groestlcoin's message signing protocol.
 pub const BITCOIN_SIGNED_MSG_PREFIX: &[u8] = b"\x1CGroestlCoin Signed Message:\n";
@@ -21,12 +22,12 @@ mod message_signing {
     use core::fmt;
 
     use groestlcoin_internals::write_err;
+    use hashes::sha256;
     use secp256k1;
     use secp256k1::ecdsa::{RecoverableSignature, RecoveryId};
 
     use crate::address::{Address, AddressType};
     use crate::crypto::key::PublicKey;
-    use crate::hashes::sha256;
     #[cfg(feature = "base64")]
     use crate::prelude::*;
 

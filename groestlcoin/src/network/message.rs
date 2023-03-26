@@ -512,6 +512,10 @@ impl Decodable for RawNetworkMessage {
 mod test {
     use std::net::Ipv4Addr;
 
+    use hashes::groestld;
+    use hashes::sha256d::Hash;
+    use hashes::Hash as HashTrait;
+
     use super::message_network::{Reject, RejectReason, VersionMessage};
     use super::{CommandString, NetworkMessage, RawNetworkMessage, *};
     use crate::bip152::BlockTransactionsRequest;
@@ -519,9 +523,6 @@ mod test {
     use crate::blockdata::script::ScriptBuf;
     use crate::blockdata::transaction::Transaction;
     use crate::consensus::encode::{deserialize, deserialize_partial, serialize};
-    use crate::hashes::groestld;
-    use crate::hashes::sha256d;
-    use crate::hashes::Hash as HashTrait;
     use crate::internal_macros::hex;
     use crate::network::address::{AddrV2, AddrV2Message, Address};
     use crate::network::constants::{Magic, Network, ServiceFlags};
