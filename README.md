@@ -166,7 +166,7 @@ mark it by prefixing the title with `WIP: `.
 
 ## Release Notes
 
-See [CHANGELOG.md](bitcoin/CHANGELOG.md).
+See [CHANGELOG.md](groestlcoin/CHANGELOG.md).
 
 
 ## Licensing
