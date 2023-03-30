@@ -2273,8 +2273,8 @@ mod tests {
     fn denomination_string_acceptable_forms() {
         // Non-exhaustive list of valid forms.
         let valid = vec![
-            "GRS", "grs", "mGRS", "mgrs", "uGRS", "ugrs", "GRO", "Gro", "Gros",
-            "groestl", "groestls", "nGRS", "pGRS",
+            "GRS", "grs", "mGRS", "mgrs", "uGRS", "ugrs", "GRO", "gro", "GROS",
+            "gros", "groestl", "groestls", "nGRS", "pGRS",
         ];
         for denom in valid.iter() {
             assert!(Denomination::from_str(denom).is_ok());
