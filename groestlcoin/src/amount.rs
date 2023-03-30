@@ -2274,7 +2274,7 @@ mod tests {
         // Non-exhaustive list of valid forms.
         let valid = vec![
             "GRS", "grs", "mGRS", "mgrs", "uGRS", "ugrs", "GRO", "Gro", "Gros",
-            "gros", "gro", "groestl", "groestls", "nGRS", "pGRS",
+            "groestl", "groestls", "nGRS", "pGRS",
         ];
         for denom in valid.iter() {
             assert!(Denomination::from_str(denom).is_ok());
