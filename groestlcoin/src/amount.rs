@@ -82,7 +82,28 @@ impl Denomination {
             Denomination::MilliSatoshi => "mgro",
         }
     }
+
+    /// The different str forms of denominations that are recognized.
+    fn forms(s: &str) -> Option<Self> {
+        match s {
+            "GRS" | "grs" => Some(Denomination::Bitcoin),
+            "cGRS" | "cgrs" => Some(Denomination::CentiBitcoin),
+            "mGRS" | "mgrs" => Some(Denomination::MilliBitcoin),
+            "uGRS" | "ugrs" => Some(Denomination::MicroBitcoin),
+            "nGRS" | "ngrs" => Some(Denomination::NanoBitcoin),
+            "pGRS" | "pgrs" => Some(Denomination::PicoBitcoin),
+            "groestl" | "groestls" | "GROESTL" | "GROESTLS" => Some(Denomination::Bit),
+            "GRO" | "gro" | "GROS" | "gros" => Some(Denomination::Satoshi),
+            "mGRO" | "mgro" | "mGROs" | "mgros" => Some(Denomination::MilliSatoshi),
+            _ => None,
+        }
+    }
 }
+
+/// These form are ambigous and could have many meanings.  For example, M could denote Mega or Milli.
+/// If any of these forms are used, an error type PossiblyConfusingDenomination is returned.
+const CONFUSING_FORMS: [&str; 9] =
+    ["Mgro", "Mgros", "MGRO", "MGROS", "MGro", "MGros", "MGRS", "Mgrs", "PGRS"];
 
 impl fmt::Display for Denomination {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { f.write_str(self.as_str()) }
@@ -99,63 +120,16 @@ impl FromStr for Denomination {
     ///
     /// Due to ambiguity between mega and milli, pico and peta we prohibit usage of leading capital 'M', 'P'.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use self::Denomination as D;
         use self::ParseAmountError::*;
 
-        let starts_with_uppercase = || s.starts_with(char::is_uppercase);
-        match denomination_from_str(s) {
-            None => Err(UnknownDenomination(s.to_owned())),
-            Some(D::MilliBitcoin) | Some(D::PicoBitcoin) | Some(D::MilliSatoshi)
-                if starts_with_uppercase() =>
-                Err(PossiblyConfusingDenomination(s.to_owned())),
-            Some(D::NanoBitcoin) | Some(D::MicroBitcoin) if starts_with_uppercase() =>
-                Err(UnknownDenomination(s.to_owned())),
-            Some(d) => Ok(d),
-        }
-    }
-}
+        if CONFUSING_FORMS.contains(&s) {
+            return Err(PossiblyConfusingDenomination(s.to_owned()));
+        };
 
-fn denomination_from_str(mut s: &str) -> Option<Denomination> {
-    if s.eq_ignore_ascii_case("GRS") {
-        return Some(Denomination::Bitcoin);
-    }
+        let form = self::Denomination::forms(s);
 
-    if s.eq_ignore_ascii_case("cGRS") {
-        return Some(Denomination::CentiBitcoin);
+        form.ok_or_else(|| UnknownDenomination(s.to_owned()))
     }
-
-    if s.eq_ignore_ascii_case("mGRS") {
-        return Some(Denomination::MilliBitcoin);
-    }
-
-    if s.eq_ignore_ascii_case("uGRS") {
-        return Some(Denomination::MicroBitcoin);
-    }
-
-    if s.eq_ignore_ascii_case("nGRS") {
-        return Some(Denomination::NanoBitcoin);
-    }
-
-    if s.eq_ignore_ascii_case("pGRS") {
-        return Some(Denomination::PicoBitcoin);
-    }
-
-    if s.ends_with('s') || s.ends_with('S') {
-        s = &s[..(s.len() - 1)];
-    }
-
-    if s.eq_ignore_ascii_case("groestl") {
-        return Some(Denomination::Bit);
-    }
-    if s.eq_ignore_ascii_case("gro") {
-        return Some(Denomination::Satoshi);
-    }
-
-    if s.eq_ignore_ascii_case("mgro") {
-        return Some(Denomination::MilliSatoshi);
-    }
-
-    None
 }
 
 /// An error during amount parsing.
@@ -2300,7 +2274,7 @@ mod tests {
         // Non-exhaustive list of valid forms.
         let valid = vec![
             "GRS", "grs", "mGRS", "mgrs", "uGRS", "ugrs", "GRO", "Gro", "Gros",
-            "groestl", "groestls", "nGRS", "pGRS",
+            "gros", "gro", "groestl", "groestls", "nGRS", "pGRS",
         ];
         for denom in valid.iter() {
             assert!(Denomination::from_str(denom).is_ok());
@@ -2309,7 +2283,6 @@ mod tests {
 
     #[test]
     fn disallow_confusing_forms() {
-        // Non-exhaustive list of confusing forms.
         let confusing =
             vec!["Mgro", "Mgros", "MGRO", "MGROS", "MGro", "MGros", "MGRS", "Mgrs", "PGRS"];
         for denom in confusing.iter() {
@@ -2324,7 +2297,7 @@ mod tests {
     #[test]
     fn disallow_unknown_denomination() {
         // Non-exhaustive list of unknown forms.
-        let unknown = vec!["NGRS", "UGRS", "ABC", "abc"];
+        let unknown = vec!["NGRS", "UGRS", "ABC", "abc", "cGrS"];
         for denom in unknown.iter() {
             match Denomination::from_str(denom) {
                 Ok(_) => panic!("from_str should error for {}", denom),
