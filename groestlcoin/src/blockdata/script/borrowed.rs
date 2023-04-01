@@ -368,7 +368,6 @@ impl Script {
     ///  * `amount` - The amount this script guards.
     ///  * `spending_tx` - The transaction that attempts to spend the output holding this script.
     #[cfg(feature = "groestlcoinconsensus")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
     pub fn verify(
         &self,
         index: usize,
@@ -386,7 +385,6 @@ impl Script {
     ///  * `spending_tx` - The transaction that attempts to spend the output holding this script.
     ///  * `flags` - Verification flags, see [`groestlcoinconsensus::VERIFY_ALL`] and similar.
     #[cfg(feature = "groestlcoinconsensus")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
     pub fn verify_with_flags<F: Into<u32>>(
         &self,
         index: usize,
@@ -502,5 +500,4 @@ delegate_index!(
     RangeToInclusive<usize>
 );
 #[cfg(rust_v_1_53)]
-#[cfg_attr(docsrs, doc(cfg(rust_v_1_53)))]
 delegate_index!((Bound<usize>, Bound<usize>));

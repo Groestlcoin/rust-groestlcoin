@@ -166,7 +166,11 @@ mark it by prefixing the title with `WIP: `.
 
 ## Release Notes
 
-See [CHANGELOG.md](groestlcoin/CHANGELOG.md).
+Release notes are done per crate, see:
+
+- [groestlcoin CHANGELOG](groestlcoin/CHANGELOG.md)
+- [hashes CHANGELOG](hashes/CHANGELOG.md)
+- [internals CHANGELOG](internals/CHANGELOG.md)
 
 
 ## Licensing

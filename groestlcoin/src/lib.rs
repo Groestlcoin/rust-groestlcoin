@@ -34,7 +34,7 @@
 #![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
 // Experimental features we need.
 #![cfg_attr(bench, feature(test))]
-#![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 // Coding conventions
 #![warn(missing_docs)]
 // Instead of littering the codebase for non-fuzzing code just globally allow.
@@ -57,12 +57,10 @@ extern crate test;
 extern crate alloc;
 
 #[cfg(feature = "base64")]
-#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
 pub extern crate base64;
 pub extern crate bech32;
 pub extern crate groestlcoin_hashes as hashes;
 #[cfg(feature = "groestlcoinconsensus")]
-#[cfg_attr(docsrs, doc(cfg(feature = "groestlcoinconsensus")))]
 pub extern crate groestlcoinconsensus;
 pub extern crate secp256k1;
 

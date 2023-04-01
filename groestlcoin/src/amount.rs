@@ -179,7 +179,6 @@ impl fmt::Display for ParseAmountError {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl std::error::Error for ParseAmountError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         use self::ParseAmountError::*;
@@ -1158,7 +1157,6 @@ mod private {
 }
 
 #[cfg(feature = "serde")]
-#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub mod serde {
     // methods are implementation of a standardized serde-specific signature
     #![allow(missing_docs)]
