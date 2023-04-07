@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use groestlcoin_internals::write_err;
+use internals::write_err;
 
 use crate::consensus::encode;
 pub use crate::parse::ParseIntError;

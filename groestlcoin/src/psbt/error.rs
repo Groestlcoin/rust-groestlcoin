@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use groestlcoin_internals::write_err;
+use internals::write_err;
 
 use crate::bip32::ExtendedPubKey;
 use crate::blockdata::transaction::Transaction;

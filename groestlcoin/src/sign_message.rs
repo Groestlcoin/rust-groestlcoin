@@ -20,8 +20,8 @@ pub const BITCOIN_SIGNED_MSG_PREFIX: &[u8] = b"\x1CGroestlCoin Signed Message:\n
 mod message_signing {
     use core::fmt;
 
-    use groestlcoin_internals::write_err;
     use hashes::sha256;
+    use internals::write_err;
     use secp256k1;
     use secp256k1::ecdsa::{RecoverableSignature, RecoveryId};
 

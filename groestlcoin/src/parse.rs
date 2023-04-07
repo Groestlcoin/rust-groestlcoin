@@ -2,7 +2,7 @@ use core::convert::TryFrom;
 use core::fmt;
 use core::str::FromStr;
 
-use groestlcoin_internals::write_err;
+use internals::write_err;
 
 use crate::error::impl_std_error;
 use crate::prelude::*;
