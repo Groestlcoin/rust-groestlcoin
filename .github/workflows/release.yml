@@ -4,13 +4,14 @@ on:
       - master
       - v0.28.0
       - v0.29.0
+      - v0.30.0
   pull_request:
 
 name: Release
 
 jobs:
-  groestlcoin:
-    name: Release - groestlcoin
+  release:
+    name: Release - dry-run
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Crate
@@ -18,24 +19,4 @@ jobs:
       - name: Checkout Toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: run cargo
-        run: cargo publish -p groestlcoin --dry-run
-  private:
-    name: Release - private
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Crate
-        uses: actions/checkout@v3
-      - name: Checkout Toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: run cargo
-        run: cargo publish -p groestlcoin-private --dry-run
-  hashes:
-    name: Release - groestlcoin_hashes
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Crate
-        uses: actions/checkout@v3
-      - name: Checkout Toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: run cargo
-        run: cargo publish -p groestlcoin_hashes --dry-run
+        run: contrib/release.sh
