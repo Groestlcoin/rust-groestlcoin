@@ -1,17 +1,6 @@
-<<<<<<< HEAD:hashes/fuzz/fuzz_targets/json.rs
-
-extern crate serde;
-#[macro_use] extern crate serde_derive;
-extern crate groestlcoin_hashes;
-extern crate serde_json;
-
-use groestlcoin_hashes::Hmac;
-use groestlcoin_hashes::{sha1, sha512, ripemd160, sha256d};
-=======
-use bitcoin::hashes::{ripemd160, sha1, sha256d, sha512, Hmac};
+use groestlcoin::hashes::{ripemd160, sha1, sha256d, sha512, Hmac};
 use honggfuzz::fuzz;
 use serde::{Deserialize, Serialize};
->>>>>>> upstream/master:fuzz/fuzz_targets/hashes/json.rs
 
 #[derive(Deserialize, Serialize)]
 struct Hmacs {
@@ -65,4 +54,3 @@ mod tests {
         super::do_test(&a);
     }
 }
-

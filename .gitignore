@@ -17,7 +17,5 @@ hashes/target
 groestlcoin/dep_test
 
 # Fuzz artifacts
-groestlcoin/fuzz/hfuzz_target
-groestlcoin/fuzz/hfuzz_workspace
-hashes/fuzz/hfuzz_target
-hashes/fuzz/hfuzz_workspace
+hfuzz_target
+hfuzz_workspace

@@ -1,18 +1,24 @@
-use groestlcoin::hashes::{sha512, Hash, HashEngine};
 use honggfuzz::fuzz;
 
 fn do_test(data: &[u8]) {
-    let mut engine = sha512::Hash::engine();
-    engine.input(data);
-    let eng_hash = sha512::Hash::from_engine(engine);
-
-    let hash = sha512::Hash::hash(data);
-    assert_eq!(&hash[..], &eng_hash[..]);
+    let psbt: Result<groestlcoin::psbt::PartiallySignedTransaction, _> =
+        groestlcoin::psbt::Psbt::deserialize(data);
+    match psbt {
+        Err(_) => {}
+        Ok(psbt) => {
+            let ser = groestlcoin::psbt::Psbt::serialize(&psbt);
+            let deser = groestlcoin::psbt::Psbt::deserialize(&ser).unwrap();
+            // Since the fuzz data could order psbt fields differently, we compare to our deser/ser instead of data
+            assert_eq!(ser, groestlcoin::psbt::Psbt::serialize(&deser));
+        }
+    }
 }
 
 fn main() {
     loop {
-        fuzz!(|d| { do_test(d) });
+        fuzz!(|data| {
+            do_test(data);
+        });
     }
 }
 
@@ -38,7 +44,7 @@ mod tests {
     #[test]
     fn duplicate_crash() {
         let mut a = Vec::new();
-        extend_vec_from_hex("00000", &mut a);
+        extend_vec_from_hex("00", &mut a);
         super::do_test(&a);
     }
 }

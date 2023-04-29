@@ -1,4 +1,4 @@
-use bitcoin::hashes::{ripemd160, Hash, HashEngine};
+use groestlcoin::hashes::{ripemd160, Hash, HashEngine};
 use honggfuzz::fuzz;
 
 fn do_test(data: &[u8]) {

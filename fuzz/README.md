@@ -1,6 +1,6 @@
 # Fuzzing
 
-`bitcoin` and `bitcoin_hashes` have fuzzing harnesses setup for use with
+`groestlcoin` and `groestlcoin_hashes` have fuzzing harnesses setup for use with
 honggfuzz.
 
 To run the fuzz-tests as in CI -- briefly fuzzing every target -- simply
@@ -71,9 +71,9 @@ If a fuzztest fails, it will exit with a summary which looks something like
 
 ```
 ...
- fuzzTarget      : hfuzz_target/x86_64-unknown-linux-gnu/release/hashes_sha256 
+ fuzzTarget      : hfuzz_target/x86_64-unknown-linux-gnu/release/hashes_sha256
 CRASH:
-DESCRIPTION: 
+DESCRIPTION:
 ORIG_FNAME: 00000000000000000000000000000000.00000000.honggfuzz.cov
 FUZZ_FNAME: hfuzz_workspace/hashes_sha256/SIGABRT.PC.7ffff7c8abc7.STACK.18826d9b64.CODE.-6.ADDR.0.INSTR.mov____%eax,%ebp.fuzz
 ...
@@ -90,4 +90,3 @@ hex output into the call to `extend_vec_from_hex`. Then run the test with
 It is important to add the `cfg=fuzzing` flag, which tells rustc to compile the
 library as though it were running a fuzztest. In particular, this will disable
 or weaken all the cryptography.
-

@@ -1,18 +1,21 @@
-use groestlcoin::hashes::{sha512, Hash, HashEngine};
+use std::str::FromStr;
+
 use honggfuzz::fuzz;
 
 fn do_test(data: &[u8]) {
-    let mut engine = sha512::Hash::engine();
-    engine.input(data);
-    let eng_hash = sha512::Hash::from_engine(engine);
-
-    let hash = sha512::Hash::hash(data);
-    assert_eq!(&hash[..], &eng_hash[..]);
+    let data_str = String::from_utf8_lossy(data);
+    let addr = match groestlcoin::address::Address::from_str(&data_str) {
+        Ok(addr) => addr.assume_checked(),
+        Err(_) => return,
+    };
+    assert_eq!(addr.to_string(), data_str);
 }
 
 fn main() {
     loop {
-        fuzz!(|d| { do_test(d) });
+        fuzz!(|data| {
+            do_test(data);
+        });
     }
 }
 
@@ -38,7 +41,7 @@ mod tests {
     #[test]
     fn duplicate_crash() {
         let mut a = Vec::new();
-        extend_vec_from_hex("00000", &mut a);
+        extend_vec_from_hex("00000000", &mut a);
         super::do_test(&a);
     }
 }

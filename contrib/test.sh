@@ -2,7 +2,7 @@
 
 set -ex
 
-CRATES="groestlcoin hashes internals"
+CRATES="groestlcoin hashes internals fuzz"
 
 for crate in ${CRATES}
 do

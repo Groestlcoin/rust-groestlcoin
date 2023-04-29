@@ -1,18 +1,24 @@
-use groestlcoin::hashes::{sha512, Hash, HashEngine};
 use honggfuzz::fuzz;
 
 fn do_test(data: &[u8]) {
-    let mut engine = sha512::Hash::engine();
-    engine.input(data);
-    let eng_hash = sha512::Hash::from_engine(engine);
+    // We already fuzz Transactions in `./deserialize_transaction.rs`.
+    let tx_result: Result<groestlcoin::bip152::PrefilledTransaction, _> =
+        groestlcoin::consensus::encode::deserialize(data);
 
-    let hash = sha512::Hash::hash(data);
-    assert_eq!(&hash[..], &eng_hash[..]);
+    match tx_result {
+        Err(_) => {}
+        Ok(tx) => {
+            let ser = groestlcoin::consensus::encode::serialize(&tx);
+            assert_eq!(&ser[..], data);
+        }
+    }
 }
 
 fn main() {
     loop {
-        fuzz!(|d| { do_test(d) });
+        fuzz!(|data| {
+            do_test(data);
+        });
     }
 }
 
@@ -38,7 +44,7 @@ mod tests {
     #[test]
     fn duplicate_crash() {
         let mut a = Vec::new();
-        extend_vec_from_hex("00000", &mut a);
+        extend_vec_from_hex("00000000", &mut a);
         super::do_test(&a);
     }
 }

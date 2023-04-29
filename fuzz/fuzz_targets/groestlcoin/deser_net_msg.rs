@@ -1,18 +1,15 @@
-use groestlcoin::hashes::{sha512, Hash, HashEngine};
 use honggfuzz::fuzz;
 
 fn do_test(data: &[u8]) {
-    let mut engine = sha512::Hash::engine();
-    engine.input(data);
-    let eng_hash = sha512::Hash::from_engine(engine);
-
-    let hash = sha512::Hash::hash(data);
-    assert_eq!(&hash[..], &eng_hash[..]);
+    let _: Result<groestlcoin::network::message::RawNetworkMessage, _> =
+        groestlcoin::consensus::encode::deserialize(data);
 }
 
 fn main() {
     loop {
-        fuzz!(|d| { do_test(d) });
+        fuzz!(|data| {
+            do_test(data);
+        });
     }
 }
 
@@ -38,7 +35,7 @@ mod tests {
     #[test]
     fn duplicate_crash() {
         let mut a = Vec::new();
-        extend_vec_from_hex("00000", &mut a);
+        extend_vec_from_hex("00", &mut a);
         super::do_test(&a);
     }
 }

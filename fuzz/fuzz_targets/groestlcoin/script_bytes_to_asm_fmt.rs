@@ -1,18 +1,26 @@
-use groestlcoin::hashes::{sha512, Hash, HashEngine};
+use std::fmt;
+
 use honggfuzz::fuzz;
 
-fn do_test(data: &[u8]) {
-    let mut engine = sha512::Hash::engine();
-    engine.input(data);
-    let eng_hash = sha512::Hash::from_engine(engine);
+// faster than String, we don't need to actually produce the value, just check absence of panics
+struct NullWriter;
 
-    let hash = sha512::Hash::hash(data);
-    assert_eq!(&hash[..], &eng_hash[..]);
+impl fmt::Write for NullWriter {
+    fn write_str(&mut self, _s: &str) -> fmt::Result { Ok(()) }
+
+    fn write_char(&mut self, _c: char) -> fmt::Result { Ok(()) }
+}
+
+fn do_test(data: &[u8]) {
+    let mut writer = NullWriter;
+    groestlcoin::Script::from_bytes(data).fmt_asm(&mut writer).unwrap();
 }
 
 fn main() {
     loop {
-        fuzz!(|d| { do_test(d) });
+        fuzz!(|data| {
+            do_test(data);
+        });
     }
 }
 

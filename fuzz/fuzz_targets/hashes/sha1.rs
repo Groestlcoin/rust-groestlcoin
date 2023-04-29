@@ -1,4 +1,4 @@
-use bitcoin::hashes::{sha1, Hash, HashEngine};
+use groestlcoin::hashes::{sha1, Hash, HashEngine};
 use honggfuzz::fuzz;
 
 fn do_test(data: &[u8]) {
