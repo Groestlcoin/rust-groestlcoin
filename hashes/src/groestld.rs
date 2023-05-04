@@ -1,16 +1,4 @@
-// Groestlcoin Hashes Library
-// Written in 2020 by
-//   Hashengineering <hashengineeringsolutions@gmail.com>
-//
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
-//
-// You should have received a copy of the CC0 Public Domain Dedication
-// along with this software.
-// If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-//
+// SPDX-License-Identifier: CC0-1.0
 
 //! # Groestl512d implementation (double Groestl512).
 //!
@@ -46,13 +34,13 @@ impl crate::HashEngine for HashEngine {
     type MidState = [u8; 64];
 
     // this is not supported by Groestl512
-    #[cfg(not(fuzzing))]
+    #[cfg(not(hashes_fuzz))]
     fn midstate(&self) -> [u8; 64] {
         static RET: [u8; 64] = [0; 64];
         RET
     }
 
-    #[cfg(fuzzing)]
+    #[cfg(hashes_fuzz)]
     fn midstate(&self) -> [u8; 64] {
         let ret = [0; 64];
         // this is not supported by Groestl512
