@@ -1,16 +1,4 @@
-// Bitcoin Hashes Library
-// Written in 2018 by
-//   Andrew Poelstra <apoelstra@wpsoftware.net>
-//
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
-//
-// You should have received a copy of the CC0 Public Domain Dedication
-// along with this software.
-// If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-//
+// SPDX-License-Identifier: CC0-1.0
 
 //! SHA256 implementation.
 //!
@@ -29,7 +17,7 @@ crate::internal_macros::hash_type! {
     "crate::util::json_hex_string::len_32"
 }
 
-#[cfg(not(fuzzing))]
+#[cfg(not(hashes_fuzz))]
 fn from_engine(mut e: HashEngine) -> Hash {
     // pad buffer with a single 1-bit then all 0s, until there are exactly 8 bytes remaining
     let data_len = e.length as u64;
@@ -49,7 +37,7 @@ fn from_engine(mut e: HashEngine) -> Hash {
     Hash(e.midstate().to_byte_array())
 }
 
-#[cfg(fuzzing)]
+#[cfg(hashes_fuzz)]
 fn from_engine(e: HashEngine) -> Hash {
     let mut hash = e.midstate().to_byte_array();
     if hash == [0; 32] {
@@ -86,7 +74,7 @@ impl Default for HashEngine {
 impl crate::HashEngine for HashEngine {
     type MidState = Midstate;
 
-    #[cfg(not(fuzzing))]
+    #[cfg(not(hashes_fuzz))]
     fn midstate(&self) -> Midstate {
         let mut ret = [0; 32];
         for (val, ret_bytes) in self.h.iter().zip(ret.chunks_exact_mut(4)) {
@@ -95,7 +83,7 @@ impl crate::HashEngine for HashEngine {
         Midstate(ret)
     }
 
-    #[cfg(fuzzing)]
+    #[cfg(hashes_fuzz)]
     fn midstate(&self) -> Midstate {
         let mut ret = [0; 32];
         ret.copy_from_slice(&self.buffer[..32]);

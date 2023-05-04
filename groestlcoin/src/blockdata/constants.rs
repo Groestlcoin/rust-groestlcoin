@@ -1,4 +1,3 @@
-// Written in 2014 by Andrew Poelstra <apoelstra@wpsoftware.net>
 // SPDX-License-Identifier: CC0-1.0
 
 //! Blockdata constants.
@@ -32,10 +31,15 @@ pub const TARGET_BLOCK_SPACING: u32 = 60;
 pub const DIFFCHANGE_INTERVAL: u32 = 1;
 /// How much time on average should occur between diffchanges.
 pub const DIFFCHANGE_TIMESPAN: u32 = 1;
+
+#[deprecated(since = "0.31.0", note = "Use Weight::MAX_BLOCK instead")]
 /// The maximum allowed weight for a block, see BIP 141 (network rule).
 pub const MAX_BLOCK_WEIGHT: u32 = 4_000_000;
+
+#[deprecated(since = "0.31.0", note = "Use Weight::MIN_TRANSACTION instead")]
 /// The minimum transaction weight for a valid serialized transaction.
 pub const MIN_TRANSACTION_WEIGHT: u32 = 4 * 60;
+
 /// The factor that non-witness serialization data is multiplied by during weight calculation.
 pub const WITNESS_SCALE_FACTOR: usize = 4;
 /// The maximum allowed number of signature check operations in a block.

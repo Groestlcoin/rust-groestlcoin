@@ -1,21 +1,4 @@
-// Bitcoin Hashes Library
-// Written in 2018 by
-//   Andrew Poelstra <apoelstra@wpsoftware.net>
-//
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
-//
-// You should have received a copy of the CC0 Public Domain Dedication
-// along with this software.
-// If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-//
-
-// This module is largely copied from the rust-crypto ripemd.rs file;
-// while rust-crypto is licensed under Apache, that file specifically
-// was written entirely by Andrew Poelstra, who is re-licensing its
-// contents here as CC0.
+// SPDX-License-Identifier: CC0-1.0
 
 //! SHA512 implementation.
 //!
@@ -56,7 +39,7 @@ impl Default for HashEngine {
 impl crate::HashEngine for HashEngine {
     type MidState = [u8; 64];
 
-    #[cfg(not(fuzzing))]
+    #[cfg(not(hashes_fuzz))]
     fn midstate(&self) -> [u8; 64] {
         let mut ret = [0; 64];
         for (val, ret_bytes) in self.h.iter().zip(ret.chunks_exact_mut(8)) {
@@ -65,7 +48,7 @@ impl crate::HashEngine for HashEngine {
         ret
     }
 
-    #[cfg(fuzzing)]
+    #[cfg(hashes_fuzz)]
     fn midstate(&self) -> [u8; 64] {
         let mut ret = [0; 64];
         ret.copy_from_slice(&self.buffer[..64]);
@@ -97,7 +80,7 @@ impl Hash {
     fn internal_engine() -> HashEngine { Default::default() }
 }
 
-#[cfg(not(fuzzing))]
+#[cfg(not(hashes_fuzz))]
 pub(crate) fn from_engine(mut e: HashEngine) -> Hash {
     // pad buffer with a single 1-bit then all 0s, until there are exactly 16 bytes remaining
     let data_len = e.length as u64;
@@ -118,7 +101,7 @@ pub(crate) fn from_engine(mut e: HashEngine) -> Hash {
     Hash(e.midstate())
 }
 
-#[cfg(fuzzing)]
+#[cfg(hashes_fuzz)]
 pub(crate) fn from_engine(e: HashEngine) -> Hash {
     let mut hash = e.midstate();
     hash[0] ^= 0xff; // Make this distinct from SHA-256

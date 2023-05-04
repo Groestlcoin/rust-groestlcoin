@@ -1,16 +1,4 @@
-// Bitcoin Hashes Library
-// Written in 2018 by
-//   Andrew Poelstra <apoelstra@wpsoftware.net>
-//
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
-//
-// You should have received a copy of the CC0 Public Domain Dedication
-// along with this software.
-// If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-//
+// SPDX-License-Identifier: CC0-1.0
 
 #[macro_export]
 /// Adds hexadecimal formatting implementation of a trait `$imp` to a given type `$ty`.
@@ -80,7 +68,7 @@ macro_rules! borrow_slice_impl(
 
 macro_rules! engine_input_impl(
     () => (
-        #[cfg(not(fuzzing))]
+        #[cfg(not(hashes_fuzz))]
         fn input(&mut self, mut inp: &[u8]) {
             while !inp.is_empty() {
                 let buf_idx = self.length % <Self as crate::HashEngine>::BLOCK_SIZE;
@@ -97,7 +85,7 @@ macro_rules! engine_input_impl(
             }
         }
 
-        #[cfg(fuzzing)]
+        #[cfg(hashes_fuzz)]
         fn input(&mut self, inp: &[u8]) {
             for c in inp {
                 self.buffer[0] ^= *c;
