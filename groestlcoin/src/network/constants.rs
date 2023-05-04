@@ -728,7 +728,7 @@ mod tests {
         }
 
         serde_test::assert_tokens(
-            &T { network: Network::Bitcoin },
+            &T { network: Network::Groestlcoin },
             &[
                 serde_test::Token::Struct { name: "T", len: 1 },
                 serde_test::Token::Str("network"),
