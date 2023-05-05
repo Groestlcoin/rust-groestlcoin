@@ -22,7 +22,7 @@ use crate::consensus::{encode, Encodable};
 use crate::error::impl_std_error;
 use crate::prelude::*;
 use crate::taproot::{LeafVersion, TapLeafHash, TAPROOT_ANNEX_PREFIX};
-use crate::{io, Script, ScriptBuf, Sequence, Transaction, TxIn, TxOut};
+use crate::{io, Amount, Script, ScriptBuf, Sequence, Transaction, TxIn, TxOut};
 
 /// Used for signature hash for invalid use of SIGHASH_SINGLE.
 #[rustfmt::skip]
@@ -751,7 +751,7 @@ impl<R: Borrow<Transaction>> SighashCache<R> {
         mut writer: Write,
         input_index: usize,
         script_code: &Script,
-        value: u64,
+        value: Amount,
         sighash_type: EcdsaSighashType,
     ) -> Result<(), Error> {
         let zero_hash = sha256::Hash::all_zeros();
@@ -810,7 +810,7 @@ impl<R: Borrow<Transaction>> SighashCache<R> {
         &mut self,
         input_index: usize,
         script_code: &Script,
-        value: u64,
+        value: Amount,
         sighash_type: EcdsaSighashType,
     ) -> Result<SegwitV0Sighash, Error> {
         let mut enc = SegwitV0Sighash::engine();
@@ -1063,7 +1063,7 @@ impl<R: BorrowMut<Transaction>> SighashCache<R> {
     ///
     /// This allows in-line signing such as
     /// ```
-    /// use groestlcoin::{absolute, Transaction, Script};
+    /// use groestlcoin::{absolute, Amount, Transaction, Script};
     /// use groestlcoin::sighash::{EcdsaSighashType, SighashCache};
     ///
     /// let mut tx_to_sign = Transaction { version: 2, lock_time: absolute::LockTime::ZERO, input: Vec::new(), output: Vec::new() };
@@ -1072,7 +1072,7 @@ impl<R: BorrowMut<Transaction>> SighashCache<R> {
     /// let mut sig_hasher = SighashCache::new(&mut tx_to_sign);
     /// for inp in 0..input_count {
     ///     let prevout_script = Script::empty();
-    ///     let _sighash = sig_hasher.segwit_signature_hash(inp, prevout_script, 42, EcdsaSighashType::All);
+    ///     let _sighash = sig_hasher.segwit_signature_hash(inp, prevout_script, Amount::ONE_SAT, EcdsaSighashType::All);
     ///     // ... sign the sighash
     ///     sig_hasher.witness_mut(inp).unwrap().push(&Vec::new());
     /// }
@@ -1469,7 +1469,7 @@ mod tests {
             #[serde(rename = "scriptPubKey")]
             script_pubkey: ScriptBuf,
             #[serde(rename = "amountSats")]
-            value: u64,
+            value: Amount,
         }
 
         #[derive(serde::Deserialize)]
@@ -1687,7 +1687,7 @@ mod tests {
 
         let witness_script =
             p2pkh_hex("025476c2e83188368da1ff3e292e7acafcdb3566bb0ad253f62fc70f07aeee6357");
-        let value = 600_000_000;
+        let value = Amount::from_sat(600_000_000);
 
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
@@ -1728,7 +1728,7 @@ mod tests {
 
         let witness_script =
             p2pkh_hex("03ad1d8e89212f0b92c74d23bb710c00662ad1470198ac48c43f7d6f93a2a26873");
-        let value = 1_000_000_000;
+        let value = Amount::from_sat(1_000_000_000);
 
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
@@ -1775,7 +1775,7 @@ mod tests {
              56ae",
         )
         .unwrap();
-        let value = 987654321;
+        let value = Amount::from_sat(987_654_321);
 
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
