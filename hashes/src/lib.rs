@@ -87,7 +87,9 @@ extern crate core;
 extern crate core2;
 pub extern crate groestl;
 #[cfg(feature = "serde")]
+/// A generic serialization/deserialization framework.
 pub extern crate serde;
+
 #[cfg(all(test, feature = "serde"))]
 extern crate serde_test;
 #[cfg(bench)]
