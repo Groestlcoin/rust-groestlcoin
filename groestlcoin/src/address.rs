@@ -955,8 +955,8 @@ impl Address {
 
     /// Creates a URI string *groestlcoin:address* optimized to be encoded in QR codes.
     ///
-    /// If the address is bech32, both the schema and the address become uppercase.
-    /// If the address is base58, the schema is lowercase and the address is left mixed case.
+    /// If the address is bech32, the address becomes uppercase.
+    /// If the address is base58, the address is left mixed case.
     ///
     /// Quoting BIP 173 "inside QR codes uppercase SHOULD be used, as those permit the use of
     /// alphanumeric mode, which is 45% more compact than the normal byte mode."
@@ -981,11 +981,7 @@ impl Address {
     /// # assert_eq!(writer, ADDRESS);
     /// ```
     pub fn to_qr_uri(&self) -> String {
-        let schema = match self.payload() {
-            Payload::WitnessProgram { .. } => "GROESTLCOIN",
-            _ => "groestlcoin",
-        };
-        format!("{}:{:#}", schema, self)
+        format!("groestlcoin:{:#}", self)
     }
 
     /// Returns true if the given pubkey is directly related to the address payload.
@@ -1604,7 +1600,7 @@ mod tests {
         .iter()
         {
             let addr = Address::from_str(el).unwrap().assume_checked();
-            assert_eq!(addr.to_qr_uri(), format!("GROESTLCOIN:{}", el.to_ascii_uppercase()));
+            assert_eq!(addr.to_qr_uri(), format!("groestlcoin:{}", el.to_ascii_uppercase()));
         }
     }
 
