@@ -29,9 +29,9 @@ pub const COIN_VALUE: u64 = 100_000_000;
 /// How many seconds between blocks we expect on average
 pub const TARGET_BLOCK_SPACING: u32 = 60;
 /// How many blocks between diffchanges
-pub const DIFFCHANGE_INTERVAL: u32 = 1;
+pub const DIFFCHANGE_INTERVAL: u32 = 2016;
 /// How much time on average should occur between diffchanges
-pub const DIFFCHANGE_TIMESPAN: u32 = 1;
+pub const DIFFCHANGE_TIMESPAN: u32 = 60;
 /// The maximum allowed weight for a block, see BIP 141 (network rule)
 pub const MAX_BLOCK_WEIGHT: u32 = 4_000_000;
 /// The minimum transaction weight for a valid serialized transaction
@@ -51,7 +51,7 @@ pub const SCRIPT_ADDRESS_PREFIX_TEST: u8 = 196; // 0xc4
 /// The maximum allowed script size.
 pub const MAX_SCRIPT_ELEMENT_SIZE: usize = 520;
 /// How may blocks between halvings.
-pub const SUBSIDY_HALVING_INTERVAL: u32 = 210_000;
+pub const SUBSIDY_HALVING_INTERVAL: u32 = 1_050_000;
 /// Maximum allowed value for an integer in Script.
 pub const MAX_SCRIPTNUM_VALUE: u32 = 0x80000000; // 2^31
 
