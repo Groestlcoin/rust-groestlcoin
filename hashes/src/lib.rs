@@ -112,7 +112,6 @@ mod util;
 #[macro_use]
 pub mod serde_macros;
 pub mod cmp;
-pub mod error;
 pub mod groestld;
 pub mod hash160;
 pub mod hex;
@@ -130,7 +129,6 @@ pub mod siphash24;
 
 use core::{borrow, fmt, hash, ops};
 
-pub use error::Error;
 pub use hmac::{Hmac, HmacEngine};
 
 /// A hashing engine which bytes can be serialized into.
@@ -189,7 +187,7 @@ pub trait Hash:
     const LEN: usize;
 
     /// Copies a byte slice into a hash object.
-    fn from_slice(sl: &[u8]) -> Result<Self, Error>;
+    fn from_slice(sl: &[u8]) -> Result<Self, FromSliceError>;
 
     /// Hashes some bytes.
     fn hash(data: &[u8]) -> Self {
@@ -218,6 +216,24 @@ pub trait Hash:
     /// it, however it is used in various places in Bitcoin e.g., the Bitcoin genesis block's
     /// previous blockhash and the coinbase transaction's outpoint txid.
     fn all_zeros() -> Self;
+}
+
+/// Attempted to create a hash from an invalid length slice.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct FromSliceError {
+    expected: usize,
+    got: usize,
+}
+
+impl fmt::Display for FromSliceError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "invalid slice length {} (expected {})", self.got, self.expected)
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for FromSliceError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> { None }
 }
 
 #[cfg(test)]

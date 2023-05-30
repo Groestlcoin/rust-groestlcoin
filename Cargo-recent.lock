@@ -145,7 +145,7 @@ dependencies = [
  "bech32",
  "bincode",
  "core2",
- "groestlcoin-private",
+ "groestlcoin-internals",
  "groestlcoin_hashes",
  "groestlcoinconsensus",
  "hex_lit",
@@ -169,7 +169,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "groestlcoin-private"
+name = "groestlcoin-internals"
 version = "0.1.0"
 
 [[package]]
@@ -178,7 +178,7 @@ version = "0.12.1"
 dependencies = [
  "core2",
  "groestl",
- "groestlcoin-private",
+ "groestlcoin-internals",
  "schemars",
  "serde",
  "serde_json",

@@ -38,7 +38,7 @@ publish_dry_run() {
     if [ "$crate" == "hashes" ]; then
         cargo publish -p "groestlcoin_hashes" --dry-run
     elif [ "$crate" == "internals" ]; then
-        cargo publish -p "groestlcoin-private" --dry-run
+        cargo publish -p "groestlcoin-internals" --dry-run
     elif [ "$crate" == "groestlcoin" ]; then
         cargo publish -p "groestlcoin" --dry-run
     fi

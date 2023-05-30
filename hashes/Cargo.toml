@@ -3,7 +3,7 @@ name = "groestlcoin_hashes"
 version = "0.12.1"
 authors = ["Groestlcoin Developers <groestlcoin@gmail.com>"]
 license = "CC0-1.0"
-repository = "https://github.com/Groestlcoin/groestlcoin_hashes/"
+repository = "https://github.com/Groestlcoin/rust-groestlcoin"
 documentation = "https://docs.rs/groestlcoin_hashes/"
 description = "Hash functions used by the rust-groestlcoin eccosystem"
 categories = ["algorithms"]
@@ -25,7 +25,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [dependencies]
 groestl = { version = "0.10.0", default_features = false }
 
-internals = { path = "../internals", package = "groestlcoin-private", version = "0.1.0" }
+internals = { path = "../internals", package = "groestlcoin-internals", version = "0.1.0" }
 
 core2 = { version = "0.3.0", default_features = false, optional = true }
 schemars = { version = "0.8.3", optional = true }
