@@ -9,7 +9,7 @@ use core::str;
 
 use groestl::{Digest, Groestl512};
 
-use crate::Error;
+use crate::FromSliceError;
 
 crate::internal_macros::hash_type! {
     256,
