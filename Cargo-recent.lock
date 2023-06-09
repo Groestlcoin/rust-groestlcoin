@@ -171,6 +171,9 @@ dependencies = [
 [[package]]
 name = "groestlcoin-internals"
 version = "0.1.0"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "groestlcoin_hashes"
