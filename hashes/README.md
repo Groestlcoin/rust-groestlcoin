@@ -1,5 +1,3 @@
-[![Status](https://travis-ci.org/Groestlcoin/groestl_hashes.png?branch=master)](https://travis-ci.org/Groestlcoin/groestlcoin_hashes)
-
 # Groestlcoin Hashes Library
 
 This is a simple library which implements the hash functions needed by
