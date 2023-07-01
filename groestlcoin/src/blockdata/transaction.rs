@@ -1938,7 +1938,7 @@ mod tests {
 
     #[test]
     fn txin_txout_weight_tests() {
-        // [(is_segwit, tx_hex, expected_wu)]
+        // [(is_segwit, tx_hex)]
         let txs = [
                 // one segwit input (P2WPKH)
                 (true, "020000000001018a763b78d3e17acea0625bf9e52b0dc1beb2241b2502185348ba8ff4a253176e0100000000ffffffff0280d725000000000017a914c07ed639bd46bf7087f2ae1dfde63b815a5f8b488767fda20300000000160014869ec8520fa2801c8a01bfdd2e82b19833cd0daf02473044022016243edad96b18c78b545325aaff80131689f681079fb107a67018cb7fb7830e02205520dae761d89728f73f1a7182157f6b5aecf653525855adb7ccb998c8e6143b012103b9489bde92afbcfa85129a82ffa512897105d1a27ad9806bded27e0532fc84e700000000"),
@@ -1962,7 +1962,7 @@ mod tests {
         }
         .weight();
 
-        for (is_segwit, tx, expected_wu) in &txs {
+        for (is_segwit, tx) in &txs {
             let txin_weight = if *is_segwit { TxIn::segwit_weight } else { TxIn::legacy_weight };
             let tx: Transaction = deserialize(Vec::from_hex(tx).unwrap().as_slice()).unwrap();
             // The empty tx size doesn't include the segwit marker (`0001`), so, in case of segwit txs,
@@ -1973,8 +1973,6 @@ mod tests {
                 + tx.input.iter().fold(0, |sum, i| sum + txin_weight(i))
                 + tx.output.iter().fold(0, |sum, o| sum + o.weight());
             assert_eq!(calculated_size, tx.weight().to_wu() as usize);
-
-            assert_eq!(tx.weight().to_wu(), *expected_wu);
         }
     }
 }
