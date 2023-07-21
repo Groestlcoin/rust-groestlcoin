@@ -6,3 +6,6 @@ path = "groestlcoin"
 
 [patch.crates-io.groestlcoin_hashes]
 path = "hashes"
+
+[patch.crates-io.bitcoin-internals]
+path = "internals"

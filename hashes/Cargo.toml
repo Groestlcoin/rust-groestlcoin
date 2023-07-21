@@ -23,9 +23,9 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-groestl = { version = "0.10.0", default_features = false }
+groestl = { version = "0.10.1", default_features = false }
 
-internals = { path = "../internals", package = "groestlcoin-internals", version = "0.1.0" }
+internals = { package = "groestlcoin-internals", version = "0.2.0" }
 
 core2 = { version = "0.3.0", default_features = false, optional = true }
 schemars = { version = "0.8.3", optional = true }

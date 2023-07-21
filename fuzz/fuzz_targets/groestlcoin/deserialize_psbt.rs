@@ -1,8 +1,7 @@
 use honggfuzz::fuzz;
 
 fn do_test(data: &[u8]) {
-    let psbt: Result<groestlcoin::psbt::PartiallySignedTransaction, _> =
-        groestlcoin::psbt::Psbt::deserialize(data);
+    let psbt: Result<groestlcoin::psbt::Psbt, _> = groestlcoin::psbt::Psbt::deserialize(data);
     match psbt {
         Err(_) => {}
         Ok(psbt) => {

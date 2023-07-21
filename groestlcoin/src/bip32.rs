@@ -65,7 +65,6 @@ pub struct ExtendedPrivKey {
 crate::serde_utils::serde_string_impl!(ExtendedPrivKey, "a BIP-32 extended private key");
 
 #[cfg(not(feature = "std"))]
-#[cfg_attr(docsrs, doc(cfg(not(feature = "std"))))]
 impl fmt::Debug for ExtendedPrivKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("ExtendedPrivKey")
@@ -413,6 +412,20 @@ impl DerivationPath {
         new_path.0.extend_from_slice(path.as_ref());
         new_path
     }
+
+    /// Returns the derivation path as a vector of u32 integers.
+    /// Unhardened elements are copied as is.
+    /// 0x80000000 is added to the hardened elements.
+    ///
+    /// ```
+    /// use bitcoin::bip32::DerivationPath;
+    /// use std::str::FromStr;
+    ///
+    /// let path = DerivationPath::from_str("m/84'/0'/0'/0/1").unwrap();
+    /// const HARDENED: u32 = 0x80000000;
+    /// assert_eq!(path.to_u32_vec(), vec![84 + HARDENED, HARDENED, HARDENED, 0, 1]);
+    /// ```
+    pub fn to_u32_vec(&self) -> Vec<u32> { self.into_iter().map(|&el| el.into()).collect() }
 }
 
 impl fmt::Display for DerivationPath {

@@ -126,6 +126,8 @@ pub use crate::amount::{Amount, Denomination, SignedAmount};
 pub use crate::blockdata::block::{self, Block};
 pub use crate::blockdata::fee_rate::FeeRate;
 pub use crate::blockdata::locktime::{self, absolute, relative};
+pub use crate::blockdata::script::witness_program::{self, WitnessProgram};
+pub use crate::blockdata::script::witness_version::{self, WitnessVersion};
 pub use crate::blockdata::script::{self, Script, ScriptBuf};
 pub use crate::blockdata::transaction::{self, OutPoint, Sequence, Transaction, TxIn, TxOut};
 pub use crate::blockdata::weight::Weight;
@@ -140,6 +142,7 @@ pub use crate::hash_types::{
 pub use crate::merkle_tree::MerkleBlock;
 pub use crate::network::constants::Network;
 pub use crate::pow::{CompactTarget, Target, Work};
+pub use crate::psbt::Psbt;
 
 #[cfg(not(feature = "std"))]
 mod io_extras {
