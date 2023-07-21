@@ -418,10 +418,10 @@ impl DerivationPath {
     /// 0x80000000 is added to the hardened elements.
     ///
     /// ```
-    /// use bitcoin::bip32::DerivationPath;
+    /// use groestlcoin::bip32::DerivationPath;
     /// use std::str::FromStr;
     ///
-    /// let path = DerivationPath::from_str("m/84'/0'/0'/0/1").unwrap();
+    /// let path = DerivationPath::from_str("m/84'/17'/0'/0/1").unwrap();
     /// const HARDENED: u32 = 0x80000000;
     /// assert_eq!(path.to_u32_vec(), vec![84 + HARDENED, HARDENED, HARDENED, 0, 1]);
     /// ```
