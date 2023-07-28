@@ -21,10 +21,10 @@ use internals::write_err;
 use super::Weight;
 use crate::blockdata::locktime::absolute::{self, Height, Time};
 use crate::blockdata::locktime::relative;
-#[cfg(feature = "groestlcoinconsensus")]
-use crate::blockdata::script;
 use crate::blockdata::script::{Script, ScriptBuf};
 use crate::blockdata::witness::Witness;
+#[cfg(feature = "groestlcoinconsensus")]
+pub use crate::consensus::validation::TxVerifyError;
 use crate::consensus::{encode, Decodable, Encodable};
 use crate::crypto::sighash::LegacySighash;
 use crate::hash_types::{Txid, TxidInternal, Wtxid, WtxidInternal};
@@ -95,7 +95,7 @@ impl fmt::Display for OutPoint {
 #[non_exhaustive]
 pub enum ParseOutPointError {
     /// Error in TXID part.
-    Txid(hashes::hex::Error),
+    Txid(hex::HexToArrayError),
     /// Error in vout part.
     Vout(crate::error::ParseIntError),
     /// Error in general format.
@@ -925,36 +925,6 @@ impl Transaction {
         }
     }
 
-    /// Shorthand for [`Self::verify_with_flags`] with flag [`groestlcoinconsensus::VERIFY_ALL`].
-    #[cfg(feature = "groestlcoinconsensus")]
-    pub fn verify<S>(&self, spent: S) -> Result<(), script::Error>
-    where
-        S: FnMut(&OutPoint) -> Option<TxOut>,
-    {
-        self.verify_with_flags(spent, groestlcoinconsensus::VERIFY_ALL)
-    }
-
-    /// Verify that this transaction is able to spend its inputs.
-    ///
-    /// The `spent` closure should not return the same [`TxOut`] twice!
-    #[cfg(feature = "groestlcoinconsensus")]
-    pub fn verify_with_flags<S, F>(&self, mut spent: S, flags: F) -> Result<(), script::Error>
-    where
-        S: FnMut(&OutPoint) -> Option<TxOut>,
-        F: Into<u32>,
-    {
-        let tx = encode::serialize(self);
-        let flags: u32 = flags.into();
-        for (idx, input) in self.input.iter().enumerate() {
-            if let Some(output) = spent(&input.previous_output) {
-                output.script_pubkey.verify_with_flags(idx, output.value, tx.as_slice(), flags)?;
-            } else {
-                return Err(script::Error::UnknownSpentOutput(input.previous_output));
-            }
-        }
-        Ok(())
-    }
-
     /// Checks if this is a coinbase transaction.
     ///
     /// The first transaction in the block distributes the mining reward and is called the coinbase
@@ -967,7 +937,7 @@ impl Transaction {
     }
 
     /// Checks if this is a coinbase transaction.
-    #[deprecated(since = "0.0.0-NEXT-RELEASE", note = "use is_coinbase instead")]
+    #[deprecated(since = "0.31.0", note = "use is_coinbase instead")]
     pub fn is_coin_base(&self) -> bool { self.is_coinbase() }
 
     /// Returns `true` if the transaction itself opted in to be BIP-125-replaceable (RBF).
@@ -1416,7 +1386,7 @@ impl InputWeightPrediction {
 mod tests {
     use core::str::FromStr;
 
-    use hashes::hex::FromHex;
+    use hex::FromHex;
 
     use super::*;
     use crate::blockdata::constants::WITNESS_SCALE_FACTOR;
@@ -1834,7 +1804,6 @@ mod tests {
     fn test_transaction_verify() {
         use std::collections::HashMap;
 
-        use crate::blockdata::script;
         use crate::blockdata::witness::Witness;
 
         // a random recent segwit transaction from blockchain using both old and segwit inputs
@@ -1891,7 +1860,7 @@ mod tests {
             .err()
             .unwrap()
         {
-            script::Error::BitcoinConsensus(_) => {}
+            TxVerifyError::ScriptVerification(_) => {}
             _ => panic!("Wrong error type"),
         }
     }

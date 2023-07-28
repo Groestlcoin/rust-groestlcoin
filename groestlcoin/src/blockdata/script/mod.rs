@@ -513,7 +513,7 @@ impl<'de> serde::Deserialize<'de> for ScriptBuf {
     {
         use core::fmt::Formatter;
 
-        use hashes::hex::FromHex;
+        use hex::FromHex;
 
         if deserializer.is_human_readable() {
             struct Visitor;
@@ -680,66 +680,19 @@ pub enum Error {
     EarlyEndOfScript,
     /// Tried to read an array off the stack as a number when it was more than 4 bytes.
     NumericOverflow,
-    /// Error validating the script with groestlcoinconsensus library.
-    #[cfg(feature = "groestlcoinconsensus")]
-    BitcoinConsensus(groestlcoinconsensus::Error),
     /// Can not find the spent output.
     UnknownSpentOutput(OutPoint),
     /// Can not serialize the spending transaction.
     Serialization,
 }
 
-// If bitcoinonsensus-std is off but groestlcoinconsensus is present we patch the error type to
-// implement `std::error::Error`.
-#[cfg(all(feature = "std", feature = "groestlcoinconsensus", not(feature = "groestlcoinconsensus-std")))]
-mod bitcoinconsensus_hack {
-    use core::fmt;
-
-    #[repr(transparent)]
-    pub(crate) struct Error(groestlcoinconsensus::Error);
-
-    impl fmt::Debug for Error {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { fmt::Debug::fmt(&self.0, f) }
-    }
-
-    impl fmt::Display for Error {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { fmt::Display::fmt(&self.0, f) }
-    }
-
-    // groestlcoinconsensus::Error has no sources at this time
-    impl std::error::Error for Error {}
-
-    pub(crate) fn wrap_error(error: &groestlcoinconsensus::Error) -> &Error {
-        // Unfortunately, we cannot have the reference inside `Error` struct because of the 'static
-        // bound on `source` return type, so we have to use unsafe to overcome the limitation.
-        // SAFETY: the type is repr(transparent) and the lifetimes match
-        unsafe { &*(error as *const _ as *const Error) }
-    }
-}
-
-#[cfg(not(all(
-    feature = "std",
-    feature = "groestlcoinconsensus",
-    not(feature = "groestlcoinconsensus-std")
-)))]
-mod bitcoinconsensus_hack {
-    #[allow(unused_imports)] // conditionally used
-    pub(crate) use core::convert::identity as wrap_error;
-}
-
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        #[cfg(feature = "groestlcoinconsensus")]
-        use internals::write_err;
-
         match *self {
             Error::NonMinimalPush => f.write_str("non-minimal datapush"),
             Error::EarlyEndOfScript => f.write_str("unexpected end of script"),
             Error::NumericOverflow =>
                 f.write_str("numeric overflow (number on stack larger than 4 bytes)"),
-            #[cfg(feature = "groestlcoinconsensus")]
-            Error::BitcoinConsensus(ref e) =>
-                write_err!(f, "groestlcoinconsensus verification failed"; bitcoinconsensus_hack::wrap_error(e)),
             Error::UnknownSpentOutput(ref point) => write!(f, "unknown spent output: {}", point),
             Error::Serialization =>
                 f.write_str("can not serialize the spending transaction in Transaction::verify()"),
@@ -758,8 +711,6 @@ impl std::error::Error for Error {
             | NumericOverflow
             | UnknownSpentOutput(_)
             | Serialization => None,
-            #[cfg(feature = "groestlcoinconsensus")]
-            BitcoinConsensus(ref e) => Some(bitcoinconsensus_hack::wrap_error(e)),
         }
     }
 }
@@ -778,9 +729,4 @@ impl From<UintError> for Error {
             UintError::NumericOverflow => Error::NumericOverflow,
         }
     }
-}
-
-#[cfg(feature = "groestlcoinconsensus")]
-impl From<groestlcoinconsensus::Error> for Error {
-    fn from(err: groestlcoinconsensus::Error) -> Error { Error::BitcoinConsensus(err) }
 }

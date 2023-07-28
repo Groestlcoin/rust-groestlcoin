@@ -31,8 +31,8 @@ use groestlcoin::bip32::{ChildNumber, ExtendedPrivKey, ExtendedPubKey, KeySource
 use groestlcoin::blockdata::locktime::{absolute, relative};
 use groestlcoin::blockdata::witness::Witness;
 use groestlcoin::consensus::encode::deserialize;
-use groestlcoin::hashes::hex::FromHex;
 use groestlcoin::hashes::{hash160, ripemd160, sha256, sha256d, Hash};
+use groestlcoin::hex::FromHex;
 use groestlcoin::psbt::raw::{self, Key, Pair, ProprietaryKey};
 use groestlcoin::psbt::{Input, Output, Psbt, PsbtSighashType};
 use groestlcoin::sighash::{EcdsaSighashType, TapSighashType};

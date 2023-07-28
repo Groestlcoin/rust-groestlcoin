@@ -13,7 +13,7 @@
 //!
 //! ```rust
 //! use groestlcoin::hash_types::Txid;
-//! use groestlcoin::hashes::hex::FromHex;
+//! use groestlcoin::hex::FromHex;
 //! use groestlcoin::{Block, MerkleBlock};
 //!
 //! // Get the proof from a groestlcoind by running in the terminal:
@@ -74,7 +74,7 @@ impl MerkleBlock {
     ///
     /// ```rust
     /// use groestlcoin::hash_types::Txid;
-    /// use groestlcoin::hashes::hex::FromHex;
+    /// use groestlcoin::hex::FromHex;
     /// use groestlcoin::{Block, MerkleBlock};
     ///
     /// // Block 3955536
@@ -231,7 +231,7 @@ impl PartialMerkleTree {
     ///
     /// ```rust
     /// use groestlcoin::hash_types::Txid;
-    /// use groestlcoin::hashes::hex::FromHex;
+    /// use groestlcoin::hex::FromHex;
     /// use groestlcoin::merkle_tree::{MerkleBlock, PartialMerkleTree};
     ///
     /// // Block 80000
@@ -759,7 +759,7 @@ mod tests {
     /// Returns a real block (0000000000000f20f063e2e0b1dd2f028db56840242db8324acf92286e8850fb)
     /// with 4 txs.
     fn get_block_3955537() -> Block {
-        use hashes::hex::FromHex;
+        use hex::FromHex;
         let block_hex = include_str!("../../tests/data/block_3955537.hex");
         deserialize(&Vec::from_hex(block_hex).unwrap()).unwrap()
     }
