@@ -53,7 +53,7 @@ pub use newtypes::*;
 #[rustfmt::skip]
 mod newtypes {
     use hashes::Hash; // needed for From implimentations to convert hash types
-    use hashes::{sha256d, hash160, hash_newtype, groestld};
+    use hashes::{sha256, sha256d, hash160, hash_newtype, groestld};
 
     hash_newtype! {
         /// A groestlcoin transaction hash/transaction ID.
