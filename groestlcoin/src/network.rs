@@ -59,7 +59,7 @@ impl Network {
     /// use groestlcoin::Network;
     /// use std::convert::TryFrom;
     ///
-    /// assert_eq!(Ok(Network::Groestlcoin), Network::try_from(Magic::from_bytes([0xF9, 0xBE, 0xB4, 0xD9])));
+    /// assert_eq!(Ok(Network::Groestlcoin), Network::try_from(Magic::from_bytes([0xF9, 0xBE, 0xB4, 0xD4])));
     /// assert_eq!(None, Network::from_magic(Magic::from_bytes([0xFF, 0xFF, 0xFF, 0xFF])));
     /// ```
     pub fn from_magic(magic: Magic) -> Option<Network> { Network::try_from(magic).ok() }
@@ -74,7 +74,7 @@ impl Network {
     /// use groestlcoin::Network;
     ///
     /// let network = Network::Groestlcoin;
-    /// assert_eq!(network.magic(), Magic::from_bytes([0xF9, 0xBE, 0xB4, 0xD9]));
+    /// assert_eq!(network.magic(), Magic::from_bytes([0xF9, 0xBE, 0xB4, 0xD4]));
     /// ```
     pub fn magic(self) -> Magic { Magic::from(self) }
 
