@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: CC0-1.0
 
-//! Bitcoin network.
+//! Groestlcoin network.
 //!
 //! The term "network" is overloaded, here [`Network`] refers to the specific
-//! Bitcoin network we are operating on e.g., signet, regtest. The terms
+//! Groestlcoin network we are operating on e.g., signet, regtest. The terms
 //! "network" and "chain" are often used interchangeably for this concept.
 //!
 //! # Example: encoding a network's magic bytes
 //!
 //! ```rust
-//! use bitcoin::Network;
-//! use bitcoin::consensus::encode::serialize;
+//! use groestlcoin::Network;
+//! use groestlcoin::consensus::encode::serialize;
 //!
-//! let network = Network::Bitcoin;
+//! let network = Network::Groestlcoin;
 //! let bytes = serialize(&network.magic());
 //!
-//! assert_eq!(&bytes[..], &[0xF9, 0xBE, 0xB4, 0xD9]);
+//! assert_eq!(&bytes[..], &[0xF9, 0xBE, 0xB4, 0xD4]);
 //! ```
 
 use core::convert::TryFrom;
@@ -39,13 +39,13 @@ use crate::prelude::{String, ToOwned};
 #[cfg_attr(feature = "serde", serde(rename_all = "lowercase"))]
 #[non_exhaustive]
 pub enum Network {
-    /// Mainnet Bitcoin.
-    Bitcoin,
-    /// Bitcoin's testnet network.
+    /// Mainnet Groestlcoin.
+    Groestlcoin,
+    /// Groestlcoin's testnet network.
     Testnet,
-    /// Bitcoin's signet network.
+    /// Groestlcoin's signet network.
     Signet,
-    /// Bitcoin's regtest network.
+    /// Groestlcoin's regtest network.
     Regtest,
 }
 
@@ -55,11 +55,11 @@ impl Network {
     /// # Examples
     ///
     /// ```rust
-    /// use bitcoin::p2p::Magic;
-    /// use bitcoin::Network;
+    /// use groestlcoin::p2p::Magic;
+    /// use groestlcoin::Network;
     /// use std::convert::TryFrom;
     ///
-    /// assert_eq!(Ok(Network::Bitcoin), Network::try_from(Magic::from_bytes([0xF9, 0xBE, 0xB4, 0xD9])));
+    /// assert_eq!(Ok(Network::Groestlcoin), Network::try_from(Magic::from_bytes([0xF9, 0xBE, 0xB4, 0xD9])));
     /// assert_eq!(None, Network::from_magic(Magic::from_bytes([0xFF, 0xFF, 0xFF, 0xFF])));
     /// ```
     pub fn from_magic(magic: Magic) -> Option<Network> { Network::try_from(magic).ok() }
@@ -70,18 +70,18 @@ impl Network {
     /// # Examples
     ///
     /// ```rust
-    /// use bitcoin::p2p::Magic;
-    /// use bitcoin::Network;
+    /// use groestlcoin::p2p::Magic;
+    /// use groestlcoin::Network;
     ///
-    /// let network = Network::Bitcoin;
+    /// let network = Network::Groestlcoin;
     /// assert_eq!(network.magic(), Magic::from_bytes([0xF9, 0xBE, 0xB4, 0xD9]));
     /// ```
     pub fn magic(self) -> Magic { Magic::from(self) }
 
-    /// Converts a `Network` to its equivalent `bitcoind -chain` argument name.
+    /// Converts a `Network` to its equivalent `groestlcoind -chain` argument name.
     ///
     /// ```bash
-    /// $ bitcoin-23.0/bin/bitcoind --help | grep -C 3 '\-chain=<chain>'
+    /// $ groestlcoin-23.0/bin/groestlcoind --help | grep -C 3 '\-chain=<chain>'
     /// Chain selection options:
     ///
     /// -chain=<chain>
@@ -89,17 +89,17 @@ impl Network {
     /// ```
     pub fn to_core_arg(self) -> &'static str {
         match self {
-            Network::Bitcoin => "main",
+            Network::Groestlcoin => "main",
             Network::Testnet => "test",
             Network::Signet => "signet",
             Network::Regtest => "regtest",
         }
     }
 
-    /// Converts a `bitcoind -chain` argument name to its equivalent `Network`.
+    /// Converts a `groestlcoind -chain` argument name to its equivalent `Network`.
     ///
     /// ```bash
-    /// $ bitcoin-23.0/bin/bitcoind --help | grep -C 3 '\-chain=<chain>'
+    /// $ groestlcoin-23.0/bin/groestlcoind --help | grep -C 3 '\-chain=<chain>'
     /// Chain selection options:
     ///
     /// -chain=<chain>
@@ -109,7 +109,7 @@ impl Network {
         use Network::*;
 
         let network = match core_arg {
-            "main" => Bitcoin,
+            "main" => Groestlcoin,
             "test" => Testnet,
             "signet" => Signet,
             "regtest" => Regtest,
@@ -123,11 +123,11 @@ impl Network {
     /// # Examples
     ///
     /// ```rust
-    /// use bitcoin::Network;
-    /// use bitcoin::blockdata::constants::ChainHash;
+    /// use groestlcoin::Network;
+    /// use groestlcoin::blockdata::constants::ChainHash;
     ///
-    /// let network = Network::Bitcoin;
-    /// assert_eq!(network.chain_hash(), ChainHash::BITCOIN);
+    /// let network = Network::Groestlcoin;
+    /// assert_eq!(network.chain_hash(), ChainHash::GROESTLCOIN);
     /// ```
     pub fn chain_hash(self) -> ChainHash { ChainHash::using_genesis_block(self) }
 
@@ -136,11 +136,11 @@ impl Network {
     /// # Examples
     ///
     /// ```rust
-    /// use bitcoin::Network;
-    /// use bitcoin::blockdata::constants::ChainHash;
+    /// use groestlcoin::Network;
+    /// use groestlcoin::blockdata::constants::ChainHash;
     /// use std::convert::TryFrom;
     ///
-    /// assert_eq!(Ok(Network::Bitcoin), Network::try_from(ChainHash::BITCOIN));
+    /// assert_eq!(Ok(Network::Groestlcoin), Network::try_from(ChainHash::GROESTLCOIN));
     /// ```
     pub fn from_chain_hash(chain_hash: ChainHash) -> Option<Network> {
         Network::try_from(chain_hash).ok()
@@ -149,7 +149,7 @@ impl Network {
 
 #[cfg(feature = "serde")]
 pub mod as_core_arg {
-    //! Module for serialization/deserialization of network variants into/from Bitcoin Core values
+    //! Module for serialization/deserialization of network variants into/from Groestlcoin Core values
     #![allow(missing_docs)]
 
     use serde;
@@ -176,7 +176,7 @@ pub mod as_core_arg {
                 Network::from_core_arg(s).map_err(|_| {
                     E::invalid_value(
                         serde::de::Unexpected::Str(s),
-                        &"bitcoin network encoded as a string (either main, test, signet or regtest)",
+                        &"groestlcoin network encoded as a string (either main, test, signet or regtest)",
                     )
                 })
             }
@@ -184,7 +184,7 @@ pub mod as_core_arg {
             fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
                 write!(
                     formatter,
-                    "bitcoin network encoded as a string (either main, test, signet or regtest)"
+                    "groestlcoin network encoded as a string (either main, test, signet or regtest)"
                 )
             }
         }
@@ -212,7 +212,7 @@ impl FromStr for Network {
         use Network::*;
 
         let network = match s {
-            "bitcoin" => Bitcoin,
+            "groestlcoin" => Groestlcoin,
             "testnet" => Testnet,
             "signet" => Signet,
             "regtest" => Regtest,
@@ -227,7 +227,7 @@ impl fmt::Display for Network {
         use Network::*;
 
         let s = match *self {
-            Bitcoin => "bitcoin",
+            Groestlcoin => "groestlcoin",
             Testnet => "testnet",
             Signet => "signet",
             Regtest => "regtest",
@@ -254,7 +254,7 @@ impl TryFrom<ChainHash> for Network {
     fn try_from(chain_hash: ChainHash) -> Result<Self, Self::Error> {
         match chain_hash {
             // Note: any new network entries must be matched against here.
-            ChainHash::BITCOIN => Ok(Network::Bitcoin),
+            ChainHash::GROESTLCOIN => Ok(Network::Groestlcoin),
             ChainHash::TESTNET => Ok(Network::Testnet),
             ChainHash::SIGNET => Ok(Network::Signet),
             ChainHash::REGTEST => Ok(Network::Regtest),
@@ -271,25 +271,25 @@ mod tests {
 
     #[test]
     fn serialize_test() {
-        assert_eq!(serialize(&Network::Bitcoin.magic()), &[0xf9, 0xbe, 0xb4, 0xd9]);
+        assert_eq!(serialize(&Network::Groestlcoin.magic()), &[0xf9, 0xbe, 0xb4, 0xd4]);
         assert_eq!(serialize(&Network::Testnet.magic()), &[0x0b, 0x11, 0x09, 0x07]);
-        assert_eq!(serialize(&Network::Signet.magic()), &[0x0a, 0x03, 0xcf, 0x40]);
+        assert_eq!(serialize(&Network::Signet.magic()), &[0x6f, 0x89, 0x2b, 0x8f]);
         assert_eq!(serialize(&Network::Regtest.magic()), &[0xfa, 0xbf, 0xb5, 0xda]);
 
-        assert_eq!(deserialize(&[0xf9, 0xbe, 0xb4, 0xd9]).ok(), Some(Network::Bitcoin.magic()));
+        assert_eq!(deserialize(&[0xf9, 0xbe, 0xb4, 0xd4]).ok(), Some(Network::Groestlcoin.magic()));
         assert_eq!(deserialize(&[0x0b, 0x11, 0x09, 0x07]).ok(), Some(Network::Testnet.magic()));
-        assert_eq!(deserialize(&[0x0a, 0x03, 0xcf, 0x40]).ok(), Some(Network::Signet.magic()));
+        assert_eq!(deserialize(&[0x6f, 0x89, 0x2b, 0x8f]).ok(), Some(Network::Signet.magic()));
         assert_eq!(deserialize(&[0xfa, 0xbf, 0xb5, 0xda]).ok(), Some(Network::Regtest.magic()));
     }
 
     #[test]
     fn string_test() {
-        assert_eq!(Network::Bitcoin.to_string(), "bitcoin");
+        assert_eq!(Network::Groestlcoin.to_string(), "groestlcoin");
         assert_eq!(Network::Testnet.to_string(), "testnet");
         assert_eq!(Network::Regtest.to_string(), "regtest");
         assert_eq!(Network::Signet.to_string(), "signet");
 
-        assert_eq!("bitcoin".parse::<Network>().unwrap(), Network::Bitcoin);
+        assert_eq!("groestlcoin".parse::<Network>().unwrap(), Network::Groestlcoin);
         assert_eq!("testnet".parse::<Network>().unwrap(), Network::Testnet);
         assert_eq!("regtest".parse::<Network>().unwrap(), Network::Regtest);
         assert_eq!("signet".parse::<Network>().unwrap(), Network::Signet);
@@ -341,7 +341,7 @@ mod tests {
     fn serde_roundtrip() {
         use Network::*;
         let tests = vec![
-            (Bitcoin, "bitcoin"),
+            (Groestlcoin, "groestlcoin"),
             (Testnet, "testnet"),
             (Signet, "signet"),
             (Regtest, "regtest"),
@@ -362,7 +362,7 @@ mod tests {
     #[test]
     fn from_to_core_arg() {
         let expected_pairs = [
-            (Network::Bitcoin, "main"),
+            (Network::Groestlcoin, "main"),
             (Network::Testnet, "test"),
             (Network::Regtest, "regtest"),
             (Network::Signet, "signet"),
@@ -385,7 +385,7 @@ mod tests {
         }
 
         serde_test::assert_tokens(
-            &T { network: Network::Bitcoin },
+            &T { network: Network::Groestlcoin },
             &[
                 serde_test::Token::Struct { name: "T", len: 1 },
                 serde_test::Token::Str("network"),

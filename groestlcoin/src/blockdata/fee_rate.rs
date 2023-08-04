@@ -96,7 +96,7 @@ impl FeeRate {
     /// # Examples
     ///
     /// ```no_run
-    /// # use bitcoin::{absolute, FeeRate, Transaction};
+    /// # use groestlcoin::{absolute, FeeRate, Transaction};
     /// # // Dummy transaction.
     /// # let tx = Transaction { version: 1, lock_time: absolute::LockTime::ZERO, input: vec![], output: vec![] };
     ///

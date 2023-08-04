@@ -29,7 +29,7 @@ fn main() {
     let version_message = build_version_message(address);
 
     let first_message =
-        message::RawNetworkMessage::new(bitcoin::Network::Groestlcoin.magic(), version_message);
+        message::RawNetworkMessage::new(groestlcoin::Network::Groestlcoin.magic(), version_message);
 
     if let Ok(mut stream) = TcpStream::connect(address) {
         // Send the message
