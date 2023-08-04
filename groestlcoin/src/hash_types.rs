@@ -46,14 +46,14 @@ macro_rules! impl_asref_push_bytes {
         )*
     };
 }
-
+pub(crate) use impl_asref_push_bytes;
 // newtypes module is solely here so we can rustfmt::skip.
 pub use newtypes::*;
 
 #[rustfmt::skip]
 mod newtypes {
     use hashes::Hash; // needed for From implimentations to convert hash types
-    use hashes::{sha256, sha256d, hash160, hash_newtype, groestld};
+    use hashes::{sha256d, hash160, hash_newtype, groestld};
 
     hash_newtype! {
         /// A groestlcoin transaction hash/transaction ID.
@@ -74,15 +74,6 @@ mod newtypes {
 
         /// A bitcoin block hash.
         pub struct BlockHash(groestld::Hash);
-
-        /// A hash of a public key.
-        pub struct PubkeyHash(hash160::Hash);
-        /// A hash of Bitcoin Script bytecode.
-        pub struct ScriptHash(hash160::Hash);
-        /// SegWit version of a public key hash.
-        pub struct WPubkeyHash(hash160::Hash);
-        /// SegWit version of a Bitcoin Script bytecode hash.
-        pub struct WScriptHash(sha256::Hash);
 
         /// A hash of the Merkle tree branch or root for transactions
         pub struct TxMerkleNode(sha256d::Hash);
@@ -108,8 +99,6 @@ mod newtypes {
 
     impl_hashencode!(FilterHash);
     impl_hashencode!(FilterHeader);
-
-    impl_asref_push_bytes!(PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash);
 
     impl From<TxidInternal> for Txid {
         fn from(txid: TxidInternal) -> Self {

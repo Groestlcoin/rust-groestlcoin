@@ -1,7 +1,7 @@
 use honggfuzz::fuzz;
 
 fn do_test(data: &[u8]) {
-    let _: Result<groestlcoin::network::message::RawNetworkMessage, _> =
+    let _: Result<groestlcoin::p2p::message::RawNetworkMessage, _> =
         groestlcoin::consensus::encode::deserialize(data);
 }
 

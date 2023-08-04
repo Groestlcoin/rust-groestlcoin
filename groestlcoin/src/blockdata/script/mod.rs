@@ -55,13 +55,13 @@ use core::cmp::Ordering;
 use core::fmt;
 use core::ops::{Deref, DerefMut};
 
+use hashes::{hash160, sha256};
 #[cfg(feature = "serde")]
 use serde;
 
 use crate::blockdata::opcodes::all::*;
 use crate::blockdata::opcodes::{self};
 use crate::consensus::{encode, Decodable, Encodable};
-use crate::hash_types::{ScriptHash, WScriptHash};
 use crate::prelude::*;
 use crate::{io, OutPoint};
 
@@ -80,6 +80,38 @@ pub use self::builder::*;
 pub use self::instruction::*;
 pub use self::owned::*;
 pub use self::push_bytes::*;
+
+hashes::hash_newtype! {
+    /// A hash of Bitcoin Script bytecode.
+    pub struct ScriptHash(hash160::Hash);
+    /// SegWit version of a Bitcoin Script bytecode hash.
+    pub struct WScriptHash(sha256::Hash);
+}
+crate::hash_types::impl_asref_push_bytes!(ScriptHash, WScriptHash);
+
+impl From<ScriptBuf> for ScriptHash {
+    fn from(script: ScriptBuf) -> ScriptHash { script.script_hash() }
+}
+
+impl From<&ScriptBuf> for ScriptHash {
+    fn from(script: &ScriptBuf) -> ScriptHash { script.script_hash() }
+}
+
+impl From<&Script> for ScriptHash {
+    fn from(script: &Script) -> ScriptHash { script.script_hash() }
+}
+
+impl From<ScriptBuf> for WScriptHash {
+    fn from(script: ScriptBuf) -> WScriptHash { script.wscript_hash() }
+}
+
+impl From<&ScriptBuf> for WScriptHash {
+    fn from(script: &ScriptBuf) -> WScriptHash { script.wscript_hash() }
+}
+
+impl From<&Script> for WScriptHash {
+    fn from(script: &Script) -> WScriptHash { script.wscript_hash() }
+}
 
 /// Encodes an integer in script(minimal CScriptNum) format.
 ///
@@ -180,24 +212,6 @@ pub fn read_scriptbool(v: &[u8]) -> bool {
         Some((last, rest)) => !((last & !0x80 == 0x00) && rest.iter().all(|&b| b == 0)),
         None => false,
     }
-}
-
-/// Decodes a script-encoded unsigned integer.
-///
-/// ## Errors
-///
-/// This function returns an error in these cases:
-///
-/// * `data` is shorter than `size` => `EarlyEndOfScript`
-/// * `size` is greater than `u16::MAX / 8` (8191) => `NumericOverflow`
-/// * The number being read overflows `usize` => `NumericOverflow`
-///
-/// Note that this does **not** return an error for `size` between `core::size_of::<usize>()`
-/// and `u16::MAX / 8` if there's no overflow.
-#[inline]
-#[deprecated(since = "0.30.0", note = "bitcoin integers are signed 32 bits, use read_scriptint")]
-pub fn read_uint(data: &[u8], size: usize) -> Result<usize, Error> {
-    read_uint_iter(&mut data.iter(), size).map_err(Into::into)
 }
 
 // We internally use implementation based on iterator so that it automatically advances as needed
@@ -302,30 +316,6 @@ impl From<Vec<u8>> for ScriptBuf {
 
 impl From<ScriptBuf> for Vec<u8> {
     fn from(v: ScriptBuf) -> Self { v.0 }
-}
-
-impl From<ScriptBuf> for ScriptHash {
-    fn from(script: ScriptBuf) -> ScriptHash { script.script_hash() }
-}
-
-impl From<&ScriptBuf> for ScriptHash {
-    fn from(script: &ScriptBuf) -> ScriptHash { script.script_hash() }
-}
-
-impl From<&Script> for ScriptHash {
-    fn from(script: &Script) -> ScriptHash { script.script_hash() }
-}
-
-impl From<ScriptBuf> for WScriptHash {
-    fn from(script: ScriptBuf) -> WScriptHash { script.wscript_hash() }
-}
-
-impl From<&ScriptBuf> for WScriptHash {
-    fn from(script: &ScriptBuf) -> WScriptHash { script.wscript_hash() }
-}
-
-impl From<&Script> for WScriptHash {
-    fn from(script: &Script) -> WScriptHash { script.wscript_hash() }
 }
 
 impl AsRef<Script> for Script {

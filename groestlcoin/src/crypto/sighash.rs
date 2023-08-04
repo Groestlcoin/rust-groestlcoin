@@ -16,7 +16,6 @@ use core::{fmt, str};
 
 use hashes::{hash_newtype, sha256, sha256d, sha256t_hash_newtype, Hash};
 
-use crate::blockdata::transaction::EncodeSigningDataResult;
 use crate::blockdata::witness::Witness;
 use crate::consensus::{encode, Encodable};
 use crate::error::impl_std_error;
@@ -248,12 +247,12 @@ impl fmt::Display for Error {
 
         match self {
             Io(error_kind) => write!(f, "writer errored: {:?}", error_kind),
-            IndexOutOfInputsBounds { index, inputs_size } => write!(f, "Requested index ({}) is greater or equal than the number of transaction inputs ({})", index, inputs_size),
+            IndexOutOfInputsBounds { index, inputs_size } => write!(f, "requested index ({}) is greater or equal than the number of transaction inputs ({})", index, inputs_size),
             SingleWithoutCorrespondingOutput { index, outputs_size } => write!(f, "SIGHASH_SINGLE for input ({}) haven't a corresponding output (#outputs:{})", index, outputs_size),
-            PrevoutsSize => write!(f, "Number of supplied prevouts differs from the number of inputs in transaction"),
-            PrevoutIndex => write!(f, "The index requested is greater than available prevouts or different from the provided [Provided::Anyone] index"),
-            PrevoutKind => write!(f, "A single prevout has been provided but all prevouts are needed without `ANYONECANPAY`"),
-            WrongAnnex => write!(f, "Annex must be at least one byte long and the first bytes must be `0x50`"),
+            PrevoutsSize => write!(f, "number of supplied prevouts differs from the number of inputs in transaction"),
+            PrevoutIndex => write!(f, "the index requested is greater than available prevouts or different from the provided [Provided::Anyone] index"),
+            PrevoutKind => write!(f, "a single prevout has been provided but all prevouts are needed without `ANYONECANPAY`"),
+            WrongAnnex => write!(f, "annex must be at least one byte long and the first bytes must be `0x50`"),
             InvalidSighashType(hash_ty) => write!(f, "Invalid taproot signature hash type : {} ", hash_ty),
         }
     }
@@ -275,6 +274,10 @@ impl std::error::Error for Error {
             | InvalidSighashType(_) => None,
         }
     }
+}
+
+impl From<io::Error> for Error {
+    fn from(e: io::Error) -> Self { Error::Io(e.kind()) }
 }
 
 impl<'u, T> Prevouts<'u, T>
@@ -325,8 +328,8 @@ impl<'s> ScriptPath<'s> {
         self.leaf_version
             .to_consensus()
             .consensus_encode(&mut enc)
-            .expect("Writing to hash enging should never fail");
-        self.script.consensus_encode(&mut enc).expect("Writing to hash enging should never fail");
+            .expect("writing to hash enging should never fail");
+        self.script.consensus_encode(&mut enc).expect("writing to hash enging should never fail");
 
         TapLeafHash::from_engine(enc)
     }
@@ -446,7 +449,7 @@ impl EcdsaSighashType {
     /// # Errors
     ///
     /// If `n` is a non-standard sighash value.
-    pub fn from_standard(n: u32) -> Result<EcdsaSighashType, NonStandardSighashType> {
+    pub fn from_standard(n: u32) -> Result<EcdsaSighashType, NonStandardSighashTypeError> {
         use EcdsaSighashType::*;
 
         match n {
@@ -457,7 +460,7 @@ impl EcdsaSighashType {
             0x81 => Ok(AllPlusAnyoneCanPay),
             0x82 => Ok(NonePlusAnyoneCanPay),
             0x83 => Ok(SinglePlusAnyoneCanPay),
-            non_standard => Err(NonStandardSighashType(non_standard)),
+            non_standard => Err(NonStandardSighashTypeError(non_standard)),
         }
     }
 
@@ -499,7 +502,7 @@ impl TapSighashType {
     }
 
     /// Constructs a [`TapSighashType`] from a raw `u8`.
-    pub fn from_consensus_u8(hash_ty: u8) -> Result<Self, Error> {
+    pub fn from_consensus_u8(hash_ty: u8) -> Result<Self, InvalidSighashTypeError> {
         use TapSighashType::*;
 
         Ok(match hash_ty {
@@ -510,23 +513,35 @@ impl TapSighashType {
             0x81 => AllPlusAnyoneCanPay,
             0x82 => NonePlusAnyoneCanPay,
             0x83 => SinglePlusAnyoneCanPay,
-            x => return Err(Error::InvalidSighashType(x as u32)),
+            x => return Err(InvalidSighashTypeError(x.into())),
         })
     }
 }
 
-/// This type is consensus valid but an input including it would prevent the transaction from
-/// being relayed on today's Bitcoin network.
+/// Integer is not a consensus valid sighash type.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct NonStandardSighashType(pub u32);
+pub struct InvalidSighashTypeError(pub u32);
 
-impl fmt::Display for NonStandardSighashType {
+impl fmt::Display for InvalidSighashTypeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Non standard sighash type {}", self.0)
+        write!(f, "invalid sighash type {}", self.0)
     }
 }
 
-impl_std_error!(NonStandardSighashType);
+impl_std_error!(InvalidSighashTypeError);
+
+/// This type is consensus valid but an input including it would prevent the transaction from
+/// being relayed on today's Bitcoin network.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct NonStandardSighashTypeError(pub u32);
+
+impl fmt::Display for NonStandardSighashTypeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "non-standard sighash type {}", self.0)
+    }
+}
+
+impl_std_error!(NonStandardSighashTypeError);
 
 /// Error returned for failure during parsing one of the sighash types.
 ///
@@ -539,7 +554,7 @@ pub struct SighashTypeParseError {
 
 impl fmt::Display for SighashTypeParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Unrecognized SIGHASH string '{}'", self.unrecognized)
+        write!(f, "unrecognized SIGHASH string '{}'", self.unrecognized)
     }
 }
 
@@ -1074,10 +1089,6 @@ impl<R: BorrowMut<Transaction>> SighashCache<R> {
     }
 }
 
-impl From<io::Error> for Error {
-    fn from(e: io::Error) -> Self { Error::Io(e.kind()) }
-}
-
 /// The `Annex` struct is a slice wrapper enforcing first byte is `0x50`.
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Annex<'a>(&'a [u8]);
@@ -1107,6 +1118,75 @@ fn is_invalid_use_of_sighash_single(sighash: u32, input_index: usize, output_len
     ty == EcdsaSighashType::Single && input_index >= output_len
 }
 
+/// Result of [`SighashCache::legacy_encode_signing_data_to`].
+///
+/// This type forces the caller to handle SIGHASH_SINGLE bug case.
+///
+/// This corner case can't be expressed using standard `Result`,
+/// in a way that is both convenient and not-prone to accidental
+/// mistakes (like calling `.expect("writer never fails")`).
+#[must_use]
+pub enum EncodeSigningDataResult<E> {
+    /// Input data is an instance of `SIGHASH_SINGLE` bug
+    SighashSingleBug,
+    /// Operation performed normally.
+    WriteResult(Result<(), E>),
+}
+
+impl<E> EncodeSigningDataResult<E> {
+    /// Checks for SIGHASH_SINGLE bug returning error if the writer failed.
+    ///
+    /// This method is provided for easy and correct handling of the result because
+    /// SIGHASH_SINGLE bug is a special case that must not be ignored nor cause panicking.
+    /// Since the data is usually written directly into a hasher which never fails,
+    /// the recommended pattern to handle this is:
+    ///
+    /// ```rust
+    /// # use bitcoin::consensus::deserialize;
+    /// # use bitcoin::hashes::{Hash, hex::FromHex};
+    /// # use bitcoin::sighash::{LegacySighash, SighashCache};
+    /// # use bitcoin::Transaction;
+    /// # let mut writer = LegacySighash::engine();
+    /// # let input_index = 0;
+    /// # let script_pubkey = bitcoin::ScriptBuf::new();
+    /// # let sighash_u32 = 0u32;
+    /// # const SOME_TX: &'static str = "0100000001a15d57094aa7a21a28cb20b59aab8fc7d1149a3bdbcddba9c622e4f5f6a99ece010000006c493046022100f93bb0e7d8db7bd46e40132d1f8242026e045f03a0efe71bbb8e3f475e970d790221009337cd7f1f929f00cc6ff01f03729b069a7c21b59b1736ddfee5db5946c5da8c0121033b9b137ee87d5a812d6f506efdd37f0affa7ffc310711c06c7f3e097c9447c52ffffffff0100e1f505000000001976a9140389035a9225b3839e2bbf32d826a1e222031fd888ac00000000";
+    /// # let raw_tx = Vec::from_hex(SOME_TX).unwrap();
+    /// # let tx: Transaction = deserialize(&raw_tx).unwrap();
+    /// let cache = SighashCache::new(&tx);
+    /// if cache.legacy_encode_signing_data_to(&mut writer, input_index, &script_pubkey, sighash_u32)
+    ///         .is_sighash_single_bug()
+    ///         .expect("writer can't fail") {
+    ///     // use a hash value of "1", instead of computing the actual hash due to SIGHASH_SINGLE bug
+    /// }
+    /// ```
+    #[allow(clippy::wrong_self_convention)] // E is not Copy so we consume self.
+    pub fn is_sighash_single_bug(self) -> Result<bool, E> {
+        match self {
+            EncodeSigningDataResult::SighashSingleBug => Ok(true),
+            EncodeSigningDataResult::WriteResult(Ok(())) => Ok(false),
+            EncodeSigningDataResult::WriteResult(Err(e)) => Err(e),
+        }
+    }
+
+    /// Maps a `Result<T, E>` to `Result<T, F>` by applying a function to a
+    /// contained [`Err`] value, leaving an [`Ok`] value untouched.
+    ///
+    /// Like [`Result::map_err`].
+    pub fn map_err<E2, F>(self, f: F) -> EncodeSigningDataResult<E2>
+    where
+        F: FnOnce(E) -> E2,
+    {
+        match self {
+            EncodeSigningDataResult::SighashSingleBug => EncodeSigningDataResult::SighashSingleBug,
+            EncodeSigningDataResult::WriteResult(Err(e)) =>
+                EncodeSigningDataResult::WriteResult(Err(f(e))),
+            EncodeSigningDataResult::WriteResult(Ok(o)) =>
+                EncodeSigningDataResult::WriteResult(Ok(o)),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -1121,7 +1201,7 @@ mod tests {
     use crate::crypto::key::PublicKey;
     use crate::crypto::sighash::{LegacySighash, TapSighash};
     use crate::internal_macros::hex;
-    use crate::network::constants::Network;
+    use crate::network::Network;
     use crate::taproot::TapLeafHash;
 
     extern crate serde_json;
@@ -1656,7 +1736,7 @@ mod tests {
         for s in sht_mistakes {
             assert_eq!(
                 TapSighashType::from_str(s).unwrap_err().to_string(),
-                format!("Unrecognized SIGHASH string '{}'", s)
+                format!("unrecognized SIGHASH string '{}'", s)
             );
         }
     }

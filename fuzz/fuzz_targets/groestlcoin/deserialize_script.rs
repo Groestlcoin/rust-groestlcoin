@@ -1,7 +1,7 @@
 use groestlcoin::address::Address;
 use groestlcoin::blockdata::script;
 use groestlcoin::consensus::encode;
-use groestlcoin::network::constants::Network;
+use groestlcoin::Network;
 use honggfuzz::fuzz;
 
 fn do_test(data: &[u8]) {

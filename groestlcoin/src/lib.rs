@@ -92,7 +92,7 @@ mod parse;
 mod serde_utils;
 
 #[macro_use]
-pub mod network;
+pub mod p2p;
 pub mod address;
 pub mod amount;
 pub mod base58;
@@ -106,13 +106,13 @@ pub(crate) mod crypto;
 pub mod error;
 pub mod hash_types;
 pub mod merkle_tree;
+pub mod network;
 pub mod policy;
 pub mod pow;
 pub mod psbt;
 pub mod sign_message;
 pub mod string;
 pub mod taproot;
-pub mod util;
 
 // May depend on crate features and we don't want to bother with it
 #[allow(unused)]
@@ -134,19 +134,17 @@ pub use crate::blockdata::fee_rate::FeeRate;
 pub use crate::blockdata::locktime::{self, absolute, relative};
 pub use crate::blockdata::script::witness_program::{self, WitnessProgram};
 pub use crate::blockdata::script::witness_version::{self, WitnessVersion};
-pub use crate::blockdata::script::{self, Script, ScriptBuf};
+pub use crate::blockdata::script::{self, Script, ScriptBuf, ScriptHash, WScriptHash};
 pub use crate::blockdata::transaction::{self, OutPoint, Sequence, Transaction, TxIn, TxOut};
 pub use crate::blockdata::weight::Weight;
 pub use crate::blockdata::witness::{self, Witness};
 pub use crate::blockdata::{constants, opcodes};
 pub use crate::consensus::encode::VarInt;
-pub use crate::crypto::key::{self, PrivateKey, PublicKey};
+pub use crate::crypto::key::{self, PrivateKey, PubkeyHash, PublicKey, WPubkeyHash};
 pub use crate::crypto::{ecdsa, sighash};
-pub use crate::hash_types::{
-    BlockHash, PubkeyHash, ScriptHash, Txid, WPubkeyHash, WScriptHash, Wtxid,
-};
+pub use crate::hash_types::{BlockHash, Txid, Wtxid};
 pub use crate::merkle_tree::MerkleBlock;
-pub use crate::network::constants::Network;
+pub use crate::network::Network;
 pub use crate::pow::{CompactTarget, Target, Work};
 pub use crate::psbt::Psbt;
 
@@ -172,13 +170,13 @@ mod io_extras {
 #[rustfmt::skip]
 mod prelude {
     #[cfg(all(not(feature = "std"), not(test)))]
-    pub use alloc::{string::{String, ToString}, vec::Vec, boxed::Box, borrow::{Borrow, Cow, ToOwned}, slice, rc};
+    pub use alloc::{string::{String, ToString}, vec::Vec, boxed::Box, borrow::{Borrow, BorrowMut, Cow, ToOwned}, slice, rc};
 
     #[cfg(all(not(feature = "std"), not(test), any(not(rust_v_1_60), target_has_atomic = "ptr")))]
     pub use alloc::sync;
 
     #[cfg(any(feature = "std", test))]
-    pub use std::{string::{String, ToString}, vec::Vec, boxed::Box, borrow::{Borrow, Cow, ToOwned}, slice, rc, sync};
+    pub use std::{string::{String, ToString}, vec::Vec, boxed::Box, borrow::{Borrow, BorrowMut, Cow, ToOwned}, slice, rc, sync};
 
     #[cfg(all(not(feature = "std"), not(test)))]
     pub use alloc::collections::{BTreeMap, BTreeSet, btree_map, BinaryHeap};
