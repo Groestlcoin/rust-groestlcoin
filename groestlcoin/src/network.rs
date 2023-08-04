@@ -257,7 +257,7 @@ impl TryFrom<ChainHash> for Network {
             ChainHash::GROESTLCOIN => Ok(Network::Groestlcoin),
             ChainHash::TESTNET => Ok(Network::Testnet),
             ChainHash::SIGNET => Ok(Network::Signet),
-            ChainHash::REGTEST => Ok(Network::Regtest),
+            //ChainHash::REGTEST => Ok(Network::Regtest),
             _ => Err(UnknownChainHash(chain_hash)),
         }
     }
