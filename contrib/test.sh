@@ -14,7 +14,7 @@ if cargo --version | grep ${MSRV}; then
     cargo update -p proc-macro2 --precise 1.0.63
     cargo update -p serde_test --precise 1.0.175
 
-    cargo update -p bitcoin:0.30.1 --precise 0.30.0
+    cargo update -p groestlcoin:0.30.0 --precise 0.30.0
 
     # Build MSRV with pinned versions.
     cargo check --all-features --all-targets
