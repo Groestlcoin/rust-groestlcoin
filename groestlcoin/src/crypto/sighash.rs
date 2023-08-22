@@ -239,6 +239,9 @@ pub enum Error {
 
     /// Invalid Sighash type.
     InvalidSighashType(u32),
+
+    /// Script is not a witness program for a p2wpkh output.
+    NotP2wpkhScript,
 }
 
 impl fmt::Display for Error {
@@ -254,6 +257,7 @@ impl fmt::Display for Error {
             PrevoutKind => write!(f, "a single prevout has been provided but all prevouts are needed without `ANYONECANPAY`"),
             WrongAnnex => write!(f, "annex must be at least one byte long and the first bytes must be `0x50`"),
             InvalidSighashType(hash_ty) => write!(f, "Invalid taproot signature hash type : {} ", hash_ty),
+            NotP2wpkhScript => write!(f, "script is not a script pubkey for a p2wpkh output"),
         }
     }
 }
@@ -271,7 +275,8 @@ impl std::error::Error for Error {
             | PrevoutIndex
             | PrevoutKind
             | WrongAnnex
-            | InvalidSighashType(_) => None,
+            | InvalidSighashType(_)
+            | NotP2wpkhScript => None,
         }
     }
 }
@@ -761,7 +766,25 @@ impl<R: Borrow<Transaction>> SighashCache<R> {
 
     /// Encodes the BIP143 signing data for any flag type into a given object implementing a
     /// [`std::io::Write`] trait.
+    #[deprecated(since = "0.31.0", note = "use segwit_v0_encode_signing_data_to instead")]
     pub fn segwit_encode_signing_data_to<Write: io::Write>(
+        &mut self,
+        writer: Write,
+        input_index: usize,
+        script_code: &Script,
+        value: Amount,
+        sighash_type: EcdsaSighashType,
+    ) -> Result<(), Error> {
+        self.segwit_v0_encode_signing_data_to(writer, input_index, script_code, value, sighash_type)
+    }
+
+    /// Encodes the BIP143 signing data for any flag type into a given object implementing a
+    /// [`std::io::Write`] trait.
+    ///
+    /// `script_code` is dependent on the type of the spend transaction. For p2wpkh use
+    /// [`Script::p2wpkh_script_code`], for p2wsh just pass in the witness script. (Also see
+    /// [`Self::p2wpkh_signature_hash`] and [`SighashCache::p2wsh_signature_hash`].)
+    pub fn segwit_v0_encode_signing_data_to<Write: io::Write>(
         &mut self,
         mut writer: Write,
         input_index: usize,
@@ -821,6 +844,7 @@ impl<R: Borrow<Transaction>> SighashCache<R> {
     }
 
     /// Computes the BIP143 sighash for any flag type.
+    #[deprecated(since = "0.31.0", note = "use segwit_v0_signature_hash instead")]
     pub fn segwit_signature_hash(
         &mut self,
         input_index: usize,
@@ -829,10 +853,53 @@ impl<R: Borrow<Transaction>> SighashCache<R> {
         sighash_type: EcdsaSighashType,
     ) -> Result<SegwitV0Sighash, Error> {
         let mut enc = SegwitV0Sighash::engine();
-        self.segwit_encode_signing_data_to(
+        self.segwit_v0_encode_signing_data_to(
             &mut enc,
             input_index,
             script_code,
+            value,
+            sighash_type,
+        )?;
+        Ok(SegwitV0Sighash::from_engine(enc))
+    }
+
+    /// Computes the BIP143 sighash to spend a p2wpkh transaction for any flag type.
+    ///
+    /// `script_pubkey` is the `scriptPubkey` (native segwit) of the spend transaction
+    /// ([`TxOut::script_pubkey`]) or the `redeemScript` (wrapped segwit).
+    pub fn p2wpkh_signature_hash(
+        &mut self,
+        input_index: usize,
+        script_pubkey: &Script,
+        value: Amount,
+        sighash_type: EcdsaSighashType,
+    ) -> Result<SegwitV0Sighash, Error> {
+        let script_code = script_pubkey.p2wpkh_script_code().ok_or(Error::NotP2wpkhScript)?;
+
+        let mut enc = SegwitV0Sighash::engine();
+        self.segwit_v0_encode_signing_data_to(
+            &mut enc,
+            input_index,
+            &script_code,
+            value,
+            sighash_type,
+        )?;
+        Ok(SegwitV0Sighash::from_engine(enc))
+    }
+
+    /// Computes the BIP143 sighash to spend a p2wsh transaction for any flag type.
+    pub fn p2wsh_signature_hash(
+        &mut self,
+        input_index: usize,
+        witness_script: &Script,
+        value: Amount,
+        sighash_type: EcdsaSighashType,
+    ) -> Result<SegwitV0Sighash, Error> {
+        let mut enc = SegwitV0Sighash::engine();
+        self.segwit_v0_encode_signing_data_to(
+            &mut enc,
+            input_index,
+            witness_script,
             value,
             sighash_type,
         )?;
@@ -1195,13 +1262,10 @@ mod tests {
     use hex::FromHex;
 
     use super::*;
-    use crate::address::Address;
     use crate::blockdata::locktime::absolute;
     use crate::consensus::deserialize;
-    use crate::crypto::key::PublicKey;
     use crate::crypto::sighash::{LegacySighash, TapSighash};
     use crate::internal_macros::hex;
-    use crate::network::Network;
     use crate::taproot::TapLeafHash;
 
     extern crate serde_json;
@@ -1741,11 +1805,6 @@ mod tests {
         }
     }
 
-    fn p2pkh_hex(pk: &str) -> ScriptBuf {
-        let pk: PublicKey = PublicKey::from_str(pk).unwrap();
-        Address::p2pkh(&pk, Network::Groestlcoin).script_pubkey()
-    }
-
     #[test]
     fn bip143_p2wpkh() {
         let tx = deserialize::<Transaction>(
@@ -1757,13 +1816,12 @@ mod tests {
             ),
         ).unwrap();
 
-        let witness_script =
-            p2pkh_hex("025476c2e83188368da1ff3e292e7acafcdb3566bb0ad253f62fc70f07aeee6357");
+        let spk = ScriptBuf::from_hex("00141d0f172a0ecb48aee1be1f2687d2963ae33f71a1").unwrap();
         let value = Amount::from_sat(600_000_000);
 
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
-            cache.segwit_signature_hash(1, &witness_script, value, EcdsaSighashType::All).unwrap(),
+            cache.p2wpkh_signature_hash(1, &spk, value, EcdsaSighashType::All).unwrap(),
             "d5ec9f04716c649e5ee176b16e69f836fe0f360d38166394ae19bcaaf5e1365b"
                 .parse::<SegwitV0Sighash>()
                 .unwrap(),
@@ -1798,13 +1856,13 @@ mod tests {
             ),
         ).unwrap();
 
-        let witness_script =
-            p2pkh_hex("03ad1d8e89212f0b92c74d23bb710c00662ad1470198ac48c43f7d6f93a2a26873");
+        let redeem_script =
+            ScriptBuf::from_hex("001479091972186c449eb1ded22b78e40d009bdf0089").unwrap();
         let value = Amount::from_sat(1_000_000_000);
 
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
-            cache.segwit_signature_hash(0, &witness_script, value, EcdsaSighashType::All).unwrap(),
+            cache.p2wpkh_signature_hash(0, &redeem_script, value, EcdsaSighashType::All).unwrap(),
             "606521f5f0c6cf8caa0aa77c54b855d539e46848e9fce1ff6aa6172bf86aef7e"
                 .parse::<SegwitV0Sighash>()
                 .unwrap(),
@@ -1829,8 +1887,10 @@ mod tests {
         );
     }
 
-    #[test]
-    fn bip143_p2wsh_nested_in_p2sh() {
+    // Note, if you are looking at the test vectors in BIP-143 and wondering why there is a `cf`
+    // prepended to all the script_code hex it is the length byte, it gets added when we consensus
+    // encode a script.
+    fn bip143_p2wsh_nested_in_p2sh_data() -> (Transaction, ScriptBuf, Amount) {
         let tx = deserialize::<Transaction>(&hex!(
             "010000000136641869ca081e70f394c6948e8af409e18b619df2ed74aa106c1ca29787b96e0100000000\
              ffffffff0200e9a435000000001976a914389ffce9cd9ae88dcc0631e88a821ffdbe9bfe2688acc0832f\
@@ -1847,15 +1907,26 @@ mod tests {
              56ae",
         )
         .unwrap();
-        let value = Amount::from_sat(987_654_321);
 
+        let value = Amount::from_sat(987_654_321);
+        (tx, witness_script, value)
+    }
+
+    #[test]
+    fn bip143_p2wsh_nested_in_p2sh_sighash_type_all() {
+        let (tx, witness_script, value) = bip143_p2wsh_nested_in_p2sh_data();
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
-            cache.segwit_signature_hash(0, &witness_script, value, EcdsaSighashType::All).unwrap(),
+            cache.p2wsh_signature_hash(0, &witness_script, value, EcdsaSighashType::All).unwrap(),
             "c3d0810930ab0047ef54095e82cae9e654316596f55646f5309ba48774b8b5ee"
                 .parse::<SegwitV0Sighash>()
                 .unwrap(),
         );
+
+        // We only test the cache intermediate values for `EcdsaSighashType::All` because they are
+        // not the same as the BIP test vectors for all the rest of the sighash types. These fields
+        // are private so it does not effect sighash cache usage, we do test against the produced
+        // sighash for all sighash types.
 
         let cache = cache.segwit_cache();
         // Parse hex into Vec because BIP143 test vector displays forwards but our sha256d::Hash displays backwards.
@@ -1874,5 +1945,35 @@ mod tests {
             &Vec::from_hex("691738022230671f6f97f0f6343ac62568f82a3e02bfb20dba155d509480c523")
                 .unwrap()[..],
         );
+    }
+
+    macro_rules! check_bip143_p2wsh_nested_in_p2sh {
+        ($($test_name:ident, $sighash_type:ident, $sighash:literal);* $(;)?) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    use EcdsaSighashType::*;
+
+                    let (tx, witness_script, value) = bip143_p2wsh_nested_in_p2sh_data();
+                    let mut cache = SighashCache::new(&tx);
+                    assert_eq!(
+                        cache
+                            .p2wsh_signature_hash(0, &witness_script, value, $sighash_type)
+                            .unwrap(),
+                        $sighash
+                            .parse::<SegwitV0Sighash>()
+                            .unwrap(),
+                    );
+                }
+            )*
+        }
+    }
+    check_bip143_p2wsh_nested_in_p2sh! {
+        // EcdsaSighashType::All tested above.
+        bip143_p2wsh_nested_in_p2sh_sighash_none, None, "e9733bc60ea13c95c6527066bb975a2ff29a925e80aa14c213f686cbae5d2f36";
+        bip143_p2wsh_nested_in_p2sh_sighash_single, Single, "1e1f1c303dc025bd664acb72e583e933fae4cff9148bf78c157d1e8f78530aea";
+        bip143_p2wsh_nested_in_p2sh_sighash_all_plus_anyonecanpay, AllPlusAnyoneCanPay, "2a67f03e63a6a422125878b40b82da593be8d4efaafe88ee528af6e5a9955c6e";
+        bip143_p2wsh_nested_in_p2sh_sighash_none_plus_anyonecanpay, NonePlusAnyoneCanPay, "781ba15f3779d5542ce8ecb5c18716733a5ee42a6f51488ec96154934e2c890a";
+        bip143_p2wsh_nested_in_p2sh_sighash_single_plus_anyonecanpay, SinglePlusAnyoneCanPay, "511e8e52ed574121fc1b654970395502128263f62662e076dc6baf05c2e6a99b";
     }
 }
