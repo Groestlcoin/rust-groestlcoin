@@ -27,7 +27,7 @@ use std::convert::TryFrom;
 use std::str::FromStr;
 
 use bincode::serialize;
-use groestlcoin::bip32::{ChildNumber, ExtendedPrivKey, ExtendedPubKey, KeySource};
+use groestlcoin::bip32::{ChildNumber, KeySource, Xpriv, Xpub};
 use groestlcoin::blockdata::locktime::{absolute, relative};
 use groestlcoin::blockdata::witness::Witness;
 use groestlcoin::consensus::encode::deserialize;
@@ -155,7 +155,7 @@ fn serde_regression_address() {
 #[test] #[ignore]
 fn serde_regression_extended_priv_key() {
     let s = include_str!("data/serde/extended_priv_key");
-    let key = ExtendedPrivKey::from_str(s.trim()).unwrap();
+    let key = Xpriv::from_str(s.trim()).unwrap();
     let got = serialize(&key).unwrap();
     let want = include_bytes!("data/serde/extended_priv_key_bincode") as &[_];
     assert_eq!(got, want)
@@ -164,7 +164,7 @@ fn serde_regression_extended_priv_key() {
 #[test] #[ignore]
 fn serde_regression_extended_pub_key() {
     let s = include_str!("data/serde/extended_pub_key");
-    let key = ExtendedPubKey::from_str(s.trim()).unwrap();
+    let key = Xpub::from_str(s.trim()).unwrap();
     let got = serialize(&key).unwrap();
     let want = include_bytes!("data/serde/extended_pub_key_bincode") as &[_];
     assert_eq!(got, want)
@@ -269,7 +269,7 @@ fn serde_regression_psbt() {
         version: 0,
         xpub: {
             let s = include_str!("data/serde/extended_pub_key");
-            let xpub = ExtendedPubKey::from_str(s.trim()).unwrap();
+            let xpub = Xpub::from_str(s.trim()).unwrap();
             vec![(xpub, key_source)].into_iter().collect()
         },
         unsigned_tx: {

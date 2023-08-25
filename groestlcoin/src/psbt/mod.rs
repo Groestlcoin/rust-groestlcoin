@@ -11,10 +11,11 @@ use core::{cmp, fmt};
 #[cfg(feature = "std")]
 use std::collections::{HashMap, HashSet};
 
+use hashes::Hash;
 use internals::write_err;
 use secp256k1::{Message, Secp256k1, Signing};
 
-use crate::bip32::{self, ExtendedPrivKey, ExtendedPubKey, KeySource};
+use crate::bip32::{self, KeySource, Xpriv, Xpub};
 use crate::blockdata::transaction::{Transaction, TxOut};
 use crate::crypto::ecdsa;
 use crate::crypto::key::{PrivateKey, PublicKey};
@@ -44,7 +45,7 @@ pub struct Psbt {
     pub version: u32,
     /// A global map from extended public keys to the used key fingerprint and
     /// derivation path as defined by BIP 32.
-    pub xpub: BTreeMap<ExtendedPubKey, KeySource>,
+    pub xpub: BTreeMap<Xpub, KeySource>,
     /// Global proprietary key-value pairs.
     #[cfg_attr(feature = "serde", serde(with = "crate::serde_utils::btreemap_as_seq_byte_values"))]
     pub proprietary: BTreeMap<raw::ProprietaryKey, Vec<u8>>,
@@ -325,31 +326,51 @@ impl Psbt {
         match self.output_type(input_index)? {
             Bare => {
                 let sighash = cache.legacy_signature_hash(input_index, spk, hash_ty.to_u32())?;
-                Ok((Message::from(sighash), hash_ty))
+                // TODO: After upgrade of secp change this to Message::from_digest(sighash.to_byte_array()).
+                Ok((
+                    Message::from_slice(sighash.as_byte_array()).expect("sighash is 32 bytes long"),
+                    hash_ty,
+                ))
             }
             Sh => {
                 let script_code =
                     input.redeem_script.as_ref().ok_or(SignError::MissingRedeemScript)?;
                 let sighash =
                     cache.legacy_signature_hash(input_index, script_code, hash_ty.to_u32())?;
-                Ok((Message::from(sighash), hash_ty))
+                // TODO: After upgrade of secp change this to Message::from_digest(sighash.to_byte_array()).
+                Ok((
+                    Message::from_slice(sighash.as_byte_array()).expect("sighash is 32 bytes long"),
+                    hash_ty,
+                ))
             }
             Wpkh => {
                 let sighash = cache.p2wpkh_signature_hash(input_index, spk, utxo.value, hash_ty)?;
-                Ok((Message::from(sighash), hash_ty))
+                // TODO: After upgrade of secp change this to Message::from_digest(sighash.to_byte_array()).
+                Ok((
+                    Message::from_slice(sighash.as_byte_array()).expect("sighash is 32 bytes long"),
+                    hash_ty,
+                ))
             }
             ShWpkh => {
                 let redeem_script = input.redeem_script.as_ref().expect("checked above");
                 let sighash =
                     cache.p2wpkh_signature_hash(input_index, redeem_script, utxo.value, hash_ty)?;
-                Ok((Message::from(sighash), hash_ty))
+                // TODO: After upgrade of secp change this to Message::from_digest(sighash.to_byte_array()).
+                Ok((
+                    Message::from_slice(sighash.as_byte_array()).expect("sighash is 32 bytes long"),
+                    hash_ty,
+                ))
             }
             Wsh | ShWsh => {
                 let witness_script =
                     input.witness_script.as_ref().ok_or(SignError::MissingWitnessScript)?;
                 let sighash =
                     cache.p2wsh_signature_hash(input_index, witness_script, utxo.value, hash_ty)?;
-                Ok((Message::from(sighash), hash_ty))
+                // TODO: After upgrade of secp change this to Message::from_digest(sighash.to_byte_array()).
+                Ok((
+                    Message::from_slice(sighash.as_byte_array()).expect("sighash is 32 bytes long"),
+                    hash_ty,
+                ))
             }
             Tr => {
                 // This PSBT signing API is WIP, taproot to come shortly.
@@ -373,20 +394,29 @@ impl Psbt {
     }
 
     /// Gets the input at `input_index` after checking that it is a valid index.
-    fn checked_input(&self, input_index: usize) -> Result<&Input, SignError> {
+    fn checked_input(&self, input_index: usize) -> Result<&Input, IndexOutOfBoundsError> {
         self.check_index_is_within_bounds(input_index)?;
         Ok(&self.inputs[input_index])
     }
 
     /// Checks `input_index` is within bounds for the PSBT `inputs` array and
     /// for the PSBT `unsigned_tx` `input` array.
-    fn check_index_is_within_bounds(&self, input_index: usize) -> Result<(), SignError> {
+    fn check_index_is_within_bounds(
+        &self,
+        input_index: usize,
+    ) -> Result<(), IndexOutOfBoundsError> {
         if input_index >= self.inputs.len() {
-            return Err(SignError::IndexOutOfBounds(input_index, self.inputs.len()));
+            return Err(IndexOutOfBoundsError::Inputs {
+                index: input_index,
+                length: self.inputs.len(),
+            });
         }
 
         if input_index >= self.unsigned_tx.input.len() {
-            return Err(SignError::IndexOutOfBounds(input_index, self.unsigned_tx.input.len()));
+            return Err(IndexOutOfBoundsError::TxInput {
+                index: input_index,
+                length: self.unsigned_tx.input.len(),
+            });
         }
 
         Ok(())
@@ -487,7 +517,7 @@ pub trait GetKey {
     ) -> Result<Option<PrivateKey>, Self::Error>;
 }
 
-impl GetKey for ExtendedPrivKey {
+impl GetKey for Xpriv {
     type Error = GetKeyError;
 
     fn get_key<C: Signing>(
@@ -520,7 +550,7 @@ pub type SigningErrors = BTreeMap<usize, SignError>;
 macro_rules! impl_get_key_for_set {
     ($set:ident) => {
 
-impl GetKey for $set<ExtendedPrivKey> {
+impl GetKey for $set<Xpriv> {
     type Error = GetKeyError;
 
     fn get_key<C: Signing>(
@@ -655,8 +685,8 @@ pub enum SigningAlgorithm {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum SignError {
-    /// Input index out of bounds (actual index, maximum index allowed).
-    IndexOutOfBounds(usize, usize),
+    /// Input index out of bounds.
+    IndexOutOfBounds(IndexOutOfBoundsError),
     /// Invalid Sighash type.
     InvalidSighashType,
     /// Missing input utxo.
@@ -690,9 +720,7 @@ impl fmt::Display for SignError {
         use self::SignError::*;
 
         match *self {
-            IndexOutOfBounds(ref ind, ref len) => {
-                write!(f, "index {}, psbt input len: {}", ind, len)
-            }
+            IndexOutOfBounds(ref e) => write_err!(f, "index out of bounds"; e),
             InvalidSighashType => write!(f, "invalid sighash type"),
             MissingInputUtxo => write!(f, "missing input utxo in PBST"),
             MissingRedeemScript => write!(f, "missing redeem script"),
@@ -717,8 +745,7 @@ impl std::error::Error for SignError {
         use self::SignError::*;
 
         match *self {
-            IndexOutOfBounds(_, _)
-            | InvalidSighashType
+            InvalidSighashType
             | MissingInputUtxo
             | MissingRedeemScript
             | MissingSpendUtxo
@@ -731,6 +758,7 @@ impl std::error::Error for SignError {
             | WrongSigningAlgorithm
             | Unsupported => None,
             SighashComputation(ref e) => Some(e),
+            IndexOutOfBounds(ref e) => Some(e),
         }
     }
 }
@@ -738,6 +766,51 @@ impl std::error::Error for SignError {
 impl From<sighash::Error> for SignError {
     fn from(e: sighash::Error) -> Self { SignError::SighashComputation(e) }
 }
+
+impl From<IndexOutOfBoundsError> for SignError {
+    fn from(e: IndexOutOfBoundsError) -> Self { SignError::IndexOutOfBounds(e) }
+}
+
+/// Input index out of bounds (actual index, maximum index allowed).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IndexOutOfBoundsError {
+    /// The index is out of bounds for the `psbt.inputs` vector.
+    Inputs {
+        /// Attempted index access.
+        index: usize,
+        /// Length of the PBST inputs vector.
+        length: usize,
+    },
+    /// The index is out of bounds for the `psbt.unsigned_tx.input` vector.
+    TxInput {
+        /// Attempted index access.
+        index: usize,
+        /// Length of the PBST's unsigned transaction input vector.
+        length: usize,
+    },
+}
+
+impl fmt::Display for IndexOutOfBoundsError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use IndexOutOfBoundsError::*;
+
+        match *self {
+            Inputs { ref index, ref length } => write!(
+                f,
+                "index {} is out-of-bounds for PSBT inputs vector length {}",
+                length, index
+            ),
+            TxInput { ref index, ref length } => write!(
+                f,
+                "index {} is out-of-bounds for PSBT unsigned tx input vector length {}",
+                length, index
+            ),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for IndexOutOfBoundsError {}
 
 #[cfg(feature = "base64")]
 mod display_from_str {
@@ -810,7 +883,7 @@ mod tests {
     use secp256k1::{All, SecretKey};
 
     use super::*;
-    use crate::bip32::{ChildNumber, ExtendedPrivKey, ExtendedPubKey, KeySource};
+    use crate::bip32::{ChildNumber, KeySource, Xpriv, Xpub};
     use crate::blockdata::locktime::absolute;
     use crate::blockdata::script::ScriptBuf;
     use crate::blockdata::transaction::{OutPoint, Sequence, Transaction, TxIn, TxOut};
@@ -857,7 +930,7 @@ mod tests {
 
         let mut hd_keypaths: BTreeMap<secp256k1::PublicKey, KeySource> = Default::default();
 
-        let mut sk: ExtendedPrivKey = ExtendedPrivKey::new_master(Groestlcoin, &seed).unwrap();
+        let mut sk: Xpriv = Xpriv::new_master(Groestlcoin, &seed).unwrap();
 
         let fprint = sk.fingerprint(secp);
 
@@ -874,7 +947,7 @@ mod tests {
 
         sk = sk.derive_priv(secp, &dpath).unwrap();
 
-        let pk = ExtendedPubKey::from_priv(secp, &sk);
+        let pk = Xpub::from_priv(secp, &sk);
 
         hd_keypaths.insert(pk.public_key, (fprint, dpath.into()));
 
@@ -1020,7 +1093,7 @@ mod tests {
         let psbt = Psbt {
             version: 0,
             xpub: {
-                let xpub: ExtendedPubKey =
+                let xpub: Xpub =
                     "xpub661MyMwAqRbcGoRVtwfvzZsq2VBJR1LAHfQstHUoxqDorV89vRoMxUZ27kLrraAj6MPi\
                     QfrDb27gigC1VS1dBXi5jGpxmMeBXEkKkcXUTg4".parse().unwrap();
                 vec![(xpub, key_source)].into_iter().collect()

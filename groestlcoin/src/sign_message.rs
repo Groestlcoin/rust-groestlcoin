@@ -19,7 +19,7 @@ pub const BITCOIN_SIGNED_MSG_PREFIX: &[u8] = b"\x1CGroestlCoin Signed Message:\n
 mod message_signing {
     use core::fmt;
 
-    use hashes::sha256;
+    use hashes::{sha256, Hash};
     use internals::write_err;
     use secp256k1;
     use secp256k1::ecdsa::{RecoverableSignature, RecoveryId};
@@ -132,9 +132,10 @@ mod message_signing {
             secp_ctx: &secp256k1::Secp256k1<C>,
             msg_hash: sha256::Hash,
         ) -> Result<PublicKey, MessageSignatureError> {
-            // let msg = secp256k1::Message::from(msg_hash);
-            let msg = secp256k1::Message::from_slice(&msg_hash[..])
-                .expect("cannot fail");
+            // TODO: After upgrade of secp change this to Message::from_digest(sighash.to_byte_array()).
+            let msg = secp256k1::Message::from_slice(msg_hash.as_byte_array())
+                .expect("sh256 hash is 32 bytes long");
+
             let pubkey = secp_ctx.recover_ecdsa(&msg, &self.signature)?;
             Ok(PublicKey { inner: pubkey, compressed: self.compressed })
         }
@@ -197,7 +198,7 @@ mod message_signing {
 pub fn signed_msg_hash(msg: &str) -> sha256::Hash {
     let mut engine = sha256::Hash::engine();
     engine.input(BITCOIN_SIGNED_MSG_PREFIX);
-    let msg_len = encode::VarInt(msg.len() as u64);
+    let msg_len = encode::VarInt::from(msg.len());
     msg_len.consensus_encode(&mut engine).expect("engines don't error");
     engine.input(msg.as_bytes());
     sha256::Hash::from_engine(engine)
@@ -228,8 +229,9 @@ mod tests {
         let secp = secp256k1::Secp256k1::new();
         let message = "rust-groestlcoin MessageSignature test";
         let msg_hash = super::signed_msg_hash(message);
-        // let msg = secp256k1::Message::from(msg_hash);
-        let msg = secp256k1::Message::from_slice(msg_hash.as_ref()).expect("message");
+        // TODO: After upgrade of secp change this to Message::from_digest(sighash.to_byte_array()).
+        let msg = secp256k1::Message::from_slice(msg_hash.as_byte_array())
+            .expect("sh256 hash is 32 bytes long");
 
         let privkey = secp256k1::SecretKey::new(&mut secp256k1::rand::thread_rng());
         let secp_sig = secp.sign_ecdsa_recoverable(&msg, &privkey);

@@ -31,7 +31,7 @@ pub fn verify_script(
     index: usize,
     amount: Amount,
     spending_tx: &[u8],
-) -> Result<(), groestlcoinconsensus::Error> {
+) -> Result<(), BitcoinconsensusError> {
     verify_script_with_flags(script, index, amount, spending_tx, groestlcoinconsensus::VERIFY_ALL)
 }
 
@@ -50,14 +50,14 @@ pub fn verify_script_with_flags<F: Into<u32>>(
     amount: Amount,
     spending_tx: &[u8],
     flags: F,
-) -> Result<(), groestlcoinconsensus::Error> {
-    groestlcoinconsensus::verify_with_flags(
+) -> Result<(), BitcoinconsensusError> {
+    Ok(groestlcoinconsensus::verify_with_flags(
         script.as_bytes(),
         amount.to_sat(),
         spending_tx,
         index,
         flags.into(),
-    )
+    )?)
 }
 
 /// Verifies that this transaction is able to spend its inputs.
@@ -121,7 +121,7 @@ impl Script {
         index: usize,
         amount: crate::Amount,
         spending_tx: &[u8],
-    ) -> Result<(), groestlcoinconsensus::Error> {
+    ) -> Result<(), BitcoinconsensusError> {
         verify_script(self, index, amount, spending_tx)
     }
 
@@ -140,7 +140,7 @@ impl Script {
         amount: crate::Amount,
         spending_tx: &[u8],
         flags: F,
-    ) -> Result<(), groestlcoinconsensus::Error> {
+    ) -> Result<(), BitcoinconsensusError> {
         verify_script_with_flags(self, index, amount, spending_tx, flags)
     }
 }
@@ -172,11 +172,40 @@ impl Transaction {
     }
 }
 
+/// Wrapped error from `groestlcoinconsensus`.
+// We do this for two reasons:
+// 1. We don't want the error to be part of the public API because we do not want to expose the
+//    unusual versioning used in `groestlcoinconsensus` to users of `rust-groestlcoin`.
+// 2. We want to implement `std::error::Error` if the "std" feature is enabled in `rust-groestlcoin` but
+//    not in `groestlcoinconsensus`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BitcoinconsensusError(groestlcoinconsensus::Error);
+
+impl fmt::Display for BitcoinconsensusError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write_err!(f, "groestlcoinconsensus error"; &self.0)
+    }
+}
+
+#[cfg(all(feature = "std", feature = "groestlcoinconsensus-std"))]
+impl std::error::Error for BitcoinconsensusError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> { Some(&self.0) }
+}
+
+#[cfg(all(feature = "std", not(feature = "groestlcoinconsensus-std")))]
+impl std::error::Error for BitcoinconsensusError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> { None }
+}
+
+impl From<groestlcoinconsensus::Error> for BitcoinconsensusError {
+    fn from(e: groestlcoinconsensus::Error) -> Self { Self(e) }
+}
+
 /// An error during transaction validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TxVerifyError {
     /// Error validating the script with groestlcoinconsensus library.
-    ScriptVerification(groestlcoinconsensus::Error),
+    ScriptVerification(BitcoinconsensusError),
     /// Can not find the spent output.
     UnknownSpentOutput(OutPoint),
 }
@@ -186,9 +215,7 @@ impl fmt::Display for TxVerifyError {
         use TxVerifyError::*;
 
         match *self {
-            ScriptVerification(ref e) => {
-                write_err!(f, "groestlcoinconsensus verification failed"; groestlcoinconsensus_hack::wrap_error(e))
-            }
+            ScriptVerification(ref e) => write_err!(f, "groestlcoinconsensus verification failed"; e),
             UnknownSpentOutput(ref p) => write!(f, "unknown spent output: {}", p),
         }
     }
@@ -200,50 +227,12 @@ impl std::error::Error for TxVerifyError {
         use TxVerifyError::*;
 
         match *self {
-            ScriptVerification(ref e) => Some(groestlcoinconsensus_hack::wrap_error(e)),
+            ScriptVerification(ref e) => Some(e),
             UnknownSpentOutput(_) => None,
         }
     }
 }
 
-impl From<groestlcoinconsensus::Error> for TxVerifyError {
-    fn from(e: groestlcoinconsensus::Error) -> Self { TxVerifyError::ScriptVerification(e) }
-}
-
-// If groestlcoinonsensus-std is off but groestlcoinconsensus is present we patch the error type to
-// implement `std::error::Error`.
-#[cfg(all(feature = "std", feature = "groestlcoinconsensus", not(feature = "groestlcoinconsensus-std")))]
-mod groestlcoinconsensus_hack {
-    use core::fmt;
-
-    #[repr(transparent)]
-    pub(crate) struct Error(groestlcoinconsensus::Error);
-
-    impl fmt::Debug for Error {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { fmt::Debug::fmt(&self.0, f) }
-    }
-
-    impl fmt::Display for Error {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { fmt::Display::fmt(&self.0, f) }
-    }
-
-    // groestlcoinconsensus::Error has no sources at this time
-    impl std::error::Error for Error {}
-
-    pub(crate) fn wrap_error(error: &groestlcoinconsensus::Error) -> &Error {
-        // Unfortunately, we cannot have the reference inside `Error` struct because of the 'static
-        // bound on `source` return type, so we have to use unsafe to overcome the limitation.
-        // SAFETY: the type is repr(transparent) and the lifetimes match
-        unsafe { &*(error as *const _ as *const Error) }
-    }
-}
-
-#[cfg(not(all(
-    feature = "std",
-    feature = "groestlcoinconsensus",
-    not(feature = "groestlcoinconsensus-std")
-)))]
-mod groestlcoinconsensus_hack {
-    #[allow(unused_imports)] // conditionally used
-    pub(crate) use core::convert::identity as wrap_error;
+impl From<BitcoinconsensusError> for TxVerifyError {
+    fn from(e: BitcoinconsensusError) -> Self { TxVerifyError::ScriptVerification(e) }
 }

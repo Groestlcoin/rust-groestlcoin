@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::{env, process};
 
 use groestlcoin::address::Address;
-use groestlcoin::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
+use groestlcoin::bip32::{ChildNumber, DerivationPath, Xpriv, Xpub};
 use groestlcoin::hex::FromHex;
 use groestlcoin::secp256k1::ffi::types::AlignedType;
 use groestlcoin::secp256k1::Secp256k1;
@@ -39,14 +39,14 @@ fn main() {
     let secp = Secp256k1::preallocated_new(buf.as_mut_slice()).unwrap();
 
     // calculate root key from seed
-    let root = ExtendedPrivKey::new_master(network, &seed).unwrap();
+    let root = Xpriv::new_master(network, &seed).unwrap();
     println!("Root key: {}", root);
 
     // derive child xpub
     let path = DerivationPath::from_str("m/84h/17h/0h").unwrap();
     let child = root.derive_priv(&secp, &path).unwrap();
     println!("Child at {}: {}", path, child);
-    let xpub = ExtendedPubKey::from_priv(&secp, &child);
+    let xpub = Xpub::from_priv(&secp, &child);
     println!("Public key at {}: {}", path, xpub);
 
     // generate first receiving address at m/0/0

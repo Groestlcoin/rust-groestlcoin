@@ -26,6 +26,15 @@ use crate::io::Write;
 use crate::network::Network;
 use crate::prelude::*;
 
+/// Version bytes for extended public keys on the Bitcoin network.
+const VERSION_BYTES_MAINNET_PUBLIC: [u8; 4] = [0x04, 0x88, 0xB2, 0x1E];
+/// Version bytes for extended private keys on the Bitcoin network.
+const VERSION_BYTES_MAINNET_PRIVATE: [u8; 4] = [0x04, 0x88, 0xAD, 0xE4];
+/// Version bytes for extended public keys on any of the testnet networks.
+const VERSION_BYTES_TESTNETS_PUBLIC: [u8; 4] = [0x04, 0x35, 0x87, 0xCF];
+/// Version bytes for extended private keys on any of the testnet networks.
+const VERSION_BYTES_TESTNETS_PRIVATE: [u8; 4] = [0x04, 0x35, 0x83, 0x94];
+
 /// A chain code
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ChainCode([u8; 32]);
@@ -47,7 +56,7 @@ impl_bytes_newtype!(Fingerprint, 4);
 /// Extended private key
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct ExtendedPrivKey {
+pub struct Xpriv {
     /// The network this key is to be used on
     pub network: Network,
     /// How many derivations this key is from the master (which is 0)
@@ -62,12 +71,12 @@ pub struct ExtendedPrivKey {
     pub chain_code: ChainCode,
 }
 #[cfg(feature = "serde")]
-crate::serde_utils::serde_string_impl!(ExtendedPrivKey, "a BIP-32 extended private key");
+crate::serde_utils::serde_string_impl!(Xpriv, "a BIP-32 extended private key");
 
 #[cfg(not(feature = "std"))]
-impl fmt::Debug for ExtendedPrivKey {
+impl fmt::Debug for Xpriv {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("ExtendedPrivKey")
+        f.debug_struct("Xpriv")
             .field("network", &self.network)
             .field("depth", &self.depth)
             .field("parent_fingerprint", &self.parent_fingerprint)
@@ -80,7 +89,7 @@ impl fmt::Debug for ExtendedPrivKey {
 
 /// Extended public key
 #[derive(Copy, Clone, PartialEq, Eq, Debug, PartialOrd, Ord, Hash)]
-pub struct ExtendedPubKey {
+pub struct Xpub {
     /// The network this key is to be used on
     pub network: Network,
     /// How many derivations this key is from the master (which is 0)
@@ -95,7 +104,7 @@ pub struct ExtendedPubKey {
     pub chain_code: ChainCode,
 }
 #[cfg(feature = "serde")]
-crate::serde_utils::serde_string_impl!(ExtendedPubKey, "a BIP-32 extended public key");
+crate::serde_utils::serde_string_impl!(Xpub, "a BIP-32 extended public key");
 
 /// A child number for a derived key
 #[derive(Copy, Clone, PartialEq, Eq, Debug, PartialOrd, Ord, Hash)]
@@ -535,14 +544,14 @@ impl From<base58::Error> for Error {
     fn from(err: base58::Error) -> Self { Error::Base58(err) }
 }
 
-impl ExtendedPrivKey {
+impl Xpriv {
     /// Construct a new master key from a seed value
-    pub fn new_master(network: Network, seed: &[u8]) -> Result<ExtendedPrivKey, Error> {
+    pub fn new_master(network: Network, seed: &[u8]) -> Result<Xpriv, Error> {
         let mut hmac_engine: HmacEngine<sha512::Hash> = HmacEngine::new(b"Bitcoin seed");
         hmac_engine.input(seed);
         let hmac_result: Hmac<sha512::Hash> = Hmac::from_engine(hmac_engine);
 
-        Ok(ExtendedPrivKey {
+        Ok(Xpriv {
             network,
             depth: 0,
             parent_fingerprint: Default::default(),
@@ -571,8 +580,8 @@ impl ExtendedPrivKey {
         &self,
         secp: &Secp256k1<C>,
         path: &P,
-    ) -> Result<ExtendedPrivKey, Error> {
-        let mut sk: ExtendedPrivKey = *self;
+    ) -> Result<Xpriv, Error> {
+        let mut sk: Xpriv = *self;
         for cnum in path.as_ref() {
             sk = sk.ckd_priv(secp, *cnum)?;
         }
@@ -584,7 +593,7 @@ impl ExtendedPrivKey {
         &self,
         secp: &Secp256k1<C>,
         i: ChildNumber,
-    ) -> Result<ExtendedPrivKey, Error> {
+    ) -> Result<Xpriv, Error> {
         let mut hmac_engine: HmacEngine<sha512::Hash> = HmacEngine::new(&self.chain_code[..]);
         match i {
             ChildNumber::Normal { .. } => {
@@ -607,7 +616,7 @@ impl ExtendedPrivKey {
         let tweaked =
             sk.add_tweak(&self.private_key.into()).expect("statistically impossible to hit");
 
-        Ok(ExtendedPrivKey {
+        Ok(Xpriv {
             network: self.network,
             depth: self.depth + 1,
             parent_fingerprint: self.fingerprint(secp),
@@ -618,19 +627,21 @@ impl ExtendedPrivKey {
     }
 
     /// Decoding extended private key from binary data according to BIP 32
-    pub fn decode(data: &[u8]) -> Result<ExtendedPrivKey, Error> {
+    pub fn decode(data: &[u8]) -> Result<Xpriv, Error> {
         if data.len() != 78 {
             return Err(Error::WrongExtendedKeyLength(data.len()));
         }
 
-        let network = match data {
-            [0x04u8, 0x88, 0xAD, 0xE4, ..] => Network::Groestlcoin,
-            [0x04u8, 0x35, 0x83, 0x94, ..] => Network::Testnet,
-            [b0, b1, b2, b3, ..] => return Err(Error::UnknownVersion([*b0, *b1, *b2, *b3])),
-            _ => unreachable!("length checked above"),
+        let network = if data.starts_with(&VERSION_BYTES_MAINNET_PRIVATE) {
+            Network::Groestlcoin
+        } else if data.starts_with(&VERSION_BYTES_TESTNETS_PRIVATE) {
+            Network::Testnet
+        } else {
+            let (b0, b1, b2, b3) = (data[0], data[1], data[2], data[3]);
+            return Err(Error::UnknownVersion([b0, b1, b2, b3]));
         };
 
-        Ok(ExtendedPrivKey {
+        Ok(Xpriv {
             network,
             depth: data[4],
             parent_fingerprint: data[5..9]
@@ -647,12 +658,10 @@ impl ExtendedPrivKey {
     /// Extended private key binary encoding according to BIP 32
     pub fn encode(&self) -> [u8; 78] {
         let mut ret = [0; 78];
-        ret[0..4].copy_from_slice(
-            &match self.network {
-                Network::Groestlcoin => [0x04, 0x88, 0xAD, 0xE4],
-                Network::Testnet | Network::Signet | Network::Regtest => [0x04, 0x35, 0x83, 0x94],
-            }[..],
-        );
+        ret[0..4].copy_from_slice(&match self.network {
+            Network::Groestlcoin => VERSION_BYTES_MAINNET_PRIVATE,
+            Network::Testnet | Network::Signet | Network::Regtest => VERSION_BYTES_TESTNETS_PRIVATE,
+        });
         ret[4] = self.depth;
         ret[5..9].copy_from_slice(&self.parent_fingerprint[..]);
         ret[9..13].copy_from_slice(&u32::from(self.child_number).to_be_bytes());
@@ -664,7 +673,7 @@ impl ExtendedPrivKey {
 
     /// Returns the HASH160 of the public key belonging to the xpriv
     pub fn identifier<C: secp256k1::Signing>(&self, secp: &Secp256k1<C>) -> XpubIdentifier {
-        ExtendedPubKey::from_priv(secp, self).identifier()
+        Xpub::from_priv(secp, self).identifier()
     }
 
     /// Returns the first four bytes of the identifier
@@ -673,13 +682,10 @@ impl ExtendedPrivKey {
     }
 }
 
-impl ExtendedPubKey {
+impl Xpub {
     /// Derives a public key from a private key
-    pub fn from_priv<C: secp256k1::Signing>(
-        secp: &Secp256k1<C>,
-        sk: &ExtendedPrivKey,
-    ) -> ExtendedPubKey {
-        ExtendedPubKey {
+    pub fn from_priv<C: secp256k1::Signing>(secp: &Secp256k1<C>, sk: &Xpriv) -> Xpub {
+        Xpub {
             network: sk.network,
             depth: sk.depth,
             parent_fingerprint: sk.parent_fingerprint,
@@ -703,8 +709,8 @@ impl ExtendedPubKey {
         &self,
         secp: &Secp256k1<C>,
         path: &P,
-    ) -> Result<ExtendedPubKey, Error> {
-        let mut pk: ExtendedPubKey = *self;
+    ) -> Result<Xpub, Error> {
+        let mut pk: Xpub = *self;
         for cnum in path.as_ref() {
             pk = pk.ckd_pub(secp, *cnum)?
         }
@@ -738,11 +744,11 @@ impl ExtendedPubKey {
         &self,
         secp: &Secp256k1<C>,
         i: ChildNumber,
-    ) -> Result<ExtendedPubKey, Error> {
+    ) -> Result<Xpub, Error> {
         let (sk, chain_code) = self.ckd_pub_tweak(i)?;
         let tweaked = self.public_key.add_exp_tweak(secp, &sk.into())?;
 
-        Ok(ExtendedPubKey {
+        Ok(Xpub {
             network: self.network,
             depth: self.depth + 1,
             parent_fingerprint: self.fingerprint(),
@@ -753,19 +759,21 @@ impl ExtendedPubKey {
     }
 
     /// Decoding extended public key from binary data according to BIP 32
-    pub fn decode(data: &[u8]) -> Result<ExtendedPubKey, Error> {
+    pub fn decode(data: &[u8]) -> Result<Xpub, Error> {
         if data.len() != 78 {
             return Err(Error::WrongExtendedKeyLength(data.len()));
         }
 
-        let network = match data {
-            [0x04u8, 0x88, 0xB2, 0x1E, ..] => Network::Groestlcoin,
-            [0x04u8, 0x35, 0x87, 0xCF, ..] => Network::Testnet,
-            [b0, b1, b2, b3, ..] => return Err(Error::UnknownVersion([*b0, *b1, *b2, *b3])),
-            _ => unreachable!("length checked above"),
+        let network = if data.starts_with(&VERSION_BYTES_MAINNET_PUBLIC) {
+            Network::Groestlcoin
+        } else if data.starts_with(&VERSION_BYTES_TESTNETS_PUBLIC) {
+            Network::Testnet
+        } else {
+            let (b0, b1, b2, b3) = (data[0], data[1], data[2], data[3]);
+            return Err(Error::UnknownVersion([b0, b1, b2, b3]));
         };
 
-        Ok(ExtendedPubKey {
+        Ok(Xpub {
             network,
             depth: data[4],
             parent_fingerprint: data[5..9]
@@ -782,12 +790,10 @@ impl ExtendedPubKey {
     /// Extended public key binary encoding according to BIP 32
     pub fn encode(&self) -> [u8; 78] {
         let mut ret = [0; 78];
-        ret[0..4].copy_from_slice(
-            &match self.network {
-                Network::Groestlcoin => [0x04u8, 0x88, 0xB2, 0x1E],
-                Network::Testnet | Network::Signet | Network::Regtest => [0x04u8, 0x35, 0x87, 0xCF],
-            }[..],
-        );
+        ret[0..4].copy_from_slice(&match self.network {
+            Network::Groestlcoin => VERSION_BYTES_MAINNET_PUBLIC,
+            Network::Testnet | Network::Signet | Network::Regtest => VERSION_BYTES_TESTNETS_PUBLIC,
+        });
         ret[4] = self.depth;
         ret[5..9].copy_from_slice(&self.parent_fingerprint[..]);
         ret[9..13].copy_from_slice(&u32::from(self.child_number).to_be_bytes());
@@ -809,52 +815,52 @@ impl ExtendedPubKey {
     }
 }
 
-impl fmt::Display for ExtendedPrivKey {
+impl fmt::Display for Xpriv {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         base58::encode_check_to_fmt(fmt, &self.encode()[..])
     }
 }
 
-impl FromStr for ExtendedPrivKey {
+impl FromStr for Xpriv {
     type Err = Error;
 
-    fn from_str(inp: &str) -> Result<ExtendedPrivKey, Error> {
+    fn from_str(inp: &str) -> Result<Xpriv, Error> {
         let data = base58::decode_check(inp)?;
 
         if data.len() != 78 {
             return Err(base58::Error::InvalidLength(data.len()).into());
         }
 
-        ExtendedPrivKey::decode(&data)
+        Xpriv::decode(&data)
     }
 }
 
-impl fmt::Display for ExtendedPubKey {
+impl fmt::Display for Xpub {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         base58::encode_check_to_fmt(fmt, &self.encode()[..])
     }
 }
 
-impl FromStr for ExtendedPubKey {
+impl FromStr for Xpub {
     type Err = Error;
 
-    fn from_str(inp: &str) -> Result<ExtendedPubKey, Error> {
+    fn from_str(inp: &str) -> Result<Xpub, Error> {
         let data = base58::decode_check(inp)?;
 
         if data.len() != 78 {
             return Err(base58::Error::InvalidLength(data.len()).into());
         }
 
-        ExtendedPubKey::decode(&data)
+        Xpub::decode(&data)
     }
 }
 
-impl From<ExtendedPubKey> for XpubIdentifier {
-    fn from(key: ExtendedPubKey) -> XpubIdentifier { key.identifier() }
+impl From<Xpub> for XpubIdentifier {
+    fn from(key: Xpub) -> XpubIdentifier { key.identifier() }
 }
 
-impl From<&ExtendedPubKey> for XpubIdentifier {
-    fn from(key: &ExtendedPubKey) -> XpubIdentifier { key.identifier() }
+impl From<&Xpub> for XpubIdentifier {
+    fn from(key: &Xpub) -> XpubIdentifier { key.identifier() }
 }
 
 #[cfg(test)]
@@ -953,13 +959,13 @@ mod tests {
         expected_sk: &str,
         expected_pk: &str,
     ) {
-        let mut sk = ExtendedPrivKey::new_master(network, seed).unwrap();
-        let mut pk = ExtendedPubKey::from_priv(secp, &sk);
+        let mut sk = Xpriv::new_master(network, seed).unwrap();
+        let mut pk = Xpub::from_priv(secp, &sk);
 
-        // Check derivation convenience method for ExtendedPrivKey
+        // Check derivation convenience method for Xpriv
         assert_eq!(&sk.derive_priv(secp, &path).unwrap().to_string()[..], expected_sk);
 
-        // Check derivation convenience method for ExtendedPubKey, should error
+        // Check derivation convenience method for Xpub, should error
         // appropriately if any ChildNumber is hardened
         if path.0.iter().any(|cnum| cnum.is_hardened()) {
             assert_eq!(pk.derive_pub(secp, &path), Err(Error::CannotDeriveFromHardenedKey));
@@ -973,12 +979,12 @@ mod tests {
             match num {
                 Normal { .. } => {
                     let pk2 = pk.ckd_pub(secp, num).unwrap();
-                    pk = ExtendedPubKey::from_priv(secp, &sk);
+                    pk = Xpub::from_priv(secp, &sk);
                     assert_eq!(pk, pk2);
                 }
                 Hardened { .. } => {
                     assert_eq!(pk.ckd_pub(secp, num), Err(Error::CannotDeriveFromHardenedKey));
-                    pk = ExtendedPubKey::from_priv(secp, &sk);
+                    pk = Xpub::from_priv(secp, &sk);
                 }
             }
         }
@@ -987,8 +993,8 @@ mod tests {
         assert_eq!(&sk.to_string()[..], expected_sk);
         assert_eq!(&pk.to_string()[..], expected_pk);
         // Check decoded base58 against result
-        let decoded_sk = ExtendedPrivKey::from_str(expected_sk);
-        let decoded_pk = ExtendedPubKey::from_str(expected_pk);
+        let decoded_sk = Xpriv::from_str(expected_sk);
+        let decoded_pk = Xpub::from_str(expected_pk);
         assert_eq!(Ok(sk), decoded_sk);
         assert_eq!(Ok(pk), decoded_pk);
     }
@@ -1181,7 +1187,7 @@ mod tests {
             sk.as_mut_ptr().copy_from(zeros.as_ptr(), 32);
         }
 
-        let xpriv = ExtendedPrivKey {
+        let xpriv = Xpriv {
             network: Network::Groestlcoin,
             depth: 0,
             parent_fingerprint: Default::default(),
@@ -1195,7 +1201,7 @@ mod tests {
 
         // Xpriv having secret key set to all zeros
         let xpriv_str = "xprv9s21ZrQH143K24Mfq5zL5MhWK9hUhhGbd45hLXo2Pq2oqzMMo63oStZzF93Y5wvzdUayhgkkFoicQZcP3y52uPPxFnfoLZB21Teqt4xEiFr";
-        ExtendedPrivKey::from_str(xpriv_str).unwrap();
+        Xpriv::from_str(xpriv_str).unwrap();
     }
 
     #[test]
@@ -1203,6 +1209,6 @@ mod tests {
     fn schnorr_broken_privkey_ffs() {
         // Xpriv having secret key set to all 0xFF's
         let xpriv_str = "xprv9s21ZrQH143K24Mfq5zL5MhWK9hUhhGbd45hLXo2Pq2oqzMMo63oStZzFAzHGBP2UuGCqWLTAPLcMtD9y5gkZ6Eq3Rjuahrv17fENbNehVJ";
-        ExtendedPrivKey::from_str(xpriv_str).unwrap();
+        Xpriv::from_str(xpriv_str).unwrap();
     }
 }

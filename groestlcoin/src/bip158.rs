@@ -391,7 +391,7 @@ impl<'a, W: io::Write> GcsFilterWriter<'a, W> {
         mapped.sort_unstable();
 
         // write number of elements as varint
-        let mut wrote = VarInt(mapped.len() as u64).consensus_encode(&mut self.writer)?;
+        let mut wrote = VarInt::from(mapped.len()).consensus_encode(&mut self.writer)?;
 
         // write out deltas of sorted values into a Golonb-Rice coded bit stream
         let mut writer = BitStreamWriter::new(self.writer);
@@ -616,7 +616,7 @@ mod test {
                 .unwrap());
 
             for script in txmap.values() {
-                let query = vec![script];
+                let query = [script];
                 if !script.is_empty() {
                     assert!(filter
                         .match_any(block_hash, &mut query.iter().map(|s| s.as_bytes()))
