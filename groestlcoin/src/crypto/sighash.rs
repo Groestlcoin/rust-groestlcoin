@@ -1971,9 +1971,9 @@ mod tests {
     }
     check_bip143_p2wsh_nested_in_p2sh! {
         // EcdsaSighashType::All tested above.
-        bip143_p2wsh_nested_in_p2sh_sighash_none, None, "e9733bc60ea13c95c6527066bb975a2ff29a925e80aa14c213f686cbae5d2f36";
-        bip143_p2wsh_nested_in_p2sh_sighash_single, Single, "1e1f1c303dc025bd664acb72e583e933fae4cff9148bf78c157d1e8f78530aea";
-        bip143_p2wsh_nested_in_p2sh_sighash_all_plus_anyonecanpay, AllPlusAnyoneCanPay, "2a67f03e63a6a422125878b40b82da593be8d4efaafe88ee528af6e5a9955c6e";
+        bip143_p2wsh_nested_in_p2sh_sighash_none, None, "2e42b29c2154f5ad117feb3c6109569381063c6cc3f573ef508d25040c3ed872";
+        bip143_p2wsh_nested_in_p2sh_sighash_single, Single, "6273921bffcaed1fae8c00edbf5dab8c1d85aabde2ae6f65878f7e0114c14beb";
+        bip143_p2wsh_nested_in_p2sh_sighash_all_plus_anyonecanpay, AllPlusAnyoneCanPay, "ae72991b3330fe5a6ed93dfa82729330fcf996e778cf308f82bdddf444215536";
         bip143_p2wsh_nested_in_p2sh_sighash_none_plus_anyonecanpay, NonePlusAnyoneCanPay, "781ba15f3779d5542ce8ecb5c18716733a5ee42a6f51488ec96154934e2c890a";
         bip143_p2wsh_nested_in_p2sh_sighash_single_plus_anyonecanpay, SinglePlusAnyoneCanPay, "511e8e52ed574121fc1b654970395502128263f62662e076dc6baf05c2e6a99b";
     }
