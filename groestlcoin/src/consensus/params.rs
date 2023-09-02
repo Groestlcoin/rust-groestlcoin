@@ -61,8 +61,8 @@ impl Params {
                 rule_change_activation_threshold: 1815, // 90%
                 miner_confirmation_window: 2016,
                 pow_limit: Work::MAINNET_MIN,
-                pow_target_spacing: 60,            // 1 minute.
-                pow_target_timespan: 14 * 24 * 60 * 60, // 2 weeks.
+                pow_target_spacing: 60,      // 1 minute.
+                pow_target_timespan: 129600, // 1.5 days (1.5 * 24 * 60 * 60)
                 allow_min_difficulty_blocks: false,
                 no_pow_retargeting: false,
             },
@@ -75,8 +75,8 @@ impl Params {
                 rule_change_activation_threshold: 1512, // 75%
                 miner_confirmation_window: 2016,
                 pow_limit: Work::TESTNET_MIN,
-                pow_target_spacing: 60,            // 1 minute.
-                pow_target_timespan: 14 * 24 * 60 * 60, // 2 weeks.
+                pow_target_spacing: 60,      // 1 minute.
+                pow_target_timespan: 129600, // 1.5 days (1.5 * 24 * 60 * 60)
                 allow_min_difficulty_blocks: true,
                 no_pow_retargeting: false,
             },
@@ -89,8 +89,8 @@ impl Params {
                 rule_change_activation_threshold: 1815, // 90%
                 miner_confirmation_window: 2016,
                 pow_limit: Work::SIGNET_MIN,
-                pow_target_spacing: 60,            // 1 minute.
-                pow_target_timespan: 14 * 24 * 60 * 60, // 2 weeks.
+                pow_target_spacing: 60,      // 1 minute.
+                pow_target_timespan: 129600, // 1.5 days (1.5 * 24 * 60 * 60)
                 allow_min_difficulty_blocks: false,
                 no_pow_retargeting: false,
             },
@@ -103,8 +103,8 @@ impl Params {
                 rule_change_activation_threshold: 108, // 75%
                 miner_confirmation_window: 144,
                 pow_limit: Work::REGTEST_MIN,
-                pow_target_spacing: 60,            // 1 minute.
-                pow_target_timespan: 14 * 24 * 60 * 60, // 2 weeks.
+                pow_target_spacing: 60,      // 1 minute.
+                pow_target_timespan: 129600, // 1.5 days (1.5 * 24 * 60 * 60)
                 allow_min_difficulty_blocks: true,
                 no_pow_retargeting: true,
             },
