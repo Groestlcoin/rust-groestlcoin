@@ -41,7 +41,7 @@ hashes = { package = "groestlcoin_hashes", version = "0.13.0", default-features 
 secp256k1 = { version = "0.27.0", default-features = false } # do not use bitcoin-hashes feature
 hex_lit = "0.1.1"
 
-base64 = { version = "0.13.0", optional = true }
+base64 = { version = "0.21.3", optional = true }
 # Only use this feature for no-std builds, otherwise use groestlcoinconsensus-std.
 groestlcoinconsensus = { version = "2.20.1-0.5.0", default-features = false, optional = true }
 
