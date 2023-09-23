@@ -53,7 +53,7 @@ pub use newtypes::*;
 #[rustfmt::skip]
 mod newtypes {
     use hashes::Hash; // needed for From implimentations to convert hash types
-    use hashes::{sha256, sha256d, hash160, hash_newtype, groestld};
+    use hashes::{sha256, sha256d, hash_newtype, groestld};
 
     hash_newtype! {
         /// A groestlcoin transaction hash/transaction ID.
@@ -81,8 +81,6 @@ mod newtypes {
         pub struct WitnessMerkleNode(sha256d::Hash);
         /// A hash corresponding to the witness structure commitment in the coinbase transaction
         pub struct WitnessCommitment(sha256d::Hash);
-        /// XpubIdentifier as defined in BIP-32.
-        pub struct XpubIdentifier(hash160::Hash);
 
         /// Filter hash, as defined in BIP-157
         pub struct FilterHash(groestld::Hash);

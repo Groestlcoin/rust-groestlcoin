@@ -9,6 +9,7 @@ use core::ops::{Index, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, Ran
 use hashes::Hash;
 use secp256k1::{Secp256k1, Verification};
 
+use super::PushBytes;
 use crate::blockdata::opcodes::all::*;
 use crate::blockdata::opcodes::{self, Opcode};
 use crate::blockdata::script::witness_version::WitnessVersion;
@@ -148,19 +149,37 @@ impl Script {
     /// Computes the P2WSH output corresponding to this witnessScript (aka the "witness redeem
     /// script").
     #[inline]
-    pub fn to_v0_p2wsh(&self) -> ScriptBuf { ScriptBuf::new_v0_p2wsh(&self.wscript_hash()) }
+    #[deprecated(since = "0.31.0", note = "use to_p2wsh instead")]
+    pub fn to_v0_p2wsh(&self) -> ScriptBuf { self.to_p2wsh() }
+
+    /// Computes the P2WSH output corresponding to this witnessScript (aka the "witness redeem
+    /// script").
+    #[inline]
+    pub fn to_p2wsh(&self) -> ScriptBuf { ScriptBuf::new_p2wsh(&self.wscript_hash()) }
 
     /// Computes P2TR output with a given internal key and a single script spending path equal to
     /// the current script, assuming that the script is a Tapscript.
     #[inline]
+    #[deprecated(since = "0.31.0", note = "use to_p2tr instead")]
     pub fn to_v1_p2tr<C: Verification>(
+        &self,
+        secp: &Secp256k1<C>,
+        internal_key: UntweakedPublicKey,
+    ) -> ScriptBuf {
+        self.to_p2tr(secp, internal_key)
+    }
+
+    /// Computes P2TR output with a given internal key and a single script spending path equal to
+    /// the current script, assuming that the script is a Tapscript.
+    #[inline]
+    pub fn to_p2tr<C: Verification>(
         &self,
         secp: &Secp256k1<C>,
         internal_key: UntweakedPublicKey,
     ) -> ScriptBuf {
         let leaf_hash = self.tapscript_leaf_hash();
         let merkle_root = TapNodeHash::from(leaf_hash);
-        ScriptBuf::new_v1_p2tr(secp, internal_key, Some(merkle_root))
+        ScriptBuf::new_p2tr(secp, internal_key, Some(merkle_root))
     }
 
     /// Returns witness version of the script, if any, assuming the script is a `scriptPubkey`.
@@ -187,6 +206,25 @@ impl Script {
             && self.0[2] == OP_PUSHBYTES_20.to_u8()
             && self.0[23] == OP_EQUALVERIFY.to_u8()
             && self.0[24] == OP_CHECKSIG.to_u8()
+    }
+
+    /// Checks whether a script is push only.
+    ///
+    /// Note: `OP_RESERVED` (`0x50`) and all the OP_PUSHNUM operations
+    /// are considered push operations.
+    #[inline]
+    pub fn is_push_only(&self) -> bool {
+        for inst in self.instructions() {
+            match inst {
+                Err(_) => return false,
+                Ok(Instruction::PushBytes(_)) => {}
+                Ok(Instruction::Op(op)) if op.to_u8() <= 0x60 => {}
+                // From Bitcoin Core
+                // if (opcode > OP_PUSHNUM_16 (0x60)) return false
+                Ok(Instruction::Op(_)) => return false,
+            }
+        }
+        true
     }
 
     /// Checks whether a script pubkey is a P2PK output.
@@ -218,6 +256,59 @@ impl Script {
         }
     }
 
+    /// Checks whether a script pubkey is a bare multisig output.
+    ///
+    /// In a bare multisig pubkey script the keys are not hashed, the script
+    /// is of the form:
+    ///
+    ///    `2 <pubkey1> <pubkey2> <pubkey3> 3 OP_CHECKMULTISIG`
+    #[inline]
+    pub fn is_multisig(&self) -> bool {
+        let required_sigs;
+
+        let mut instructions = self.instructions();
+        if let Some(Ok(Instruction::Op(op))) = instructions.next() {
+            if let Some(pushnum) = op.decode_pushnum() {
+                required_sigs = pushnum;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        let mut num_pubkeys: u8 = 0;
+        while let Some(Ok(instruction)) = instructions.next() {
+            match instruction {
+                Instruction::PushBytes(_) => {
+                    num_pubkeys += 1;
+                }
+                Instruction::Op(op) => {
+                    if let Some(pushnum) = op.decode_pushnum() {
+                        if pushnum != num_pubkeys {
+                            return false;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        if required_sigs > num_pubkeys {
+            return false;
+        }
+
+        if let Some(Ok(Instruction::Op(op))) = instructions.next() {
+            if op != OP_CHECKMULTISIG {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        instructions.next().is_none()
+    }
+
     /// Checks whether a script pubkey is a Segregated Witness (segwit) program.
     #[inline]
     pub fn is_witness_program(&self) -> bool {
@@ -240,7 +331,12 @@ impl Script {
 
     /// Checks whether a script pubkey is a P2WSH output.
     #[inline]
-    pub fn is_v0_p2wsh(&self) -> bool {
+    #[deprecated(since = "0.31.0", note = "use is_p2wsh instead")]
+    pub fn is_v0_p2wsh(&self) -> bool { self.is_p2wsh() }
+
+    /// Checks whether a script pubkey is a P2WSH output.
+    #[inline]
+    pub fn is_p2wsh(&self) -> bool {
         self.0.len() == 34
             && self.witness_version() == Some(WitnessVersion::V0)
             && self.0[1] == OP_PUSHBYTES_32.to_u8()
@@ -248,14 +344,19 @@ impl Script {
 
     /// Checks whether a script pubkey is a P2WPKH output.
     #[inline]
-    pub fn is_v0_p2wpkh(&self) -> bool {
+    #[deprecated(since = "0.31.0", note = "use is_p2wpkh instead")]
+    pub fn is_v0_p2wpkh(&self) -> bool { self.is_p2wpkh() }
+
+    /// Checks whether a script pubkey is a P2WPKH output.
+    #[inline]
+    pub fn is_p2wpkh(&self) -> bool {
         self.0.len() == 22
             && self.witness_version() == Some(WitnessVersion::V0)
             && self.0[1] == OP_PUSHBYTES_20.to_u8()
     }
 
-    pub(crate) fn v0_p2wpkh(&self) -> Option<&[u8; 20]> {
-        if self.is_v0_p2wpkh() {
+    pub(crate) fn p2wpkh(&self) -> Option<&[u8; 20]> {
+        if self.is_p2wpkh() {
             Some(self.0[2..].try_into().expect("is_v0_p2wpkh checks the length"))
         } else {
             None
@@ -264,7 +365,12 @@ impl Script {
 
     /// Checks whether a script pubkey is a P2TR output.
     #[inline]
-    pub fn is_v1_p2tr(&self) -> bool {
+    #[deprecated(since = "0.31.0", note = "use is_p2tr instead")]
+    pub fn is_v1_p2tr(&self) -> bool { self.is_p2tr() }
+
+    /// Checks whether a script pubkey is a P2TR output.
+    #[inline]
+    pub fn is_p2tr(&self) -> bool {
         self.0.len() == 34
             && self.witness_version() == Some(WitnessVersion::V1)
             && self.0[1] == OP_PUSHBYTES_32.to_u8()
@@ -303,7 +409,7 @@ impl Script {
     ///
     /// [BIP143]: <https://github.com/bitcoin/bips/blob/99701f68a88ce33b2d0838eb84e115cef505b4c2/bip-0143.mediawiki>
     pub fn p2wpkh_script_code(&self) -> Option<ScriptBuf> {
-        self.v0_p2wpkh().map(|wpkh| {
+        self.p2wpkh().map(|wpkh| {
             Builder::new()
                 .push_opcode(OP_DUP)
                 .push_opcode(OP_HASH160)
@@ -350,11 +456,7 @@ impl Script {
     /// (Note: taproot scripts don't count toward the sigop count of the block,
     /// nor do they have CHECKMULTISIG operations. This function does not count OP_CHECKSIGADD,
     /// so do not use this to try and estimate if a taproot script goes over the sigop budget.)
-    ///
-    /// # Errors
-    ///
-    /// If the Script is not able to be parsed to completion.
-    pub fn count_sigops(&self) -> Result<usize, super::Error> { self.count_sigops_internal(true) }
+    pub fn count_sigops(&self) -> usize { self.count_sigops_internal(true) }
 
     /// Counts the sigops for this Script using legacy counting.
     ///
@@ -368,21 +470,16 @@ impl Script {
     /// (Note: taproot scripts don't count toward the sigop count of the block,
     /// nor do they have CHECKMULTISIG operations. This function does not count OP_CHECKSIGADD,
     /// so do not use this to try and estimate if a taproot script goes over the sigop budget.)
-    ///
-    /// # Errors
-    ///
-    /// If the Script is not able to be parsed to completion.
-    pub fn count_sigops_legacy(&self) -> Result<usize, super::Error> {
-        self.count_sigops_internal(false)
-    }
+    pub fn count_sigops_legacy(&self) -> usize { self.count_sigops_internal(false) }
 
-    fn count_sigops_internal(&self, accurate: bool) -> Result<usize, super::Error> {
+    fn count_sigops_internal(&self, accurate: bool) -> usize {
         let mut n = 0;
         let mut pushnum_cache = None;
         for inst in self.instructions() {
-            match inst? {
-                Instruction::Op(opcode) => {
+            match inst {
+                Ok(Instruction::Op(opcode)) => {
                     match opcode {
+                        // p2pk, p2pkh
                         OP_CHECKSIG | OP_CHECKSIGVERIFY => {
                             n += 1;
                         }
@@ -404,13 +501,15 @@ impl Script {
                         }
                     }
                 }
-                Instruction::PushBytes(_) => {
+                Ok(Instruction::PushBytes(_)) => {
                     pushnum_cache = None;
                 }
+                // In Bitcoin Core it does `if (!GetOp(pc, opcode)) break;`
+                Err(_) => break,
             }
         }
 
-        Ok(n)
+        n
     }
 
     /// Iterates over the script instructions.
@@ -489,6 +588,29 @@ impl Script {
         }
     }
 
+    /// Iterates the script to find the last pushdata.
+    ///
+    /// Returns `None` if the instruction is an opcode or if the script is empty.
+    pub(crate) fn last_pushdata(&self) -> Option<Push> {
+        match self.instructions().last() {
+            // Handles op codes up to (but excluding) OP_PUSHNUM_NEG.
+            Some(Ok(Instruction::PushBytes(bytes))) => Some(Push::Data(bytes)),
+            // OP_16 (0x60) and lower are considered "pushes" by Bitcoin Core (excl. OP_RESERVED).
+            // By here we know that op is between OP_PUSHNUM_NEG AND OP_PUSHNUM_16 inclusive.
+            Some(Ok(Instruction::Op(op))) if op.to_u8() <= 0x60 => {
+                if op == OP_PUSHNUM_NEG1 {
+                    Some(Push::Num(-1))
+                } else if op == OP_RESERVED {
+                    Some(Push::Reserved)
+                } else {
+                    let num = (op.to_u8() - 0x50) as i8; // cast ok, num is [1, 16].
+                    Some(Push::Num(num))
+                }
+            }
+            _ => None,
+        }
+    }
+
     /// Converts a [`Box<Script>`](Box) into a [`ScriptBuf`] without copying or allocating.
     #[must_use = "`self` will be dropped if the result is not used"]
     pub fn into_script_buf(self: Box<Self>) -> ScriptBuf {
@@ -500,6 +622,19 @@ impl Script {
         let inner = unsafe { Box::from_raw(rw) };
         ScriptBuf(Vec::from(inner))
     }
+}
+
+/// Data pushed by "push" opcodes.
+///
+/// "push" opcodes are defined by Bitcoin Core as OP_PUSHBYTES_, OP_PUSHDATA, OP_PUSHNUM_, and
+/// OP_RESERVED i.e., everything less than OP_PUSHNUM_16 (0x60) . (TODO: Add link to core code).
+pub(crate) enum Push<'a> {
+    /// All the OP_PUSHBYTES_ and OP_PUSHDATA_ opcodes.
+    Data(&'a PushBytes),
+    /// All the OP_PUSHNUM_ opcodes (-1, 1, 2, .., 16)
+    Num(i8),
+    /// OP_RESERVED
+    Reserved,
 }
 
 /// Iterator over bytes of a script

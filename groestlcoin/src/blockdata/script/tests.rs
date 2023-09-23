@@ -208,7 +208,7 @@ fn script_generators() {
     assert!(ScriptBuf::new_p2pkh(&pubkey_hash).is_p2pkh());
 
     let wpubkey_hash = WPubkeyHash::hash(&pubkey.inner.serialize());
-    assert!(ScriptBuf::new_v0_p2wpkh(&wpubkey_hash).is_v0_p2wpkh());
+    assert!(ScriptBuf::new_p2wpkh(&wpubkey_hash).is_p2wpkh());
 
     let script = Builder::new().push_opcode(OP_NUMEQUAL).push_verify().into_script();
     let script_hash = script.script_hash();
@@ -217,14 +217,14 @@ fn script_generators() {
     assert_eq!(script.to_p2sh(), p2sh);
 
     let wscript_hash = script.wscript_hash();
-    let p2wsh = ScriptBuf::new_v0_p2wsh(&wscript_hash);
-    assert!(p2wsh.is_v0_p2wsh());
-    assert_eq!(script.to_v0_p2wsh(), p2wsh);
+    let p2wsh = ScriptBuf::new_p2wsh(&wscript_hash);
+    assert!(p2wsh.is_p2wsh());
+    assert_eq!(script.to_p2wsh(), p2wsh);
 
     // Test data are taken from the second output of
     // 2ccb3a1f745eb4eefcf29391460250adda5fab78aaddb902d25d3cd97d9d8e61 transaction
     let data = hex!("aa21a9ed20280f53f2d21663cac89e6bd2ad19edbabb048cda08e73ed19e9268d0afea2a");
-    let op_return = ScriptBuf::new_op_return(&data);
+    let op_return = ScriptBuf::new_op_return(data);
     assert!(op_return.is_op_return());
     assert_eq!(
         op_return.to_hex_string(),
@@ -312,9 +312,13 @@ fn scriptint_round_trip() {
     for &i in test_vectors.iter() {
         assert_eq!(Ok(i), read_scriptint(&build_scriptint(i)));
         assert_eq!(Ok(-i), read_scriptint(&build_scriptint(-i)));
+        assert_eq!(Ok(i), read_scriptint_non_minimal(&build_scriptint(i)));
+        assert_eq!(Ok(-i), read_scriptint_non_minimal(&build_scriptint(-i)));
     }
     assert!(read_scriptint(&build_scriptint(1 << 31)).is_err());
     assert!(read_scriptint(&build_scriptint(-(1 << 31))).is_err());
+    assert!(read_scriptint_non_minimal(&build_scriptint(1 << 31)).is_err());
+    assert!(read_scriptint_non_minimal(&build_scriptint(-(1 << 31))).is_err());
 }
 
 #[test]
@@ -323,6 +327,11 @@ fn non_minimal_scriptints() {
     assert_eq!(read_scriptint(&[0xff, 0x00]), Ok(0xff));
     assert_eq!(read_scriptint(&[0x8f, 0x00, 0x00]), Err(Error::NonMinimalPush));
     assert_eq!(read_scriptint(&[0x7f, 0x00]), Err(Error::NonMinimalPush));
+
+    assert_eq!(read_scriptint_non_minimal(&[0x80, 0x00]), Ok(0x80));
+    assert_eq!(read_scriptint_non_minimal(&[0xff, 0x00]), Ok(0xff));
+    assert_eq!(read_scriptint_non_minimal(&[0x8f, 0x00, 0x00]), Ok(0x8f));
+    assert_eq!(read_scriptint_non_minimal(&[0x7f, 0x00]), Ok(0x7f));
 }
 
 #[test]
@@ -365,6 +374,53 @@ fn op_return_test() {
         .unwrap()
         .is_op_return());
     assert!(!ScriptBuf::from_hex("").unwrap().is_op_return());
+}
+
+#[test]
+fn multisig() {
+    // First multisig? 1-of-2
+    // In block 164467, txid 60a20bd93aa49ab4b28d514ec10b06e1829ce6818ec06cd3aabd013ebcdc4bb1
+    assert!(
+        ScriptBuf::from_hex("514104cc71eb30d653c0c3163990c47b976f3fb3f37cccdcbedb169a1dfef58bbfbfaff7d8a473e7e2e6d317b87bafe8bde97e3cf8f065dec022b51d11fcdd0d348ac4410461cbdcc5409fb4b4d42b51d33381354d80e550078cb532a34bfa2fcfdeb7d76519aecc62770f5b0e4ef8551946d8a540911abe3e7854a26f39f58b25c15342af52ae")
+            .unwrap()
+            .is_multisig()
+    );
+    // 2-of-2
+    assert!(
+        ScriptBuf::from_hex("5221021c4ac2ecebc398e390e07f045aac5cc421f82f0739c1ce724d3d53964dc6537d21023a2e9155e0b62f76737605504819a2b4e5ce20653f6c397d7a178ae42ba702f452ae")
+            .unwrap()
+            .is_multisig()
+    );
+
+    // Extra opcode after OP_CHECKMULTISIG
+    assert!(
+        !ScriptBuf::from_hex("5221021c4ac2ecebc398e390e07f045aac5cc421f82f0739c1ce724d3d53964dc6537d21023a2e9155e0b62f76737605504819a2b4e5ce20653f6c397d7a178ae42ba702f452ae52")
+            .unwrap()
+            .is_multisig()
+    );
+    // Required sigs > num pubkeys
+    assert!(
+        !ScriptBuf::from_hex("5321021c4ac2ecebc398e390e07f045aac5cc421f82f0739c1ce724d3d53964dc6537d21023a2e9155e0b62f76737605504819a2b4e5ce20653f6c397d7a178ae42ba702f452ae")
+            .unwrap()
+            .is_multisig()
+    );
+    // Num pubkeys != pushnum
+    assert!(
+        !ScriptBuf::from_hex("5221021c4ac2ecebc398e390e07f045aac5cc421f82f0739c1ce724d3d53964dc6537d21023a2e9155e0b62f76737605504819a2b4e5ce20653f6c397d7a178ae42ba702f453ae")
+            .unwrap()
+            .is_multisig()
+    );
+
+    // Taproot hash from another test
+    assert!(!ScriptBuf::from_hex(
+        "20d85a959b0290bf19bb89ed43c916be835475d013da4b362117393e25a48229b8ac"
+    )
+    .unwrap()
+    .is_multisig());
+    // OP_RETURN from another test
+    assert!(!ScriptBuf::from_hex("6aa9149eb21980dc9d413d8eac27314938b9da920ee53e87")
+        .unwrap()
+        .is_multisig());
 }
 
 #[test]
@@ -469,8 +525,8 @@ fn p2sh_p2wsh_conversion() {
     let expected_witout =
         ScriptBuf::from_hex("0020b95237b48faaa69eb078e1170be3b5cbb3fddf16d0a991e14ad274f7b33a4f64")
             .unwrap();
-    assert!(redeem_script.to_v0_p2wsh().is_v0_p2wsh());
-    assert_eq!(redeem_script.to_v0_p2wsh(), expected_witout);
+    assert!(redeem_script.to_p2wsh().is_p2wsh());
+    assert_eq!(redeem_script.to_p2wsh(), expected_witout);
 
     // p2sh
     let redeem_script = ScriptBuf::from_hex("0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8").unwrap();
@@ -487,9 +543,9 @@ fn p2sh_p2wsh_conversion() {
     let expected_out =
         ScriptBuf::from_hex("a914f386c2ba255cc56d20cfa6ea8b062f8b5994551887").unwrap();
     assert!(redeem_script.to_p2sh().is_p2sh());
-    assert!(redeem_script.to_p2sh().to_v0_p2wsh().is_v0_p2wsh());
-    assert_eq!(redeem_script.to_v0_p2wsh(), expected_witout);
-    assert_eq!(redeem_script.to_v0_p2wsh().to_p2sh(), expected_out);
+    assert!(redeem_script.to_p2sh().to_p2wsh().is_p2wsh());
+    assert_eq!(redeem_script.to_p2wsh(), expected_witout);
+    assert_eq!(redeem_script.to_p2wsh().to_p2sh(), expected_out);
 }
 
 macro_rules! unwrap_all {
@@ -592,7 +648,7 @@ fn defult_dust_value_tests() {
     // Check that our dust_value() calculator correctly calculates the dust limit on common
     // well-known scriptPubKey types.
     let script_p2wpkh = Builder::new().push_int(0).push_slice([42; 20]).into_script();
-    assert!(script_p2wpkh.is_v0_p2wpkh());
+    assert!(script_p2wpkh.is_p2wpkh());
     assert_eq!(script_p2wpkh.dust_value(), crate::Amount::from_sat(294));
 
     let script_p2pkh = Builder::new()
@@ -616,7 +672,7 @@ fn test_script_get_sigop_count() {
             .push_opcode(OP_EQUAL)
             .into_script()
             .count_sigops(),
-        Ok(0)
+        0
     );
     assert_eq!(
         Builder::new()
@@ -627,7 +683,7 @@ fn test_script_get_sigop_count() {
             .push_opcode(OP_CHECKSIG)
             .into_script()
             .count_sigops(),
-        Ok(1)
+        1
     );
     assert_eq!(
         Builder::new()
@@ -639,7 +695,7 @@ fn test_script_get_sigop_count() {
             .push_opcode(OP_PUSHNUM_1)
             .into_script()
             .count_sigops(),
-        Ok(1)
+        1
     );
     let multi = Builder::new()
         .push_opcode(OP_PUSHNUM_1)
@@ -649,8 +705,8 @@ fn test_script_get_sigop_count() {
         .push_opcode(OP_PUSHNUM_3)
         .push_opcode(OP_CHECKMULTISIG)
         .into_script();
-    assert_eq!(multi.count_sigops(), Ok(3));
-    assert_eq!(multi.count_sigops_legacy(), Ok(20));
+    assert_eq!(multi.count_sigops(), 3);
+    assert_eq!(multi.count_sigops_legacy(), 20);
     let multi_verify = Builder::new()
         .push_opcode(OP_PUSHNUM_1)
         .push_slice([3; 33])
@@ -660,8 +716,8 @@ fn test_script_get_sigop_count() {
         .push_opcode(OP_CHECKMULTISIGVERIFY)
         .push_opcode(OP_PUSHNUM_1)
         .into_script();
-    assert_eq!(multi_verify.count_sigops(), Ok(3));
-    assert_eq!(multi_verify.count_sigops_legacy(), Ok(20));
+    assert_eq!(multi_verify.count_sigops(), 3);
+    assert_eq!(multi_verify.count_sigops_legacy(), 20);
     let multi_nopushnum_pushdata = Builder::new()
         .push_opcode(OP_PUSHNUM_1)
         .push_slice([3; 33])
@@ -669,8 +725,8 @@ fn test_script_get_sigop_count() {
         .push_slice([3; 33])
         .push_opcode(OP_CHECKMULTISIG)
         .into_script();
-    assert_eq!(multi_nopushnum_pushdata.count_sigops(), Ok(20));
-    assert_eq!(multi_nopushnum_pushdata.count_sigops_legacy(), Ok(20));
+    assert_eq!(multi_nopushnum_pushdata.count_sigops(), 20);
+    assert_eq!(multi_nopushnum_pushdata.count_sigops_legacy(), 20);
     let multi_nopushnum_op = Builder::new()
         .push_opcode(OP_PUSHNUM_1)
         .push_slice([3; 33])
@@ -678,8 +734,8 @@ fn test_script_get_sigop_count() {
         .push_opcode(OP_DROP)
         .push_opcode(OP_CHECKMULTISIG)
         .into_script();
-    assert_eq!(multi_nopushnum_op.count_sigops(), Ok(20));
-    assert_eq!(multi_nopushnum_op.count_sigops_legacy(), Ok(20));
+    assert_eq!(multi_nopushnum_op.count_sigops(), 20);
+    assert_eq!(multi_nopushnum_op.count_sigops_legacy(), 20);
 }
 
 #[test]
@@ -768,4 +824,50 @@ fn read_scriptbool_non_zero_is_true() {
 
     let v: Vec<u8> = vec![0x01, 0x00, 0x00, 0x80]; // With sign bit set.
     assert!(read_scriptbool(&v));
+}
+
+#[test]
+fn instruction_script_num_parse() {
+    let push_bytes = [
+        (PushBytesBuf::from([]), Some(0)),
+        (PushBytesBuf::from([0x00]), Some(0)),
+        (PushBytesBuf::from([0x01]), Some(1)),
+        // Check all the negative 1s
+        (PushBytesBuf::from([0x81]), Some(-1)),
+        (PushBytesBuf::from([0x01, 0x80]), Some(-1)),
+        (PushBytesBuf::from([0x01, 0x00, 0x80]), Some(-1)),
+        (PushBytesBuf::from([0x01, 0x00, 0x00, 0x80]), Some(-1)),
+        // Check all the negative 0s
+        (PushBytesBuf::from([0x80]), Some(0)),
+        (PushBytesBuf::from([0x00, 0x80]), Some(0)),
+        (PushBytesBuf::from([0x00, 0x00, 0x80]), Some(0)),
+        (PushBytesBuf::from([0x00, 0x00, 0x00, 0x80]), Some(0)),
+        // Too long
+        (PushBytesBuf::from([0x01, 0x00, 0x00, 0x00, 0x80]), None),
+        // Check the position of all the bytes
+        (PushBytesBuf::from([0xef, 0xbe, 0xad, 0x5e]), Some(0x5eadbeef)),
+        // Add negative
+        (PushBytesBuf::from([0xef, 0xbe, 0xad, 0xde]), Some(-0x5eadbeef)),
+    ];
+    let ops = [
+        (Instruction::Op(opcodes::all::OP_PUSHDATA4), None),
+        (Instruction::Op(opcodes::all::OP_PUSHNUM_NEG1), Some(-1)),
+        (Instruction::Op(opcodes::all::OP_RESERVED), None),
+        (Instruction::Op(opcodes::all::OP_PUSHNUM_1), Some(1)),
+        (Instruction::Op(opcodes::all::OP_PUSHNUM_16), Some(16)),
+        (Instruction::Op(opcodes::all::OP_NOP), None),
+    ];
+    for (input, expected) in &push_bytes {
+        assert_eq!(Instruction::PushBytes(input).script_num(), *expected);
+    }
+    for (input, expected) in &ops {
+        assert_eq!(input.script_num(), *expected);
+    }
+
+    // script_num() is predicated on OP_0/OP_FALSE (0x00)
+    // being treated as an empty PushBytes
+    assert_eq!(
+        Script::from_bytes(&[0x00]).instructions().next(),
+        Some(Ok(Instruction::PushBytes(PushBytes::empty()))),
+    );
 }
