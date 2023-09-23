@@ -49,124 +49,9 @@ use crate::prelude::*;
 use crate::script::PushBytesBuf;
 use crate::taproot::TapNodeHash;
 
-<<<<<<<< HEAD:groestlcoin/src/address.rs
-/// Address error.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[non_exhaustive]
-pub enum Error {
-    /// Base58 encoding error.
-    Base58(base58::Error),
-    /// Bech32 encoding error.
-    Bech32(bech32::Error),
-    /// The bech32 payload was empty.
-    EmptyBech32Payload,
-    /// The wrong checksum algorithm was used. See BIP-0350.
-    InvalidBech32Variant {
-        /// Bech32 variant that is required by the used Witness version.
-        expected: bech32::Variant,
-        /// The actual Bech32 variant encoded in the address representation.
-        found: bech32::Variant,
-    },
-    /// A witness version construction error.
-    WitnessVersion(witness_version::TryFromError),
-    /// A witness program error.
-    WitnessProgram(witness_program::Error),
-    /// An uncompressed pubkey was used where it is not allowed.
-    UncompressedPubkey,
-    /// Address size more than 520 bytes is not allowed.
-    ExcessiveScriptSize,
-    /// Script is not a p2pkh, p2sh or witness program.
-    UnrecognizedScript,
-    /// Address type is either invalid or not supported in rust-groestlcoin.
-    UnknownAddressType(String),
-    /// Address's network differs from required one.
-    NetworkValidation {
-        /// Network that was required.
-        required: Network,
-        /// Network on which the address was found to be valid.
-        found: Network,
-        /// The address itself
-        address: Address<NetworkUnchecked>,
-    },
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Error::Base58(ref e) => write_err!(f, "base58 address encoding error"; e),
-            Error::Bech32(ref e) => write_err!(f, "bech32 address encoding error"; e),
-            Error::EmptyBech32Payload => write!(f, "the bech32 payload was empty"),
-            Error::InvalidBech32Variant { expected, found } => write!(
-                f,
-                "invalid bech32 checksum variant found {:?} when {:?} was expected",
-                found, expected
-            ),
-            Error::WitnessVersion(ref e) => write_err!(f, "witness version construction error"; e),
-            Error::WitnessProgram(ref e) => write_err!(f, "witness program error"; e),
-            Error::UncompressedPubkey =>
-                write!(f, "an uncompressed pubkey was used where it is not allowed"),
-            Error::ExcessiveScriptSize => write!(f, "script size exceed 520 bytes"),
-            Error::UnrecognizedScript =>
-                write!(f, "script is not a p2pkh, p2sh or witness program"),
-            Error::UnknownAddressType(ref s) => write!(
-                f,
-                "unknown address type: '{}' is either invalid or not supported in rust-groestlcoin",
-                s
-            ),
-            Error::NetworkValidation { required, found, ref address } => {
-                write!(f, "address ")?;
-                address.fmt_internal(f)?; // Using fmt_internal in order to remove the "Address<NetworkUnchecked>(..)" wrapper
-                write!(
-                    f,
-                    " belongs to network {} which is different from required {}",
-                    found, required
-                )
-            }
-        }
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        use self::Error::*;
-
-        match self {
-            Base58(e) => Some(e),
-            Bech32(e) => Some(e),
-            WitnessVersion(e) => Some(e),
-            WitnessProgram(e) => Some(e),
-            EmptyBech32Payload
-            | InvalidBech32Variant { .. }
-            | UncompressedPubkey
-            | ExcessiveScriptSize
-            | UnrecognizedScript
-            | UnknownAddressType(_)
-            | NetworkValidation { .. } => None,
-        }
-    }
-}
-
-impl From<base58::Error> for Error {
-    fn from(e: base58::Error) -> Error { Error::Base58(e) }
-}
-
-impl From<bech32::Error> for Error {
-    fn from(e: bech32::Error) -> Error { Error::Bech32(e) }
-}
-
-impl From<witness_version::TryFromError> for Error {
-    fn from(e: witness_version::TryFromError) -> Error { Error::WitnessVersion(e) }
-}
-
-impl From<witness_program::Error> for Error {
-    fn from(e: witness_program::Error) -> Error { Error::WitnessProgram(e) }
-}
-========
 /// Error code for the address module.
 pub mod error;
 pub use self::error::{Error, ParseError, UnknownAddressTypeError};
->>>>>>>> upstream/master:bitcoin/src/address/mod.rs
 
 /// The different types of addresses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -353,13 +238,8 @@ pub struct AddressEncoding<'a> {
     pub p2pkh_prefix: u8,
     /// base58 version byte for p2sh payloads (e.g. 0x05 for "3..." addresses).
     pub p2sh_prefix: u8,
-<<<<<<<< HEAD:groestlcoin/src/address.rs
-    /// hrp used in bech32 addresss (e.g. "grs" for "grs1..." addresses).
-    pub bech32_hrp: &'a str,
-========
     /// The bech32 human-readable part.
     pub hrp: Hrp,
->>>>>>>> upstream/master:bitcoin/src/address/mod.rs
 }
 
 /// Formats bech32 as upper case if alternate formatting is chosen (`{:#}`).
@@ -613,17 +493,10 @@ impl<V: NetworkValidation> Address<V> {
             Network::Groestlcoin => SCRIPT_ADDRESS_PREFIX_MAIN,
             Network::Testnet | Network::Signet | Network::Regtest => SCRIPT_ADDRESS_PREFIX_TEST,
         };
-<<<<<<<< HEAD:groestlcoin/src/address.rs
-        let bech32_hrp = match self.network() {
-            Network::Groestlcoin => "grs",
-            Network::Testnet | Network::Signet => "tgrs",
-            Network::Regtest => "grsrt",
-========
         let hrp = match self.network() {
-            Network::Bitcoin => hrp::BC,
-            Network::Testnet | Network::Signet => hrp::TB,
-            Network::Regtest => hrp::BCRT,
->>>>>>>> upstream/master:bitcoin/src/address/mod.rs
+            Network::Groestlcoin => hrp::GRS,
+            Network::Testnet | Network::Signet => hrp::TGRS,
+            Network::Regtest => hrp::GRSRT,
         };
         let encoding = AddressEncoding { payload: self.payload(), p2pkh_prefix, p2sh_prefix, hrp };
 
@@ -1182,87 +1055,6 @@ mod tests {
     }
 
     #[test]
-<<<<<<<< HEAD:groestlcoin/src/address.rs
-    fn test_bip173_350_vectors() {
-        // Test vectors valid under both BIP-173 and BIP-350
-        let valid_vectors = [
-            ("GRS1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7K3K4SJ5", "0014751e76e8199196d454941c45d1b3a323f1433bd6"),
-            // ("tgrs1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3quvjfuq", "00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262"),
-            // ("grs1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kt5nd6y", "5128751e76e8199196d454941c45d1b3a323f1433bd6751e76e8199196d454941c45d1b3a323f1433bd6"),
-            // ("GRS1SW50QGDZ25J", "6002751e"),
-            // ("grs1zw508d6qejxtdg4y5r3zarvaryvaxxpcs", "5210751e76e8199196d454941c45d1b3a323"),
-            // ("tgrs1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsess668a6", "0020000000c4a5cad46221b2a187905e5266362b99d5e91c6ce24d165dab93e86433"),
-            // ("tgrs1pqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvses6d6w9x", "5120000000c4a5cad46221b2a187905e5266362b99d5e91c6ce24d165dab93e86433"),
-            // ("grs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqddt7at", "512079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798")
-        ];
-        for vector in &valid_vectors {
-            let addr: Address = vector.0.parse::<Address<_>>().unwrap().assume_checked();
-            assert_eq!(&addr.script_pubkey().to_hex_string(), vector.1);
-            roundtrips(&addr);
-        }
-
-        let invalid_vectors = [
-            // 1. BIP-350 test vectors
-            // Invalid human-readable part
-            "frs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq5zuyut",
-            // Invalid checksums (Bech32 instead of Bech32m):
-            "grs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqh2y7hd",
-            "tgrs1z0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqglt7rf",
-            "GRS1S0XLXVLHEMJA6C4DQV22UAPCTQUPFHLXM9H8Z3K2E72Q4K9HCZ7VQ54WELL",
-            "grs1qw508d6qejxtdg4y5r3zarvary0c5xw7kemeawh",
-            "tgrs1q0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq24jc47",
-            // Invalid character in checksum
-            "grs1p38j9r5y49hruaue7wxjce0updqjuyyx0kh56v8s25huc6995vvpql3jow4",
-            // Invalid witness version
-            "GRS130XLXVLHEMJA6C4DQV22UAPCTQUPFHLXM9H8Z3K2E72Q4K9HCZ7VQ7ZWS8R",
-            // Invalid program length (1 byte)
-            "grs1pw5dgrnzv",
-            // Invalid program length (41 bytes)
-            "grs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7v8n0nx0muaewav253zgeav",
-            // Invalid program length for witness version 0 (per BIP141)
-            "GRS1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P",
-            // Mixed case
-            "tgrs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq47Zagq",
-            // zero padding of more than 4 bits
-            "grs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7v07qwwzcrf",
-            // Non-zero padding in 8-to-5 conversion
-            "tgrs1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vpggkg4j",
-            // Empty data section
-            "grs1gmk9yu",
-            // 2. BIP-173 test vectors
-            // Invalid human-readable part
-            "frs1qw508d6qejxtdg4y5r3zarvary0c5xw7kg3g4ty",
-            // Invalid checksum
-            "grs1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5",
-            // Invalid witness version
-            "GRS13W508D6QEJXTDG4Y5R3ZARVARY0C5XW7KN40WF2",
-            // Invalid program length
-            "grs1rw5uspcuh",
-            // Invalid program length
-            "grs10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw5rljs90",
-            // Invalid program length for witness version 0 (per BIP141)
-            "GRS1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P",
-            // Mixed case
-            "tgrs1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7",
-            // zero padding of more than 4 bits
-            "grs1zw508d6qejxtdg4y5r3zarvaryvqyzf3du",
-            // Non-zero padding in 8-to-5 conversion
-            "tgrs1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv",
-            // Final test for empty data section is the same as above in BIP-350
-
-            // 3. BIP-173 valid test vectors obsolete by BIP-350
-            "grs1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx",
-            "GRS1SW50QA3JX3S",
-            "grs1zw508d6qejxtdg4y5r3zarvaryvg6kdaj",
-        ];
-        for vector in &invalid_vectors {
-            assert!(vector.parse::<Address<_>>().is_err());
-        }
-    }
-
-    #[test]
-========
->>>>>>>> upstream/master:bitcoin/src/address/mod.rs
     #[cfg(feature = "serde")]
     fn test_json_serialize() {
         use serde_json;
@@ -1599,14 +1391,14 @@ mod tests {
     #[test] #[ignore]
     fn test_matches_script_pubkey() {
         let addresses = [
-            "1QJVDzdqb1VpbDK7uDeyVXy9mR27CJiyhY",
-            "1J4LVanjHMu3JkXbVrahNuQCTGCRRgfWWx",
-            "33iFwdLuRpW1uK1RTRqsoi8rR4NpDzk66k",
-            "3QBRmWNqqBGme9er7fMkGqtZtp4gjMFxhE",
+            "FtUCfuND9WBN2pLEnKeSx3mURaJ4iQdado",
+            "FnE3wVX6qraakMYiNxaAqRCX7RUP5q7ba2",
+            "33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32",
+            "3QBRmWNqqBGme9er7fMkGqtZtp4gn5WwDf",
             "bc1zw508d6qejxtdg4y5r3zarvaryvaxxpcs",
-            "bc1qvzvkjn4q3nszqxrv3nraga2r822xjty3ykvkuw",
-            "bc1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr",
-            "bc1pgllnmtxs0g058qz7c6qgaqq4qknwrqj9z7rqn9e2dzhmcfmhlu4sfadf5e",
+            "grs1qvzvkjn4q3nszqxrv3nraga2r822xjty3e8sh90",
+            "grs1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqezj0h8",
+            "grs1pgllnmtxs0g058qz7c6qgaqq4qknwrqj9z7rqn9e2dzhmcfmhlu4sxxj9ma",
         ];
         for addr in &addresses {
             let addr = Address::from_str(addr).unwrap().require_network(Network::Groestlcoin).unwrap();
