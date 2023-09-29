@@ -188,7 +188,6 @@ version = "0.13.0"
 dependencies = [
  "core2",
  "groestl",
- "groestlcoin-internals",
  "hex-conservative",
  "schemars",
  "serde",
