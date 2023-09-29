@@ -9,10 +9,9 @@ use core::convert::TryInto;
 use core::fmt;
 use core::ops::Index;
 
-use secp256k1::ecdsa;
-
 use crate::consensus::encode::{Error, MAX_VEC_SIZE};
 use crate::consensus::{Decodable, Encodable, WriteExt};
+use crate::crypto::ecdsa;
 use crate::io::{self, Read, Write};
 use crate::prelude::*;
 use crate::sighash::EcdsaSighashType;
@@ -150,7 +149,7 @@ impl Decodable for Witness {
 
             for i in 0..witness_elements {
                 let element_size_varint = VarInt::consensus_decode(r)?;
-                let element_size_varint_len = element_size_varint.len();
+                let element_size_varint_len = element_size_varint.size();
                 let element_size = element_size_varint.0 as usize;
                 let required_len = cursor
                     .checked_add(element_size)
@@ -229,7 +228,7 @@ impl Encodable for Witness {
         let indices_size = self.witness_elements * 4;
         let content_len = content_with_indices_len - indices_size;
         w.emit_slice(&self.content[..content_len])?;
-        Ok(content_len + len.len())
+        Ok(content_len + len.size())
     }
 }
 
@@ -237,13 +236,26 @@ impl Witness {
     /// Creates a new empty [`Witness`].
     pub fn new() -> Self { Witness::default() }
 
+    /// Creates a witness required to spend a P2WPKH output.
+    ///
+    /// The witness will be made up of the DER encoded signature + sighash_type followed by the
+    /// serialized public key. Also useful for spending a P2SH-P2WPKH output.
+    ///
+    /// It is expected that `pubkey` is related to the secret key used to create `signature`.
+    pub fn p2wpkh(signature: &ecdsa::Signature, pubkey: &secp256k1::PublicKey) -> Witness {
+        let mut witness = Witness::new();
+        witness.push_slice(&signature.serialize());
+        witness.push_slice(&pubkey.serialize());
+        witness
+    }
+
     /// Creates a [`Witness`] object from a slice of bytes slices where each slice is a witness item.
     pub fn from_slice<T: AsRef<[u8]>>(slice: &[T]) -> Self {
         let witness_elements = slice.len();
         let index_size = witness_elements * 4;
         let content_size = slice
             .iter()
-            .map(|elem| elem.as_ref().len() + VarInt::from(elem.as_ref().len()).len())
+            .map(|elem| elem.as_ref().len() + VarInt::from(elem.as_ref().len()).size())
             .sum();
 
         let mut content = vec![0u8; content_size + index_size];
@@ -252,9 +264,9 @@ impl Witness {
             encode_cursor(&mut content, content_size, i, cursor);
             let elem_len_varint = VarInt::from(elem.as_ref().len());
             elem_len_varint
-                .consensus_encode(&mut &mut content[cursor..cursor + elem_len_varint.len()])
+                .consensus_encode(&mut &mut content[cursor..cursor + elem_len_varint.size()])
                 .expect("writers on vec don't errors, space granted by content_size");
-            cursor += elem_len_varint.len();
+            cursor += elem_len_varint.size();
             content[cursor..cursor + elem.as_ref().len()].copy_from_slice(elem.as_ref());
             cursor += elem.as_ref().len();
         }
@@ -277,9 +289,22 @@ impl Witness {
     pub fn len(&self) -> usize { self.witness_elements }
 
     /// Returns the bytes required when this Witness is consensus encoded.
-    pub fn serialized_len(&self) -> usize {
-        self.iter().map(|el| VarInt::from(el.len()).len() + el.len()).sum::<usize>()
-            + VarInt::from(self.witness_elements).len()
+    #[deprecated(since = "0.31.0", note = "use size instead")]
+    pub fn serialized_len(&self) -> usize { self.size() }
+
+    /// Returns the number of bytes this witness contributes to a transactions total size.
+    pub fn size(&self) -> usize {
+        let mut size: usize = 0;
+
+        size += VarInt::from(self.witness_elements).size();
+        size += self
+            .iter()
+            .map(|witness_element| {
+                VarInt::from(witness_element.len()).size() + witness_element.len()
+            })
+            .sum::<usize>();
+
+        size
     }
 
     /// Clear the witness.
@@ -300,7 +325,7 @@ impl Witness {
         let previous_content_end = self.indices_start;
         let element_len_varint = VarInt::from(new_element.len());
         let current_content_len = self.content.len();
-        let new_item_total_len = element_len_varint.len() + new_element.len();
+        let new_item_total_len = element_len_varint.size() + new_element.len();
         self.content.resize(current_content_len + new_item_total_len + 4, 0);
 
         self.content[previous_content_end..].rotate_right(new_item_total_len);
@@ -312,7 +337,7 @@ impl Witness {
             previous_content_end,
         );
 
-        let end_varint = previous_content_end + element_len_varint.len();
+        let end_varint = previous_content_end + element_len_varint.size();
         element_len_varint
             .consensus_encode(&mut &mut self.content[previous_content_end..end_varint])
             .expect("writers on vec don't error, space granted through previous resize");
@@ -321,9 +346,10 @@ impl Witness {
 
     /// Pushes a DER-encoded ECDSA signature with a signature hash type as a new element on the
     /// witness, requires an allocation.
+    #[deprecated(since = "0.30.0", note = "use push_ecdsa_signature instead")]
     pub fn push_bitcoin_signature(
         &mut self,
-        signature: &ecdsa::SerializedSignature,
+        signature: &secp256k1::ecdsa::SerializedSignature,
         hash_type: EcdsaSighashType,
     ) {
         // Note that a maximal length ECDSA signature is 72 bytes, plus the sighash type makes 73
@@ -333,9 +359,16 @@ impl Witness {
         self.push(&sig[..signature.len() + 1]);
     }
 
+    /// Pushes, as a new element on the witness, an ECDSA signature.
+    ///
+    /// Pushes the DER encoded signature + sighash_type, requires an allocation.
+    pub fn push_ecdsa_signature(&mut self, signature: &ecdsa::Signature) {
+        self.push_slice(&signature.serialize())
+    }
+
     fn element_at(&self, index: usize) -> Option<&[u8]> {
         let varint = VarInt::consensus_decode(&mut &self.content[index..]).ok()?;
-        let start = index + varint.len();
+        let start = index + varint.size();
         Some(&self.content[start..start + varint.0 as usize])
     }
 
@@ -404,7 +437,7 @@ impl<'a> Iterator for Iter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let index = decode_cursor(self.inner, self.indices_start, self.current_index)?;
         let varint = VarInt::consensus_decode(&mut &self.inner[index..]).ok()?;
-        let start = index + varint.len();
+        let start = index + varint.size();
         let end = start + varint.0 as usize;
         let slice = &self.inner[start..end];
         self.current_index += 1;
@@ -525,8 +558,6 @@ impl From<Vec<&[u8]>> for Witness {
 
 #[cfg(test)]
 mod test {
-    use secp256k1::ecdsa;
-
     use super::*;
     use crate::consensus::{deserialize, serialize};
     use crate::internal_macros::hex;
@@ -624,9 +655,10 @@ mod test {
         // The very first signature in block 734,958
         let sig_bytes =
             hex!("304402207c800d698f4b0298c5aac830b822f011bb02df41eb114ade9a6702f364d5e39c0220366900d2a60cab903e77ef7dd415d46509b1f78ac78906e3296f495aa1b1b541");
-        let sig = ecdsa::Signature::from_der(&sig_bytes).unwrap();
+        let sig = secp256k1::ecdsa::Signature::from_der(&sig_bytes).unwrap();
         let mut witness = Witness::default();
-        witness.push_bitcoin_signature(&sig.serialize_der(), EcdsaSighashType::All);
+        let signature = ecdsa::Signature { sig, hash_ty: EcdsaSighashType::All };
+        witness.push_ecdsa_signature(&signature);
         let expected_witness = vec![hex!(
             "304402207c800d698f4b0298c5aac830b822f011bb02df41eb114ade9a6702f364d5e39c0220366900d2a60cab903e77ef7dd415d46509b1f78ac78906e3296f495aa1b1b54101")
             ];
