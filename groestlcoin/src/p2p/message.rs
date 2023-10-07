@@ -129,6 +129,7 @@ impl Decodable for CommandString {
 ///
 /// This is currently returned for command strings longer than 12.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct CommandStringError {
     cow: Cow<'static, str>,
 }
@@ -144,7 +145,10 @@ impl fmt::Display for CommandStringError {
     }
 }
 
-crate::error::impl_std_error!(CommandStringError);
+#[cfg(feature = "std")]
+impl std::error::Error for CommandStringError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> { None }
+}
 
 /// A Network message
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -541,6 +545,7 @@ mod test {
     use hashes::groestld;
     use hashes::sha256d;
     use hashes::Hash as HashTrait;
+    use hex::test_hex_unwrap as hex;
 
     use super::message_network::{Reject, RejectReason, VersionMessage};
     use super::{CommandString, NetworkMessage, RawNetworkMessage, *};
@@ -549,7 +554,6 @@ mod test {
     use crate::blockdata::script::ScriptBuf;
     use crate::blockdata::transaction::Transaction;
     use crate::consensus::encode::{deserialize, deserialize_partial, serialize};
-    use crate::internal_macros::hex;
     use crate::network::Network;
     use crate::p2p::address::{AddrV2, AddrV2Message, Address};
     use crate::p2p::message_blockdata::{GetBlocksMessage, GetHeadersMessage, Inventory};

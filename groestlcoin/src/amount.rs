@@ -158,16 +158,17 @@ pub enum ParseAmountError {
 
 impl fmt::Display for ParseAmountError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use ParseAmountError::*;
+
         match *self {
-            ParseAmountError::Negative => f.write_str("amount is negative"),
-            ParseAmountError::TooBig => f.write_str("amount is too big"),
-            ParseAmountError::TooPrecise => f.write_str("amount has a too high precision"),
-            ParseAmountError::InvalidFormat => f.write_str("invalid number format"),
-            ParseAmountError::InputTooLarge => f.write_str("input string was too large"),
-            ParseAmountError::InvalidCharacter(c) => write!(f, "invalid character in input: {}", c),
-            ParseAmountError::UnknownDenomination(ref d) =>
-                write!(f, "unknown denomination: {}", d),
-            ParseAmountError::PossiblyConfusingDenomination(ref d) => {
+            Negative => f.write_str("amount is negative"),
+            TooBig => f.write_str("amount is too big"),
+            TooPrecise => f.write_str("amount has a too high precision"),
+            InvalidFormat => f.write_str("invalid number format"),
+            InputTooLarge => f.write_str("input string was too large"),
+            InvalidCharacter(c) => write!(f, "invalid character in input: {}", c),
+            UnknownDenomination(ref d) => write!(f, "unknown denomination: {}", d),
+            PossiblyConfusingDenomination(ref d) => {
                 let (letter, upper, lower) = match d.chars().next() {
                     Some('M') => ('M', "Mega", "milli"),
                     Some('P') => ('P', "Peta", "pico"),
@@ -183,7 +184,7 @@ impl fmt::Display for ParseAmountError {
 #[cfg(feature = "std")]
 impl std::error::Error for ParseAmountError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        use self::ParseAmountError::*;
+        use ParseAmountError::*;
 
         match *self {
             Negative
@@ -241,7 +242,7 @@ fn parse_signed_to_satoshi(
             let last_n = unsigned_abs(precision_diff).into();
             if is_too_precise(s, last_n) {
                 match s.parse::<i64>() {
-                    Ok(v) if v == 0_i64 => return Ok((is_negative, 0)),
+                    Ok(0) => return Ok((is_negative, 0)),
                     _ => return Err(ParseAmountError::TooPrecise),
                 }
             }

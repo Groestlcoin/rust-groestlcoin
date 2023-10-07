@@ -179,6 +179,7 @@ impl Transaction {
 // 2. We want to implement `std::error::Error` if the "std" feature is enabled in `rust-groestlcoin` but
 //    not in `groestlcoinconsensus`.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct BitcoinconsensusError(groestlcoinconsensus::Error);
 
 impl fmt::Display for BitcoinconsensusError {
@@ -203,6 +204,7 @@ impl From<groestlcoinconsensus::Error> for BitcoinconsensusError {
 
 /// An error during transaction validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum TxVerifyError {
     /// Error validating the script with groestlcoinconsensus library.
     ScriptVerification(BitcoinconsensusError),

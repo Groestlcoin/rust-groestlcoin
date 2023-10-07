@@ -8,8 +8,6 @@ MSRV="1\.48\.0"
 
 # Test pinned versions.
 if cargo --version | grep ${MSRV}; then
-    cargo update -p syn:2.0.37 --precise 2.0.32
-
     cargo update -p serde_json --precise 1.0.99
     cargo update -p serde --precise 1.0.156
     cargo update -p quote --precise 1.0.30
@@ -21,6 +19,8 @@ if cargo --version | grep ${MSRV}; then
     cargo update -p schemars_derive --precise 0.8.12
     # memcrh 2.6.0 uses edition 2021
     cargo update -p memchr --precise 2.5.0
+    # byteorder 1.5.0 uses edition 2021
+    cargo update -p byteorder --precise 1.4.3
 
     cargo update -p groestlcoin:0.30.0 --precise 0.30.0
 

@@ -70,9 +70,11 @@ pub enum Error {
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        use Error::*;
+
         match *self {
-            Error::UtxoMissing(ref coin) => write!(f, "unresolved UTXO {}", coin),
-            Error::Io(ref e) => write_err!(f, "IO error"; e),
+            UtxoMissing(ref coin) => write!(f, "unresolved UTXO {}", coin),
+            Io(ref e) => write_err!(f, "IO error"; e),
         }
     }
 }
@@ -80,11 +82,11 @@ impl Display for Error {
 #[cfg(feature = "std")]
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        use self::Error::*;
+        use Error::*;
 
-        match self {
+        match *self {
             UtxoMissing(_) => None,
-            Io(e) => Some(e),
+            Io(ref e) => Some(e),
         }
     }
 }
@@ -554,12 +556,12 @@ impl<'a, W: io::Write> BitStreamWriter<'a, W> {
 mod test {
     use std::collections::HashMap;
 
+    use hex::test_hex_unwrap as hex;
     use serde_json::Value;
 
     use super::*;
     use crate::consensus::encode::deserialize;
     use crate::hash_types::BlockHash;
-    use crate::internal_macros::hex;
     use crate::ScriptBuf;
 
     #[test] #[ignore]

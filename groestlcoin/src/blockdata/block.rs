@@ -386,13 +386,15 @@ pub enum Bip34Error {
 
 impl fmt::Display for Bip34Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use Bip34Error::*;
+
         match *self {
-            Bip34Error::Unsupported => write!(f, "block doesn't support BIP34"),
-            Bip34Error::NotPresent => write!(f, "BIP34 push not present in block's coinbase"),
-            Bip34Error::UnexpectedPush(ref p) => {
+            Unsupported => write!(f, "block doesn't support BIP34"),
+            NotPresent => write!(f, "BIP34 push not present in block's coinbase"),
+            UnexpectedPush(ref p) => {
                 write!(f, "unexpected byte push of > 8 bytes: {:?}", p)
             }
-            Bip34Error::NegativeHeight => write!(f, "negative BIP34 height"),
+            NegativeHeight => write!(f, "negative BIP34 height"),
         }
     }
 }
@@ -400,16 +402,17 @@ impl fmt::Display for Bip34Error {
 #[cfg(feature = "std")]
 impl std::error::Error for Bip34Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        use self::Bip34Error::*;
+        use Bip34Error::*;
 
-        match self {
+        match *self {
             Unsupported | NotPresent | UnexpectedPush(_) | NegativeHeight => None,
         }
     }
 }
 
 /// A block validation error.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ValidationError {
     /// The header hash is not below the target.
     BadProofOfWork,
@@ -441,11 +444,10 @@ impl std::error::Error for ValidationError {
 
 #[cfg(test)]
 mod tests {
-    use hex::FromHex;
+    use hex::{test_hex_unwrap as hex, FromHex};
 
     use super::*;
     use crate::consensus::encode::{deserialize, serialize};
-    use crate::internal_macros::hex;
 
     #[test]
     fn test_coinbase_and_bip34() {

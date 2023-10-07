@@ -509,7 +509,7 @@ pub enum MerkleBlockError {
 
 impl fmt::Display for MerkleBlockError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::MerkleBlockError::*;
+        use MerkleBlockError::*;
 
         match *self {
             MerkleRootMismatch => write!(f, "merkle header root doesn't match to the root calculated from the partial merkle tree"),
@@ -529,7 +529,7 @@ impl fmt::Display for MerkleBlockError {
 #[cfg(feature = "std")]
 impl std::error::Error for MerkleBlockError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        use self::MerkleBlockError::*;
+        use MerkleBlockError::*;
 
         match *self {
             MerkleRootMismatch | NoTransactions | TooManyTransactions | TooManyHashes
@@ -543,6 +543,7 @@ impl std::error::Error for MerkleBlockError {
 mod tests {
     #[cfg(feature = "rand-std")]
     use hashes::Hash;
+    use hex::test_hex_unwrap as hex;
     #[cfg(feature = "rand-std")]
     use secp256k1::rand::prelude::*;
 
@@ -550,7 +551,6 @@ mod tests {
     use crate::consensus::encode::{deserialize, serialize};
     #[cfg(feature = "rand-std")]
     use crate::hash_types::TxMerkleNode;
-    use crate::internal_macros::hex;
     use crate::{Block, Txid};
 
     #[cfg(feature = "rand-std")]
