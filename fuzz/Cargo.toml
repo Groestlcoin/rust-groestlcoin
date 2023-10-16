@@ -10,71 +10,75 @@ cargo-fuzz = true
 
 [dependencies]
 honggfuzz = { version = "0.5.55", default-features = false }
-groestlcoin = { version = "0.30.0", features = [ "serde" ] }
+groestlcoin = { version = "0.31.0-rc1", features = [ "serde" ] }
 
 serde = { version = "1.0.103", features = [ "derive" ] }
 serde_json = "1.0"
 serde_cbor = "0.9"
 
 [[bin]]
-name = "bitcoin_outpoint_string"
-path = "fuzz_targets/groestlcoin/outpoint_string.rs"
+name = "bitcoin_deserialize_address"
+path = "fuzz_targets/groestlcoin/deserialize_address.rs"
 
 [[bin]]
 name = "bitcoin_deserialize_amount"
 path = "fuzz_targets/groestlcoin/deserialize_amount.rs"
 
 [[bin]]
-name = "bitcoin_deserialize_transaction"
-path = "fuzz_targets/groestlcoin/deserialize_transaction.rs"
-
-[[bin]]
-name = "bitcoin_deser_net_msg"
-path = "fuzz_targets/groestlcoin/deser_net_msg.rs"
-
-[[bin]]
-name = "bitcoin_deserialize_address"
-path = "fuzz_targets/groestlcoin/deserialize_address.rs"
-
-[[bin]]
-name = "bitcoin_script_bytes_to_asm_fmt"
-path = "fuzz_targets/groestlcoin/script_bytes_to_asm_fmt.rs"
+name = "bitcoin_deserialize_block"
+path = "fuzz_targets/groestlcoin/deserialize_block.rs"
 
 [[bin]]
 name = "bitcoin_deserialize_prefilled_transaction"
 path = "fuzz_targets/groestlcoin/deserialize_prefilled_transaction.rs"
 
 [[bin]]
-name = "bitcoin_deserialize_witness"
-path = "fuzz_targets/groestlcoin/deserialize_witness.rs"
-
-[[bin]]
 name = "bitcoin_deserialize_psbt"
 path = "fuzz_targets/groestlcoin/deserialize_psbt.rs"
-
-[[bin]]
-name = "bitcoin_deserialize_block"
-path = "fuzz_targets/groestlcoin/deserialize_block.rs"
 
 [[bin]]
 name = "bitcoin_deserialize_script"
 path = "fuzz_targets/groestlcoin/deserialize_script.rs"
 
 [[bin]]
-name = "hashes_json"
-path = "fuzz_targets/hashes/json.rs"
+name = "bitcoin_deserialize_transaction"
+path = "fuzz_targets/groestlcoin/deserialize_transaction.rs"
+
+[[bin]]
+name = "bitcoin_deserialize_witness"
+path = "fuzz_targets/groestlcoin/deserialize_witness.rs"
+
+[[bin]]
+name = "bitcoin_deser_net_msg"
+path = "fuzz_targets/groestlcoin/deser_net_msg.rs"
+
+[[bin]]
+name = "bitcoin_outpoint_string"
+path = "fuzz_targets/groestlcoin/outpoint_string.rs"
+
+[[bin]]
+name = "bitcoin_script_bytes_to_asm_fmt"
+path = "fuzz_targets/groestlcoin/script_bytes_to_asm_fmt.rs"
 
 [[bin]]
 name = "hashes_cbor"
 path = "fuzz_targets/hashes/cbor.rs"
 
 [[bin]]
-name = "hashes_sha256"
-path = "fuzz_targets/hashes/sha256.rs"
+name = "hashes_json"
+path = "fuzz_targets/hashes/json.rs"
 
 [[bin]]
 name = "hashes_ripemd160"
 path = "fuzz_targets/hashes/ripemd160.rs"
+
+[[bin]]
+name = "hashes_sha1"
+path = "fuzz_targets/hashes/sha1.rs"
+
+[[bin]]
+name = "hashes_sha256"
+path = "fuzz_targets/hashes/sha256.rs"
 
 [[bin]]
 name = "hashes_sha512_256"
@@ -83,7 +87,3 @@ path = "fuzz_targets/hashes/sha512_256.rs"
 [[bin]]
 name = "hashes_sha512"
 path = "fuzz_targets/hashes/sha512.rs"
-
-[[bin]]
-name = "hashes_sha1"
-path = "fuzz_targets/hashes/sha1.rs"

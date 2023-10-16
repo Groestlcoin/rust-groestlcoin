@@ -1,6 +1,6 @@
 [package]
 name = "groestlcoin"
-version = "0.30.0"
+version = "0.31.0-rc1"
 authors = ["Groestlcoin Developers <groestlcoin@gmail.com>"]
 license = "CC0-1.0"
 repository = "https://github.com/Groestlcoin/rust-groestlcoin/"
@@ -38,7 +38,7 @@ internals = { package = "groestlcoin-internals", version = "0.2.0" }
 hex = { package = "hex-conservative", version = "0.1.1", default-features = false }
 bech32 = { git = "https://github.com/Groestlcoin/rust-bech32", default-features = false }
 hashes = { package = "groestlcoin_hashes", version = "0.13.0", default-features = false }
-secp256k1 = { version = "0.27.0", default-features = false } # do not use bitcoin-hashes feature
+secp256k1 = { version = "0.28.0", default-features = false } # do not use bitcoin-hashes feature
 hex_lit = "0.1.1"
 
 base64 = { version = "0.21.3", optional = true }
