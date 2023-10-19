@@ -123,7 +123,7 @@ dependencies = [
 
 [[package]]
 name = "groestlcoin"
-version = "0.31.0-rc1"
+version = "0.31.0-rc2"
 dependencies = [
  "base64",
  "bech32",
