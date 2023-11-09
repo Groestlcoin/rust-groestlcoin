@@ -21,7 +21,7 @@ use crate::hash_types::{TxMerkleNode, WitnessCommitment, WitnessMerkleNode, Wtxi
 use crate::internal_macros::impl_consensus_encoding;
 use crate::pow::{CompactTarget, Target, Work};
 use crate::prelude::*;
-use crate::{io, merkle_tree, VarInt};
+use crate::{io, merkle_tree, Network, VarInt};
 
 /// Groestlcoin block header.
 ///
@@ -69,7 +69,10 @@ impl Header {
     pub fn target(&self) -> Target { self.bits.into() }
 
     /// Computes the popular "difficulty" measure for mining.
-    pub fn difficulty(&self) -> u128 { self.target().difficulty() }
+    ///
+    /// Difficulty represents how difficult the current target makes it to find a block, relative to
+    /// how difficult it would be at the highest possible target (highest target == lowest difficulty).
+    pub fn difficulty(&self, network: Network) -> u128 { self.target().difficulty(network) }
 
     /// Computes the popular "difficulty" measure for mining and returns a float value of f64.
     pub fn difficulty_float(&self) -> f64 { self.target().difficulty_float() }
@@ -327,10 +330,6 @@ impl Block {
         size
     }
 
-    /// Returns the stripped size of the block.
-    #[deprecated(since = "0.31.0", note = "use Block::base_size() instead")]
-    pub fn strippedsize(&self) -> usize { self.base_size() }
-
     /// Returns the coinbase transaction, if one is present.
     pub fn coinbase(&self) -> Option<&Transaction> { self.txdata.first() }
 
@@ -484,6 +483,7 @@ mod tests {
 
     #[test]
     fn block_test() {
+        let network = Network::Groestlcoin;
         // Mainnet block 00000000021c22618cd341745bf6e8d9562398fb7e4a88253476d715c126227e
         let some_block = hex!("7000000054e62863a89f1c737a8c9647c3843d16bcfd81c9b0048653b459df0200000000755988c47b18539187e9d050453781266ddd193820e94c72eff0b7562185f52578154053ab1d031c18d135000101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2602204e062f503253482f04df15405308f800029f4b0000000d2f7374726174756d506f6f6c2f00000000010000a7340b0000001976a9141aad02bd83c154bf91c9a51e70c5b28dc3720b8188ac00000000");
         let cutoff_block = hex!("7000000054e62863a89f1c737a8c9647c3843d16bcfd81c9b0048653b459df0200000000755988c47b18539187e9d050453781266ddd193820e94c72eff0b7562185f52578154053ab1d031c18d135000101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2602204e062f503253482f04df15405308f800029f4b0000000d2f7374726174756d506f6f6c2f00000000010000a7340b0000001976a9141aad02bd83c154bf91c9a51e70c5b28dc3720b8188ac");
@@ -510,7 +510,7 @@ mod tests {
             real_decode.header.validate_pow(real_decode.header.target()).unwrap(),
             real_decode.block_hash()
         );
-        assert_eq!(real_decode.header.difficulty(), 82);
+        assert_eq!(real_decode.header.difficulty(network), 82);
         assert_eq!(real_decode.header.difficulty_float(), 82.1582444920006);
         // [test] TODO: check the transaction data
 
@@ -530,6 +530,7 @@ mod tests {
     // Check testnet block 000000000000045e0b1660b6445b5e5c5ab63c9a4f956be7e1e69be04fa4497b
     #[test] #[ignore]
     fn segwit_block_test() {
+        let network = Network::Testnet;
         let segwit_block = include_bytes!("../../tests/data/testnet_block_000000000000045e0b1660b6445b5e5c5ab63c9a4f956be7e1e69be04fa4497b.raw").to_vec();
 
         let decode: Result<Block, _> = deserialize(&segwit_block);
@@ -552,7 +553,7 @@ mod tests {
             real_decode.header.validate_pow(real_decode.header.target()).unwrap(),
             real_decode.block_hash()
         );
-        assert_eq!(real_decode.header.difficulty(), 440819);
+        assert_eq!(real_decode.header.difficulty(network), 440819);
         assert_eq!(real_decode.header.difficulty_float(), 2456598.4399242126);
         // [test] TODO: check the transaction data
 
