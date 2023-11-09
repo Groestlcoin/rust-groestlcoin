@@ -510,7 +510,7 @@ mod tests {
             real_decode.header.validate_pow(real_decode.header.target()).unwrap(),
             real_decode.block_hash()
         );
-        assert_eq!(real_decode.header.difficulty(network), 82);
+        assert_eq!(real_decode.header.difficulty(network), 22054522349);
         assert_eq!(real_decode.header.difficulty_float(), 82.1582444920006);
         // [test] TODO: check the transaction data
 
