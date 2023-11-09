@@ -226,7 +226,7 @@ impl Target {
     #[cfg_attr(all(test, mutate), mutate)]
     pub fn difficulty(&self, network: Network) -> u128 {
         let max = match network {
-            Network::Bitcoin => Target::MAX_ATTAINABLE_MAINNET,
+            Network::Groestlcoin => Target::MAX_ATTAINABLE_MAINNET,
             Network::Testnet => Target::MAX_ATTAINABLE_TESTNET,
             Network::Signet => Target::MAX_ATTAINABLE_SIGNET,
             Network::Regtest => Target::MAX_ATTAINABLE_REGTEST,
