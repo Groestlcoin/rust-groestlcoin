@@ -8,9 +8,12 @@
 
 use hashes::{sha256, Hash, HashEngine};
 
+use crate::consensus::{encode, Encodable};
+
+#[rustfmt::skip]
+#[doc(inline)]
 #[cfg(feature = "secp-recovery")]
 pub use self::message_signing::{MessageSignature, MessageSignatureError};
-use crate::consensus::{encode, Encodable};
 
 /// The prefix for signed messages using Groestlcoin's message signing protocol.
 pub const BITCOIN_SIGNED_MSG_PREFIX: &[u8] = b"\x1CGroestlCoin Signed Message:\n";

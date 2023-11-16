@@ -8,17 +8,20 @@
 
 pub mod encode;
 pub mod params;
+#[cfg(feature = "serde")]
+pub mod serde;
 #[cfg(feature = "groestlcoinconsensus")]
 pub mod validation;
 
-pub use self::encode::{
-    deserialize, deserialize_partial, serialize, Decodable, Encodable, ReadExt, WriteExt,
+#[rustfmt::skip]                // Keep public re-exports separate.
+#[doc(inline)]
+pub use self::{
+    encode::{deserialize, deserialize_partial, serialize, Decodable, Encodable, ReadExt, WriteExt},
+    params::Params,
 };
-pub use self::params::Params;
+
 #[cfg(feature = "groestlcoinconsensus")]
+#[doc(inline)]
 pub use self::validation::{
     verify_script, verify_script_with_flags, verify_transaction, verify_transaction_with_flags,
 };
-
-#[cfg(feature = "serde")]
-pub mod serde;
