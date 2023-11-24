@@ -31,8 +31,7 @@ groestl = { version = "0.10.1", default_features = false }
 hex = { package = "hex-conservative", version = "0.1.1", default-features = false }
 
 bitcoin-io = { version = "0.1", default-features = false, optional = true }
-
-schemars = { version = "0.8.3", optional = true }
+schemars = { version = "0.8.3", default-features = false, optional = true }
 # Only enable this if you explicitly do not want to use "std", otherwise enable "serde-std".
 serde = { version = "1.0", default-features = false, optional = true }
 
