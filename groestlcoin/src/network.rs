@@ -149,7 +149,7 @@ impl Network {
     /// Returns the associated network parameters.
     pub const fn params(self) -> &'static Params {
         const PARAMS: [Params; 4] = [
-            Params::new(Network::Bitcoin),
+            Params::new(Network::Groestlcoin),
             Params::new(Network::Testnet),
             Params::new(Network::Signet),
             Params::new(Network::Regtest),
