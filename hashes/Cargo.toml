@@ -9,7 +9,8 @@ description = "Hash functions used by the rust-groestlcoin eccosystem"
 categories = ["algorithms"]
 keywords = [ "crypto", "groestlcoin", "hash", "digest" ]
 readme = "README.md"
-edition = "2018"
+edition = "2021"
+rust-version = "1.56.1"
 exclude = ["tests", "contrib"]
 
 [features]

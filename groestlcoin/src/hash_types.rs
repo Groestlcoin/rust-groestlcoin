@@ -118,4 +118,16 @@ mod newtypes {
             sha256d::Hash::from_byte_array(blockid.to_raw_hash().to_byte_array())
         }
     }
+
+    impl From<Txid> for TxMerkleNode {
+        fn from(txid: Txid) -> Self {
+            Self::from(txid.0)
+        }
+    }
+
+    impl From<Wtxid> for WitnessMerkleNode {
+        fn from(wtxid: Wtxid) -> Self {
+            Self::from(wtxid.0)
+        }
+    }
 }

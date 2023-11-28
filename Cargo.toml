@@ -1,5 +1,6 @@
 [workspace]
 members = ["groestlcoin", "hashes", "internals", "fuzz", "io"]
+resolver = "2"
 
 [patch.crates-io.groestlcoin]
 path = "groestlcoin"

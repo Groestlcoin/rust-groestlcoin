@@ -306,6 +306,16 @@ impl Decodable for CompactTarget {
     }
 }
 
+impl LowerHex for CompactTarget {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { LowerHex::fmt(&self.0, f) }
+}
+
+impl UpperHex for CompactTarget {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { UpperHex::fmt(&self.0, f) }
+}
+
 /// Big-endian 256 bit integer type.
 // (high, low): u.0 contains the high bits, u.1 contains the low bits.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -834,8 +844,6 @@ impl crate::serde::Serialize for U256 {
 #[cfg(feature = "serde")]
 impl<'de> crate::serde::Deserialize<'de> for U256 {
     fn deserialize<D: crate::serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        use core::convert::TryInto;
-
         use hex::FromHex;
 
         use crate::serde::de;
@@ -1536,6 +1544,12 @@ mod tests {
         let hex = "0xzbf9";
         let result = CompactTarget::from_hex_str(hex);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn compact_target_lower_hex_and_upper_hex() {
+        assert_eq!(format!("{:08x}", CompactTarget(0x01D0F456)), "01d0f456");
+        assert_eq!(format!("{:08X}", CompactTarget(0x01d0f456)), "01D0F456");
     }
 
     #[test]
