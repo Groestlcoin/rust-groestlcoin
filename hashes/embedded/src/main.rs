@@ -10,7 +10,7 @@ extern crate groestlcoin_hashes;
 #[cfg(feature = "alloc")] use alloc::string::ToString;
 
 use groestlcoin_hashes::{sha256, Hash, HashEngine};
-use bitcoin_io::io::Write;
+use bitcoin_io::Write;
 use core::str::FromStr;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::{debug, hprintln};

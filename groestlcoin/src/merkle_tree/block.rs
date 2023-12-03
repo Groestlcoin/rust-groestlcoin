@@ -49,7 +49,6 @@ use crate::blockdata::transaction::Transaction;
 use crate::blockdata::weight::Weight;
 use crate::consensus::encode::{self, Decodable, Encodable};
 use crate::hash_types::{TxMerkleNode, Txid};
-use crate::io;
 use crate::prelude::*;
 
 /// Data structure that represents a block header paired to a partial merkle tree.

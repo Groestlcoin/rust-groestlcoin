@@ -20,7 +20,7 @@ use crate::hash_types::{TxMerkleNode, WitnessCommitment, WitnessMerkleNode, Wtxi
 use crate::internal_macros::impl_consensus_encoding;
 use crate::pow::{CompactTarget, Target, Work};
 use crate::prelude::*;
-use crate::{io, merkle_tree, Network, VarInt};
+use crate::{merkle_tree, Network, VarInt};
 
 #[rustfmt::skip]                // Keep public re-exports separate.
 #[doc(inline)]
@@ -642,11 +642,11 @@ mod tests {
 
 #[cfg(bench)]
 mod benches {
+    use io::sink;
     use test::{black_box, Bencher};
 
     use super::Block;
     use crate::consensus::{deserialize, Decodable, Encodable};
-    use crate::io::sink;
 
     #[bench]
     pub fn bench_stream_reader(bh: &mut Bencher) {
