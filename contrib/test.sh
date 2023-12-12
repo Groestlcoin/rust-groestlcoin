@@ -2,7 +2,7 @@
 
 set -ex
 
-CRATES="groestlcoin hashes internals fuzz"
+CRATES="groestlcoin hashes units internals fuzz"
 DEPS="recent minimal"
 
 for dep in $DEPS

@@ -15,7 +15,7 @@ cortex-m-rt = "0.7.1"
 cortex-m-semihosting = "0.3.7"
 panic-halt = "0.2.0"
 alloc-cortex-m = "0.4.1"
-groestlcoin = { path="../", default-features = false, features = ["no-std", "secp-lowmemory"] }
+groestlcoin = { path="../", default-features = false, features = ["secp-lowmemory"] }
 
 [[bin]]
 name = "embedded"
@@ -35,3 +35,6 @@ path = "../../internals"
 
 [patch.crates-io.bitcoin-io]
 path = "../../io"
+
+[patch.crates-io.groestlcoin-units]
+path = "../../units"

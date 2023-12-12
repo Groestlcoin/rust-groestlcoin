@@ -125,6 +125,7 @@ dependencies = [
  "bincode",
  "bitcoin-io",
  "groestlcoin-internals",
+ "groestlcoin-units",
  "groestlcoin_hashes",
  "groestlcoinconsensus",
  "hex-conservative",
@@ -152,6 +153,16 @@ name = "groestlcoin-internals"
 version = "0.2.0"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "groestlcoin-units"
+version = "0.1.0"
+dependencies = [
+ "groestlcoin-internals",
+ "serde",
+ "serde_json",
+ "serde_test",
 ]
 
 [[package]]

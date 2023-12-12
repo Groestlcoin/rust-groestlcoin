@@ -14,6 +14,7 @@ use hex::FromHex;
 use internals::write_err;
 
 use crate::crypto::ecdsa;
+use crate::internal_macros::impl_asref_push_bytes;
 use crate::network::Network;
 use crate::prelude::*;
 use crate::taproot::{TapNodeHash, TapTweakHash};
@@ -58,15 +59,13 @@ impl PublicKey {
     pub fn pubkey_hash(&self) -> PubkeyHash { self.with_serialized(PubkeyHash::hash) }
 
     /// Returns bitcoin 160-bit hash of the public key for witness program
-    pub fn wpubkey_hash(&self) -> Option<WPubkeyHash> {
+    pub fn wpubkey_hash(&self) -> Result<WPubkeyHash, UncompressedPubkeyError> {
         if self.compressed {
-            Some(WPubkeyHash::from_byte_array(
+            Ok(WPubkeyHash::from_byte_array(
                 hash160::Hash::hash(&self.inner.serialize()).to_byte_array(),
             ))
         } else {
-            // We can't create witness pubkey hashes for an uncompressed
-            // public keys
-            None
+            Err(UncompressedPubkeyError)
         }
     }
 
@@ -252,7 +251,7 @@ hashes::hash_newtype! {
     /// SegWit version of a public key hash.
     pub struct WPubkeyHash(hash160::Hash);
 }
-crate::hash_types::impl_asref_push_bytes!(PubkeyHash, WPubkeyHash);
+impl_asref_push_bytes!(PubkeyHash, WPubkeyHash);
 
 impl From<PublicKey> for PubkeyHash {
     fn from(key: PublicKey) -> PubkeyHash { key.pubkey_hash() }
@@ -263,8 +262,7 @@ impl From<&PublicKey> for PubkeyHash {
 }
 
 /// A Bitcoin ECDSA private key
-#[derive(Copy, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct PrivateKey {
     /// Whether this private key should be serialized as compressed
     pub compressed: bool,
@@ -365,11 +363,6 @@ impl PrivateKey {
 
 impl fmt::Display for PrivateKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { self.fmt_wif(f) }
-}
-
-#[cfg(not(feature = "std"))]
-impl fmt::Debug for PrivateKey {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "[private key data]") }
 }
 
 impl FromStr for PrivateKey {
@@ -746,6 +739,22 @@ impl From<hex::HexToArrayError> for Error {
     fn from(e: hex::HexToArrayError) -> Self { Error::Hex(e) }
 }
 
+/// Segwit public keys must always be compressed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct UncompressedPubkeyError;
+
+impl fmt::Display for UncompressedPubkeyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("segwit public keys must always be compressed")
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for UncompressedPubkeyError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> { None }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -767,7 +776,7 @@ mod tests {
         assert_eq!(&sk.to_wif(), "cVt4o7BGAig1UXywgGSmARhxMdzP5qvQsxKkSsc1XEkw3tCzAzUV");
 
         let secp = Secp256k1::new();
-        let pk = Address::p2pkh(&sk.public_key(&secp), sk.network);
+        let pk = Address::p2pkh(sk.public_key(&secp), sk.network);
         assert_eq!(&pk.to_string(), "mqwpxxvfv3QbM8PU8uBx2jaNt9btR2QtRW");
 
         // test string conversion
@@ -788,7 +797,7 @@ mod tests {
         assert!(!pk.compressed);
         assert_eq!(&pk.to_string(), "042e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af191923a2964c177f5b5923ae500fca49e99492d534aa3759d6b25a8bc971b133");
         assert_eq!(pk, PublicKey::from_str("042e58afe51f9ed8ad3cc7897f634d881fdbe49a81564629ded8156bebd2ffd1af191923a2964c177f5b5923ae500fca49e99492d534aa3759d6b25a8bc971b133").unwrap());
-        let addr = Address::p2pkh(&pk, sk.network);
+        let addr = Address::p2pkh(pk, sk.network);
         assert_eq!(&addr.to_string(), "Fks8N9pztde7YYD5DtWEk8DCa2E73FFym8");
         pk.compressed = true;
         assert_eq!(
@@ -826,7 +835,7 @@ mod tests {
             pk.wpubkey_hash().unwrap().to_string(),
             "9511aa27ef39bbfa4e4f3dd15f4d66ea57f475b4"
         );
-        assert_eq!(upk.wpubkey_hash(), None);
+        assert!(upk.wpubkey_hash().is_err());
     }
 
     #[cfg(feature = "serde")]
@@ -1090,5 +1099,26 @@ mod tests {
         let res = PublicKey::from_str(s);
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), Error::InvalidHexLength(8));
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn private_key_debug_is_obfuscated() {
+        let sk =
+            PrivateKey::from_str("cVt4o7BGAig1UXywgGSmARhxMdzP5qvQsxKkSsc1XEkw3tCzAzUV").unwrap();
+        let want = "PrivateKey { compressed: true, network: Testnet, inner: SecretKey(#32014e414fdce702) }";
+        let got = format!("{:?}", sk);
+        assert_eq!(got, want)
+    }
+
+    #[test]
+    #[cfg(all(not(feature = "std"), feature = "no-std"))]
+    fn private_key_debug_is_obfuscated() {
+        let sk =
+            PrivateKey::from_str("cVt4o7BGAig1UXywgGSmARhxMdzP5qvQsxKkSsc1XEkw3tCzAzUV").unwrap();
+        // Why is this not shortened? In rust-secp256k1/src/secret it is printed with "#{:016x}"?
+        let want = "PrivateKey { compressed: true, network: Testnet, inner: SecretKey(#7217ac58fbad8880a91032107b82cb6c5422544b426c350ee005cf509f3dbf7b) }";
+        let got = format!("{:?}", sk);
+        assert_eq!(got, want)
     }
 }

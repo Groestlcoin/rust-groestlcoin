@@ -14,17 +14,17 @@
 use core::default::Default;
 use core::{cmp, fmt, str};
 
-use hashes::{self, sha256d, Hash};
+use hashes::{self, sha256, Hash};
 use internals::write_err;
 
 use super::Weight;
+use crate::blockdata::fee_rate::FeeRate;
 use crate::blockdata::locktime::absolute::{self, Height, Time};
 use crate::blockdata::locktime::relative;
 use crate::blockdata::script::{Script, ScriptBuf};
 use crate::blockdata::witness::Witness;
 use crate::consensus::{encode, Decodable, Encodable};
-use crate::hash_types::{Txid, TxidInternal, Wtxid, WtxidInternal};
-use crate::internal_macros::impl_consensus_encoding;
+use crate::internal_macros::{impl_consensus_encoding, impl_hashencode};
 use crate::parse::impl_parse_str_from_int_infallible;
 use crate::prelude::*;
 use crate::script::Push;
@@ -37,6 +37,21 @@ use crate::{Amount, VarInt};
 #[cfg(feature = "groestlcoinconsensus")]
 #[doc(inline)]
 pub use crate::consensus::validation::TxVerifyError;
+
+hashes::hash_newtype! {
+    /// A bitcoin transaction hash/transaction ID.
+    ///
+    /// For compatibility with the existing Bitcoin infrastructure and historical and current
+    /// versions of the Bitcoin Core software itself, this and other [`sha256d::Hash`] types, are
+    /// serialized in reverse byte order when converted to a hex string via [`std::fmt::Display`]
+    /// trait operations. See [`hashes::Hash::DISPLAY_BACKWARD`] for more details.
+    pub struct Txid(sha256::Hash);
+
+    /// A bitcoin witness transaction ID.
+    pub struct Wtxid(sha256::Hash);
+}
+impl_hashencode!(Txid);
+impl_hashencode!(Wtxid);
 
 /// The marker MUST be a 1-byte zero value: 0x00. (BIP-141)
 const SEGWIT_MARKER: u8 = 0x00;
@@ -534,19 +549,33 @@ impl TxOut {
     /// Creates a `TxOut` with given script and the smallest possible `value` that is **not** dust
     /// per current Core policy.
     ///
-    /// The current dust fee rate is 3 sat/vB.
+    /// Dust depends on the -dustrelayfee value of the Bitcoin Core node you are broadcasting to.
+    /// This function uses the default value of 0.00003 BTC/kB (3 sat/vByte).
+    ///
+    /// To use a custom value, use [`minimal_non_dust_custom`].
+    ///
+    /// [`minimal_non_dust_custom`]: TxOut::minimal_non_dust_custom
     pub fn minimal_non_dust(script_pubkey: ScriptBuf) -> Self {
-        let len = size_from_script_pubkey(&script_pubkey);
-        let len = len
-            + if script_pubkey.is_witness_program() {
-                32 + 4 + 1 + (107 / 4) + 4
-            } else {
-                32 + 4 + 1 + 107 + 4
-            };
-        let dust_amount = (len as u64) * 3;
-
         TxOut {
-            value: Amount::from_sat(dust_amount + 1), // minimal non-dust amount is one higher than dust amount
+            value: script_pubkey.minimal_non_dust(),
+            script_pubkey,
+        }
+    }
+
+    /// Creates a `TxOut` with given script and the smallest possible `value` that is **not** dust
+    /// per current Core policy.
+    ///
+    /// Dust depends on the -dustrelayfee value of the Bitcoin Core node you are broadcasting to.
+    /// This function lets you set the fee rate used in dust calculation.
+    ///
+    /// The current default value in Bitcoin Core (as of v26) is 3 sat/vByte.
+    ///
+    /// To use the default Bitcoin Core value, use [`minimal_non_dust`].
+    ///
+    /// [`minimal_non_dust`]: TxOut::minimal_non_dust
+    pub fn minimal_non_dust_custom(script_pubkey: ScriptBuf, dust_relay_fee: FeeRate) -> Self {
+        TxOut {
+            value: script_pubkey.minimal_non_dust_custom(dust_relay_fee),
             script_pubkey,
         }
     }
