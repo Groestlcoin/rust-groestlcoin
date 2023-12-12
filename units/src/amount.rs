@@ -2030,7 +2030,7 @@ mod tests {
             Amount::from_str("5 GRS GRS"),
             Err(Unknown(UnknownDenominationError("GRS GRS".into())).into()),
         );
-        assert_eq!(Amount::from_str("5GRS GRS"), Err(E::InvalidCharacter('B')));
+        assert_eq!(Amount::from_str("5GRS GRS"), Err(E::InvalidCharacter('G')));
         assert_eq!(
             Amount::from_str("5 5 GRS"),
             Err(Unknown(UnknownDenominationError("5 GRS".into())).into()),
