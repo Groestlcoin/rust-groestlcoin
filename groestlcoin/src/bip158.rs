@@ -41,7 +41,7 @@
 use core::cmp::{self, Ordering};
 use core::fmt::{self, Display, Formatter};
 
-use hashes::{sha256d, siphash24, Hash, groestld};
+use hashes::{siphash24, Hash, groestld};
 use internals::write_err;
 
 use crate::blockdata::block::{Block, BlockHash};

@@ -46,10 +46,12 @@ hashes::hash_newtype! {
     /// serialized in reverse byte order when converted to a hex string via [`std::fmt::Display`]
     /// trait operations. See [`hashes::Hash::DISPLAY_BACKWARD`] for more details.
     pub struct Txid(sha256d::Hash);
+    /// use single sha256 for grs
     pub struct TxidInternal(sha256::Hash);
 
     /// A bitcoin witness transaction ID.
     pub struct Wtxid(sha256d::Hash);
+    /// use single sha256 for grs
     pub struct WtxidInternal(sha256::Hash);
 }
 impl_hashencode!(Txid);
