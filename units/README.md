@@ -1,7 +1,7 @@
-Bitcoin Units
+Groestlcoin Units
 =============
 
-This crate provides basic Bitcoin numeric units such as `Amount`.
+This crate provides basic Groestlcoin numeric units such as `Amount`.
 
 
 ## Minimum Supported Rust Version (MSRV)

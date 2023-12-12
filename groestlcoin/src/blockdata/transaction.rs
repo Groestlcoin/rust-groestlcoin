@@ -14,7 +14,7 @@
 use core::default::Default;
 use core::{cmp, fmt, str};
 
-use hashes::{self, sha256, Hash};
+use hashes::{self, sha256, sha256d, Hash};
 use internals::write_err;
 
 use super::Weight;
@@ -45,13 +45,27 @@ hashes::hash_newtype! {
     /// versions of the Bitcoin Core software itself, this and other [`sha256d::Hash`] types, are
     /// serialized in reverse byte order when converted to a hex string via [`std::fmt::Display`]
     /// trait operations. See [`hashes::Hash::DISPLAY_BACKWARD`] for more details.
-    pub struct Txid(sha256::Hash);
+    pub struct Txid(sha256d::Hash);
+    pub struct TxidInternal(sha256::Hash);
 
     /// A bitcoin witness transaction ID.
-    pub struct Wtxid(sha256::Hash);
+    pub struct Wtxid(sha256d::Hash);
+    pub struct WtxidInternal(sha256::Hash);
 }
 impl_hashencode!(Txid);
 impl_hashencode!(Wtxid);
+
+impl From<TxidInternal> for Txid {
+    fn from(txid: TxidInternal) -> Self {
+        Self::from(sha256d::Hash::from_byte_array(txid.to_raw_hash().to_byte_array()))
+    }
+}
+
+impl From<WtxidInternal> for Wtxid {
+    fn from(txid: WtxidInternal) -> Self {
+        Self::from(sha256d::Hash::from_byte_array(txid.to_raw_hash().to_byte_array()))
+    }
+}
 
 /// The marker MUST be a 1-byte zero value: 0x00. (BIP-141)
 const SEGWIT_MARKER: u8 = 0x00;

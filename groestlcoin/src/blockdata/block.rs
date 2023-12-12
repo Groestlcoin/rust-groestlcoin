@@ -10,7 +10,7 @@
 
 use core::fmt;
 
-use hashes::{sha256d, Hash, HashEngine};
+use hashes::{sha256d, Hash, HashEngine, groestld};
 
 use super::Weight;
 use crate::blockdata::script;
@@ -23,7 +23,7 @@ use crate::{merkle_tree, Network, VarInt};
 
 hashes::hash_newtype! {
     /// A bitcoin block hash.
-    pub struct BlockHash(sha256d::Hash);
+    pub struct BlockHash(groestld::Hash);
     /// A hash of the Merkle tree branch or root for transactions.
     pub struct TxMerkleNode(sha256d::Hash);
     /// A hash corresponding to the Merkle tree root for witness data.
@@ -41,6 +41,12 @@ impl From<Txid> for TxMerkleNode {
 
 impl From<Wtxid> for WitnessMerkleNode {
     fn from(wtxid: Wtxid) -> Self { Self::from_byte_array(wtxid.to_byte_array()) }
+}
+
+impl From<BlockHash> for sha256d::Hash {
+    fn from(blockid: BlockHash) -> Self {
+        sha256d::Hash::from_byte_array(blockid.to_raw_hash().to_byte_array())
+    }
 }
 
 /// Groestlcoin block header.

@@ -23,11 +23,7 @@ use crate::prelude::{String, ToString};
 /// # Examples
 /// ```
 /// # use core::str::FromStr;
-<<<<<<<< HEAD:groestlcoin/src/amount.rs
-/// # use groestlcoin::Amount;
-========
-/// # use bitcoin_units::Amount;
->>>>>>>> upstream/master:units/src/amount.rs
+/// # use groestlcoin_units::Amount;
 ///
 /// assert_eq!(Amount::from_str("1 GRS").unwrap(), Amount::from_sat(100_000_000));
 /// assert_eq!(Amount::from_str("1 cGRS").unwrap(), Amount::from_sat(1_000_000));
@@ -639,11 +635,7 @@ impl Amount {
     ///
     /// # Examples
     /// ```
-<<<<<<<< HEAD:groestlcoin/src/amount.rs
-    /// # use groestlcoin::{Amount, Denomination};
-========
-    /// # use bitcoin_units::amount::{Amount, Denomination};
->>>>>>>> upstream/master:units/src/amount.rs
+    /// # use groestlcoin_units::amount::{Amount, Denomination};
     /// let amount = Amount::from_sat(100_000);
     /// assert_eq!(amount.to_btc(), amount.to_float_in(Denomination::Bitcoin))
     /// ```
@@ -1262,19 +1254,11 @@ pub mod serde {
     //!
     //! ```rust,ignore
     //! use serde::{Serialize, Deserialize};
-<<<<<<<< HEAD:groestlcoin/src/amount.rs
-    //! use groestlcoin::Amount;
-========
-    //! use bitcoin_units::Amount;
->>>>>>>> upstream/master:units/src/amount.rs
+    //! use groestlcoin_units::Amount;
     //!
     //! #[derive(Serialize, Deserialize)]
     //! pub struct HasAmount {
-<<<<<<<< HEAD:groestlcoin/src/amount.rs
-    //!     #[serde(with = "groestlcoin::amount::serde::as_btc")]
-========
-    //!     #[serde(with = "bitcoin_units::amount::serde::as_btc")]
->>>>>>>> upstream/master:units/src/amount.rs
+    //!     #[serde(with = "groestlcoin_units::amount::serde::as_btc")]
     //!     pub amount: Amount,
     //! }
     //! ```
@@ -2037,28 +2021,20 @@ mod tests {
 
         use super::ParseAmountError as E;
 
-<<<<<<<< HEAD:groestlcoin/src/amount.rs
         assert_eq!(Amount::from_str("x GRS"), Err(E::InvalidCharacter('x')));
-        assert_eq!(Amount::from_str("xGRS"), Err(E::UnknownDenomination("xGRS".into())));
-        assert_eq!(Amount::from_str("5 GRS GRS"), Err(E::UnknownDenomination("GRS GRS".into())));
-        assert_eq!(Amount::from_str("5GRS GRS"), Err(E::InvalidCharacter('G')));
-        assert_eq!(Amount::from_str("5 5 GRS"), Err(E::UnknownDenomination("5 GRS".into())));
-========
-        assert_eq!(Amount::from_str("x BTC"), Err(E::InvalidCharacter('x')));
         assert_eq!(
-            Amount::from_str("xBTC"),
-            Err(Unknown(UnknownDenominationError("xBTC".into())).into()),
+            Amount::from_str("xGRS"),
+            Err(Unknown(UnknownDenominationError("xGRS".into())).into()),
         );
         assert_eq!(
-            Amount::from_str("5 BTC BTC"),
-            Err(Unknown(UnknownDenominationError("BTC BTC".into())).into()),
+            Amount::from_str("5 GRS GRS"),
+            Err(Unknown(UnknownDenominationError("GRS GRS".into())).into()),
         );
-        assert_eq!(Amount::from_str("5BTC BTC"), Err(E::InvalidCharacter('B')));
+        assert_eq!(Amount::from_str("5GRS GRS"), Err(E::InvalidCharacter('B')));
         assert_eq!(
-            Amount::from_str("5 5 BTC"),
-            Err(Unknown(UnknownDenominationError("5 BTC".into())).into()),
+            Amount::from_str("5 5 GRS"),
+            Err(Unknown(UnknownDenominationError("5 GRS".into())).into()),
         );
->>>>>>>> upstream/master:units/src/amount.rs
 
         #[track_caller]
         fn case(s: &str, expected: Result<Amount, ParseAmountError>) {
@@ -2198,21 +2174,12 @@ mod tests {
         assert_eq!(Amount::from_str(&denom(amt, D::PicoBitcoin)), Ok(amt));
 
         assert_eq!(
-<<<<<<<< HEAD:groestlcoin/src/amount.rs
             Amount::from_str("42 gro GRS"),
-            Err(ParseAmountError::UnknownDenomination("gro GRS".into())),
+            Err(Unknown(UnknownDenominationError("gro GRS".into())).into()),
         );
         assert_eq!(
             SignedAmount::from_str("-42 gro GRS"),
-            Err(ParseAmountError::UnknownDenomination("gro GRS".into())),
-========
-            Amount::from_str("42 satoshi BTC"),
-            Err(Unknown(UnknownDenominationError("satoshi BTC".into())).into()),
-        );
-        assert_eq!(
-            SignedAmount::from_str("-42 satoshi BTC"),
-            Err(Unknown(UnknownDenominationError("satoshi BTC".into())).into()),
->>>>>>>> upstream/master:units/src/amount.rs
+            Err(Unknown(UnknownDenominationError("gro GRS".into())).into()),
         );
     }
 

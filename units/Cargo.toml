@@ -1,12 +1,12 @@
 [package]
-name = "bitcoin-units"
+name = "groestlcoin-units"
 version = "0.1.0"
 authors = ["Andrew Poelstra <apoelstra@wpsoftware.net>"]
 license = "CC0-1.0"
-repository = "https://github.com/rust-bitcoin/rust-bitcoin/"
-description = "Basic Bitcoin numeric units such as amount"
+repository = "https://github.com/Groestlcoin/rust-groestlcoin/"
+description = "Basic Groestlcoin numeric units such as amount"
 categories = ["cryptography::cryptocurrencies"]
-keywords = ["bitcoin", "newtypes"]
+keywords = ["groestlcoin", "newtypes"]
 readme = "README.md"
 edition = "2021"
 rust-version = "1.56.1"
@@ -22,7 +22,7 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-internals = { package = "bitcoin-internals", version = "0.2.0" }
+internals = { package = "groestlcoin-internals", version = "0.2.0" }
 
 serde = { version = "1.0.103", default-features = false, features = ["derive"], optional = true }
 
