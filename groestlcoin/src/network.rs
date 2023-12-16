@@ -52,7 +52,7 @@ impl From<Network> for NetworkKind {
         use Network::*;
 
         match n {
-            Bitcoin => NetworkKind::Main,
+            Groestlcoin => NetworkKind::Main,
             Testnet | Signet | Regtest => NetworkKind::Test,
         }
     }
