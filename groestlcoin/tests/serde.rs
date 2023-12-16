@@ -38,7 +38,7 @@ use groestlcoin::psbt::{Input, Output, Psbt, PsbtSighashType};
 use groestlcoin::sighash::{EcdsaSighashType, TapSighashType};
 use groestlcoin::taproot::{self, ControlBlock, LeafVersion, TapTree, TaprootBuilder};
 use groestlcoin::{
-    ecdsa, transaction, Address, Amount, Block, Network, OutPoint, PrivateKey, PublicKey,
+    ecdsa, transaction, Address, Amount, Block, NetworkKind, OutPoint, PrivateKey, PublicKey,
     ScriptBuf, Sequence, Target, Transaction, TxIn, TxOut, Txid, Work,
 };
 
@@ -145,7 +145,7 @@ fn serde_regression_witness() {
 fn serde_regression_address() {
     let s = include_str!("data/serde/public_key_hex");
     let pk = PublicKey::from_str(s.trim()).unwrap();
-    let addr = Address::p2pkh(pk, Network::Groestlcoin);
+    let addr = Address::p2pkh(pk, NetworkKind::Main);
 
     let got = serialize(&addr).unwrap();
     let want = include_bytes!("data/serde/address_bincode") as &[_];

@@ -43,8 +43,8 @@ fn main() -> ! {
     let secp = Secp256k1::preallocated_new(&mut buf_ful).unwrap();
 
     // Derive address
-    let pubkey = pk.public_key(&secp);
-    let address = Address::p2wpkh(&pubkey, Network::Groestlcoin).unwrap();
+    let pubkey = pk.public_key(&secp).try_into().unwrap();
+    let address = Address::p2wpkh(&pubkey, Network::Groestlcoin);
     hprintln!("Address: {}", address).unwrap();
 
     assert_eq!(address.to_string(), "grs1qpx9t9pzzl4qsydmhyt6ctrxxjd4ep549wseyus".to_string());

@@ -59,10 +59,6 @@ pub extern crate base64;
 /// Encodes and decodes the Bech32 forrmat.
 pub extern crate bech32;
 
-#[cfg(feature = "groestlcoinconsensus")]
-/// Groestlcoin's libgroestlcoinconsensus with Rust binding.
-pub extern crate groestlcoinconsensus;
-
 /// Rust implementation of cryptographic hash function algorithems.
 pub extern crate hashes;
 
@@ -130,36 +126,15 @@ pub use crate::{
     blockdata::witness::{self, Witness},
     consensus::encode::VarInt,
     crypto::ecdsa,
-    crypto::key::{self, PrivateKey, PubkeyHash, PublicKey, WPubkeyHash, XOnlyPublicKey},
+    crypto::key::{self, PrivateKey, PubkeyHash, PublicKey, CompressedPublicKey, WPubkeyHash, XOnlyPublicKey},
     crypto::sighash::{self, LegacySighash, SegwitV0Sighash, TapSighash, TapSighashTag},
     merkle_tree::MerkleBlock,
-    network::Network,
+    network::{Network, NetworkKind},
     pow::{CompactTarget, Target, Work},
     psbt::Psbt,
     sighash::{EcdsaSighashType, TapSighashType},
     taproot::{TapBranchTag, TapLeafHash, TapLeafTag, TapNodeHash, TapTweakHash, TapTweakTag},
 };
-
-#[cfg(not(feature = "std"))]
-mod io_extras {
-    use crate::io;
-
-    /// A writer which will move data into the void.
-    pub struct Sink {
-        _priv: (),
-    }
-
-    /// Creates an instance of a writer which will successfully consume all data.
-    pub const fn sink() -> Sink { Sink { _priv: () } }
-
-    impl io::Write for Sink {
-        #[inline]
-        fn write(&mut self, buf: &[u8]) -> io::Result<usize> { Ok(buf.len()) }
-
-        #[inline]
-        fn flush(&mut self) -> io::Result<()> { Ok(()) }
-    }
-}
 
 #[rustfmt::skip]
 mod prelude {
@@ -178,11 +153,7 @@ mod prelude {
     #[cfg(any(feature = "std", test))]
     pub use std::collections::{BTreeMap, BTreeSet, btree_map, BinaryHeap};
 
-    #[cfg(feature = "std")]
     pub use crate::io::sink;
-
-    #[cfg(not(feature = "std"))]
-    pub use crate::io_extras::sink;
 
     pub use hex::DisplayHex;
 }

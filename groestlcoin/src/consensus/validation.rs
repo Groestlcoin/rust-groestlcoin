@@ -51,13 +51,13 @@ pub fn verify_script_with_flags<F: Into<u32>>(
     spending_tx: &[u8],
     flags: F,
 ) -> Result<(), BitcoinconsensusError> {
-    Ok(groestlcoinconsensus::verify_with_flags(
+    groestlcoinconsensus::verify_with_flags(
         script.as_bytes(),
         amount.to_sat(),
         spending_tx,
         index,
         flags.into(),
-    )?)
+    ).map_err(BitcoinconsensusError)
 }
 
 /// Verifies that this transaction is able to spend its inputs.
@@ -196,10 +196,6 @@ impl std::error::Error for BitcoinconsensusError {
 #[cfg(all(feature = "std", not(feature = "groestlcoinconsensus-std")))]
 impl std::error::Error for BitcoinconsensusError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> { None }
-}
-
-impl From<groestlcoinconsensus::Error> for BitcoinconsensusError {
-    fn from(e: groestlcoinconsensus::Error) -> Self { Self(e) }
 }
 
 /// An error during transaction validation.

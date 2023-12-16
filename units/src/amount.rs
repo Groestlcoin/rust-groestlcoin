@@ -6,7 +6,7 @@
 //! We refer to the documentation on the types for more information.
 
 use core::cmp::Ordering;
-use core::fmt::{self, Write};
+use core::fmt::{self, Write as _};
 use core::str::FromStr;
 use core::{default, ops};
 
@@ -936,14 +936,14 @@ impl SignedAmount {
     /// Note: This only parses the value string.  If you want to parse a value
     /// with denomination, use [FromStr].
     pub fn from_str_in(s: &str, denom: Denomination) -> Result<SignedAmount, ParseAmountError> {
-        let (negative, satoshi) = parse_signed_to_satoshi(s, denom)?;
-        if satoshi > i64::MAX as u64 {
-            return Err(ParseAmountError::TooBig);
+        match parse_signed_to_satoshi(s, denom)? {
+            // (negative, amount)
+            (false, sat) if sat > i64::MAX as u64     => Err(ParseAmountError::TooBig),
+            (false, sat)                              => Ok(SignedAmount(sat as i64)),
+            (true, sat) if sat == i64::MAX as u64 + 1 => Ok(SignedAmount(i64::MIN)),
+            (true, sat) if sat > i64::MAX as u64 + 1  => Err(ParseAmountError::TooBig),
+            (true, sat)                               => Ok(SignedAmount(-(sat as i64))),
         }
-        Ok(match negative {
-            true => SignedAmount(-(satoshi as i64)),
-            false => SignedAmount(satoshi as i64),
-        })
     }
 
     /// Parses amounts with denomination suffix like they are produced with
@@ -1760,6 +1760,7 @@ mod tests {
 
         assert_eq!(p("1", btc), Ok(Amount::from_sat(1_000_000_00)));
         assert_eq!(sp("-.5", btc), Ok(SignedAmount::from_sat(-500_000_00)));
+        assert_eq!(sp(&i64::MIN.to_string(), sat), Ok(SignedAmount::from_sat(i64::MIN)));
         assert_eq!(p("1.1", btc), Ok(Amount::from_sat(1_100_000_00)));
         assert_eq!(p("100", sat), Ok(Amount::from_sat(100)));
         assert_eq!(p("55", sat), Ok(Amount::from_sat(55)));
@@ -2065,6 +2066,7 @@ mod tests {
         scase("-5 gro", Ok(SignedAmount::from_sat(-5)));
         case("0.10000000 GRS", Ok(Amount::from_sat(100_000_00)));
         scase("-100 groestls", Ok(SignedAmount::from_sat(-10_000)));
+        scase(&format!("{} GRO", i64::MIN), Ok(SignedAmount::from_sat(i64::MIN)));
     }
 
     #[test]
