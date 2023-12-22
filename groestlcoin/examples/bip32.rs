@@ -8,7 +8,7 @@ use groestlcoin::bip32::{ChildNumber, DerivationPath, Xpriv, Xpub};
 use groestlcoin::hex::FromHex;
 use groestlcoin::secp256k1::ffi::types::AlignedType;
 use groestlcoin::secp256k1::Secp256k1;
-use groestlcoin::{Network, NetworkKind, CompressedPublicKey};
+use groestlcoin::{CompressedPublicKey, Network, NetworkKind};
 
 fn main() {
     // This example derives root xprv from a 32-byte seed,

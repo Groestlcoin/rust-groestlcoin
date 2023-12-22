@@ -39,8 +39,8 @@ use groestlcoin::locktime::absolute;
 use groestlcoin::psbt::{self, Input, Psbt, PsbtSighashType};
 use groestlcoin::secp256k1::{Secp256k1, Signing, Verification};
 use groestlcoin::{
-    transaction, Address, Amount, Network, OutPoint, CompressedPublicKey, ScriptBuf, Sequence, Transaction,
-    TxIn, TxOut, Witness,
+    transaction, Address, Amount, CompressedPublicKey, Network, OutPoint, ScriptBuf, Sequence,
+    Transaction, TxIn, TxOut, Witness,
 };
 
 type Result<T> = std::result::Result<T, Error>;

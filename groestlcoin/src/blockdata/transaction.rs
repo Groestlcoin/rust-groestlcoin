@@ -573,10 +573,7 @@ impl TxOut {
     ///
     /// [`minimal_non_dust_custom`]: TxOut::minimal_non_dust_custom
     pub fn minimal_non_dust(script_pubkey: ScriptBuf) -> Self {
-        TxOut {
-            value: script_pubkey.minimal_non_dust(),
-            script_pubkey,
-        }
+        TxOut { value: script_pubkey.minimal_non_dust(), script_pubkey }
     }
 
     /// Creates a `TxOut` with given script and the smallest possible `value` that is **not** dust
@@ -591,10 +588,7 @@ impl TxOut {
     ///
     /// [`minimal_non_dust`]: TxOut::minimal_non_dust
     pub fn minimal_non_dust_custom(script_pubkey: ScriptBuf, dust_relay_fee: FeeRate) -> Self {
-        TxOut {
-            value: script_pubkey.minimal_non_dust_custom(dust_relay_fee),
-            script_pubkey,
-        }
+        TxOut { value: script_pubkey.minimal_non_dust_custom(dust_relay_fee), script_pubkey }
     }
 }
 
@@ -1947,7 +1941,8 @@ mod tests {
         let mut witness: Vec<_> = spending.input[1].witness.to_vec();
         witness[0][10] = 42;
         spending.input[1].witness = Witness::from_slice(&witness);
-        match spending
+
+        let error = spending
             .verify(|point: &OutPoint| {
                 if let Some(tx) = spent3.remove(&point.txid) {
                     return tx.output.get(point.vout as usize).cloned();
@@ -1955,8 +1950,9 @@ mod tests {
                 None
             })
             .err()
-            .unwrap()
-        {
+            .unwrap();
+
+        match error {
             TxVerifyError::ScriptVerification(_) => {}
             _ => panic!("Wrong error type"),
         }
