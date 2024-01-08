@@ -44,7 +44,7 @@ use crate::blockdata::constants::{
 };
 use crate::blockdata::script::witness_program::WitnessProgram;
 use crate::blockdata::script::witness_version::WitnessVersion;
-use crate::blockdata::script::{self, PushBytesBuf, Script, ScriptBuf, ScriptHash};
+use crate::blockdata::script::{self, Script, ScriptBuf, ScriptHash};
 use crate::crypto::key::{
     CompressedPublicKey, PubkeyHash, PublicKey, TweakedPublicKey, UntweakedPublicKey,
 };
@@ -353,8 +353,7 @@ impl<N: NetworkValidation> serde::Serialize for Address<N> {
 /// Methods on [`Address`] that can be called on both `Address<NetworkChecked>` and
 /// `Address<NetworkUnchecked>`.
 impl<V: NetworkValidation> Address<V> {
-    /// Returns a reference to the unchecked address, which is dangerous to use if the address
-    /// is invalid in the context of `NetworkUnchecked`.
+    /// Returns a reference to the address as if it was unchecked.
     pub fn as_unchecked(&self) -> &Address<NetworkUnchecked> {
         unsafe { &*(self as *const Address<V> as *const Address<NetworkUnchecked>) }
     }
@@ -520,10 +519,8 @@ impl Address {
         } else if script.is_witness_program() {
             let opcode = script.first_opcode().expect("is_witness_program guarantees len > 4");
 
-            let buf = PushBytesBuf::try_from(script.as_bytes()[2..].to_vec())
-                .expect("is_witness_program guarantees len <= 42 bytes");
             let version = WitnessVersion::try_from(opcode)?;
-            let program = WitnessProgram::new(version, buf)?;
+            let program = WitnessProgram::new(version, &script.as_bytes()[2..])?;
             Ok(Address::from_witness_program(program, network))
         } else {
             Err(Error::UnrecognizedScript)
@@ -632,10 +629,12 @@ impl Address {
 /// Methods that can be called only on `Address<NetworkUnchecked>`.
 impl Address<NetworkUnchecked> {
     /// Returns a reference to the checked address.
+    ///
     /// This function is dangerous in case the address is not a valid checked address.
     pub fn assume_checked_ref(&self) -> &Address {
         unsafe { &*(self as *const Address<NetworkUnchecked> as *const Address) }
     }
+
     /// Parsed addresses do not always have *one* network. The problem is that legacy testnet,
     /// regtest and signet addresse use the same prefix instead of multiple different ones. When
     /// parsing, such addresses are always assumed to be testnet addresses (the same is true for
@@ -727,8 +726,7 @@ impl FromStr for Address<NetworkUnchecked> {
     fn from_str(s: &str) -> Result<Address<NetworkUnchecked>, ParseError> {
         if let Ok((hrp, witness_version, data)) = bech32::segwit::decode(s) {
             let version = WitnessVersion::try_from(witness_version)?;
-            let buf = PushBytesBuf::try_from(data).expect("bech32 guarantees valid program length");
-            let program = WitnessProgram::new(version, buf)
+            let program = WitnessProgram::new(version, &data)
                 .expect("bech32 guarantees valid program length for witness");
 
             let hrp = KnownHrp::from_hrp(hrp)?;
@@ -924,10 +922,10 @@ mod tests {
     #[test]
     fn test_non_existent_segwit_version() {
         // 40-byte program
-        let program = PushBytesBuf::from(hex!(
+        let program = hex!(
             "654f6ea368e0acdfd92976b7c2103a1b26313f430654f6ea368e0acdfd92976b7c2103a1b26313f4"
-        ));
-        let program = WitnessProgram::new(WitnessVersion::V13, program).expect("valid program");
+        );
+        let program = WitnessProgram::new(WitnessVersion::V13, &program).expect("valid program");
 
         let addr = Address::from_witness_program(program, Groestlcoin);
         roundtrips(&addr, Groestlcoin);

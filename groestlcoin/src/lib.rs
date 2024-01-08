@@ -39,6 +39,7 @@
 // Exclude clippy lints we don't think are valuable
 #![allow(clippy::needless_question_mark)] // https://github.com/rust-bitcoin/rust-bitcoin/pull/2134
 #![allow(clippy::uninhabited_references)] // falsely claims that 100% safe code is UB
+#![allow(clippy::manual_range_contains)] // more readable than clippy's format
 
 // Disable 16-bit support at least for now as we can't guarantee it yet.
 #[cfg(target_pointer_width = "16")]
@@ -60,7 +61,7 @@ pub extern crate base64;
 /// Encodes and decodes the Bech32 forrmat.
 pub extern crate bech32;
 
-/// Rust implementation of cryptographic hash function algorithems.
+/// Rust implementation of cryptographic hash function algorithms.
 pub extern crate hashes;
 
 /// Re-export the `hex-conservative` crate.

@@ -1,8 +1,8 @@
 # Groestlcoin Hashes Library
 
-This is a simple library which implements the hash functions needed by
-Groestlcoin. These are Groestl512, SHA1, SHA256, SHA256d, and RIPEMD160. As an
-ancilliary thing, it exposes hexadecimal serialization and deserialization,
+This is a simple, no-dependency library which implements the hash functions
+needed by Groestlcoin. These are SHA1, SHA256, SHA256d, SHA512, and RIPEMD160. As an
+ancillary thing, it exposes hexadecimal serialization and deserialization,
 since these are needed to display hashes anway.
 
 [Documentation](https://docs.rs/groestlcoin_hashes/)
