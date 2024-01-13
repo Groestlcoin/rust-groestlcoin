@@ -28,7 +28,6 @@ use crate::consensus::{encode, Decodable, Encodable};
 use crate::internal_macros::{impl_consensus_encoding, impl_hashencode};
 use crate::parse::impl_parse_str_from_int_infallible;
 use crate::prelude::*;
-use crate::script::Push;
 #[cfg(doc)]
 use crate::sighash::{EcdsaSighashType, TapSighashType};
 use crate::string::FromHexStr;
@@ -921,7 +920,7 @@ impl Transaction {
         fn count_sigops(prevout: &TxOut, input: &TxIn) -> usize {
             let mut count: usize = 0;
             if prevout.script_pubkey.is_p2sh() {
-                if let Some(Push::Data(redeem)) = input.script_sig.last_pushdata() {
+                if let Some(redeem) = input.script_sig.last_pushdata() {
                     count =
                         count.saturating_add(Script::from_bytes(redeem.as_bytes()).count_sigops());
                 }
@@ -967,7 +966,7 @@ impl Transaction {
             } else if prevout.script_pubkey.is_p2sh() && script_sig.is_push_only() {
                 // If prevout is P2SH and scriptSig is push only
                 // then we wrap the last push (redeemScript) in a Script
-                if let Some(Push::Data(push_bytes)) = script_sig.last_pushdata() {
+                if let Some(push_bytes) = script_sig.last_pushdata() {
                     Script::from_bytes(push_bytes.as_bytes())
                 } else {
                     return 0;
@@ -1043,9 +1042,7 @@ impl Decodable for Version {
 }
 
 impl fmt::Display for Version {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.0, f)
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Display::fmt(&self.0, f) }
 }
 
 impl_consensus_encoding!(TxOut, value, script_pubkey);
@@ -1196,7 +1193,7 @@ impl From<&Transaction> for Wtxid {
 ///   of the to-be-constructed transaction.
 ///
 /// Note that lengths of the scripts and witness elements must be non-serialized, IOW *without* the
-/// preceding compact size. The lenght of preceding compact size is computed and added inside the
+/// preceding compact size. The length of preceding compact size is computed and added inside the
 /// function for convenience.
 ///
 /// If you  have the transaction already constructed (except for signatures) with a dummy value for
