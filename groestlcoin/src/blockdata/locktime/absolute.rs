@@ -10,7 +10,7 @@ use core::cmp::{Ordering, PartialOrd};
 use core::{fmt, mem};
 
 use internals::write_err;
-use io::{Read, Write};
+use io::{BufRead, Write};
 #[cfg(all(test, mutate))]
 use mutagen::mutate;
 
@@ -345,7 +345,7 @@ impl Encodable for LockTime {
 
 impl Decodable for LockTime {
     #[inline]
-    fn consensus_decode<R: Read + ?Sized>(r: &mut R) -> Result<Self, encode::Error> {
+    fn consensus_decode<R: BufRead + ?Sized>(r: &mut R) -> Result<Self, encode::Error> {
         u32::consensus_decode(r).map(LockTime::from_consensus)
     }
 }
@@ -386,6 +386,20 @@ impl<'de> serde::Deserialize<'de> for LockTime {
             }
         }
         deserializer.deserialize_u32(Visitor).map(LockTime::from_consensus)
+    }
+}
+
+#[cfg(feature = "ordered")]
+impl ordered::ArbitraryOrd for LockTime {
+    fn arbitrary_cmp(&self, other: &Self) -> Ordering {
+        use LockTime::*;
+
+        match (self, other) {
+            (Blocks(_), Seconds(_)) => Ordering::Less,
+            (Seconds(_), Blocks(_)) => Ordering::Greater,
+            (Blocks(this), Blocks(that)) => this.cmp(that),
+            (Seconds(this), Seconds(that)) => this.cmp(that),
+        }
     }
 }
 

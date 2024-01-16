@@ -40,6 +40,7 @@
 #![allow(clippy::needless_question_mark)] // https://github.com/rust-bitcoin/rust-bitcoin/pull/2134
 #![allow(clippy::uninhabited_references)] // falsely claims that 100% safe code is UB
 #![allow(clippy::manual_range_contains)] // more readable than clippy's format
+#![allow(clippy::unconditional_recursion)] // broken; see https://github.com/rust-lang/rust-clippy/issues/12133
 
 // Disable 16-bit support at least for now as we can't guarantee it yet.
 #[cfg(target_pointer_width = "16")]
@@ -69,6 +70,10 @@ pub extern crate hex;
 
 /// Re-export the `bitcoin-io` crate.
 pub extern crate io;
+
+/// Re-export the `ordered` crate.
+#[cfg(feature = "ordered")]
+pub extern crate ordered;
 
 /// Rust wrapper library for Pieter Wuille's libsecp256k1.  Implements ECDSA and BIP 340 signatures
 /// for the SECG elliptic curve group secp256k1 and related utilities.
@@ -167,7 +172,7 @@ pub mod amount {
     //! We refer to the documentation on the types for more information.
 
     use crate::consensus::{encode, Decodable, Encodable};
-    use crate::io;
+    use crate::io::{BufRead, Write};
 
     #[rustfmt::skip]            // Keep public re-exports separate.
     #[doc(inline)]
@@ -179,14 +184,14 @@ pub mod amount {
 
     impl Decodable for Amount {
         #[inline]
-        fn consensus_decode<R: io::Read + ?Sized>(r: &mut R) -> Result<Self, encode::Error> {
+        fn consensus_decode<R: BufRead + ?Sized>(r: &mut R) -> Result<Self, encode::Error> {
             Ok(Amount::from_sat(Decodable::consensus_decode(r)?))
         }
     }
 
     impl Encodable for Amount {
         #[inline]
-        fn consensus_encode<W: io::Write + ?Sized>(&self, w: &mut W) -> Result<usize, io::Error> {
+        fn consensus_encode<W: Write + ?Sized>(&self, w: &mut W) -> Result<usize, io::Error> {
             self.to_sat().consensus_encode(w)
         }
     }
