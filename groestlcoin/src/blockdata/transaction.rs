@@ -773,7 +773,7 @@ impl Transaction {
         size += self.input.iter().map(|input| input.base_size()).sum::<usize>();
 
         size += VarInt::from(self.output.len()).size();
-        size += self.output.iter().map(|input| input.size()).sum::<usize>();
+        size += self.output.iter().map(|output| output.size()).sum::<usize>();
 
         size + absolute::LockTime::SIZE
     }
@@ -785,8 +785,9 @@ impl Transaction {
     #[inline]
     pub fn total_size(&self) -> usize {
         let mut size: usize = 4; // Serialized length of a u32 for the version number.
+	let uses_segwit = self.uses_segwit_serialization();
 
-        if self.use_segwit_serialization() {
+        if uses_segwit {
             size += 2; // 1 byte for the marker and 1 for the flag.
         }
 
@@ -795,7 +796,7 @@ impl Transaction {
             .input
             .iter()
             .map(|input| {
-                if self.use_segwit_serialization() {
+                if uses_segwit {
                     input.total_size()
                 } else {
                     input.base_size()
@@ -995,16 +996,91 @@ impl Transaction {
     }
 
     /// Returns whether or not to serialize transaction as specified in BIP-144.
-    fn use_segwit_serialization(&self) -> bool {
-        for input in &self.input {
-            if !input.witness.is_empty() {
-                return true;
-            }
+    fn uses_segwit_serialization(&self) -> bool {
+        if self.input.iter().any(|input| !input.witness.is_empty()) {
+            return true;
         }
         // To avoid serialization ambiguity, no inputs means we use BIP141 serialization (see
         // `Transaction` docs for full explanation).
         self.input.is_empty()
     }
+
+    /// Returns a reference to the input at `input_index` if it exists.
+    #[inline]
+    pub fn tx_in(&self, input_index: usize) -> Result<&TxIn, InputsIndexError> {
+        self.input
+            .get(input_index)
+            .ok_or(IndexOutOfBoundsError { index: input_index, length: self.input.len() }.into())
+    }
+
+    /// Returns a reference to the output at `output_index` if it exists.
+    #[inline]
+    pub fn tx_out(&self, output_index: usize) -> Result<&TxOut, OutputsIndexError> {
+        self.output
+            .get(output_index)
+            .ok_or(IndexOutOfBoundsError { index: output_index, length: self.output.len() }.into())
+    }
+}
+
+/// Error attempting to do an out of bounds access on the transaction inputs vector.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct InputsIndexError(pub IndexOutOfBoundsError);
+
+impl fmt::Display for InputsIndexError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write_err!(f, "invalid input index"; self.0)
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for InputsIndexError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> { Some(&self.0) }
+}
+
+impl From<IndexOutOfBoundsError> for InputsIndexError {
+    fn from(e: IndexOutOfBoundsError) -> Self { Self(e) }
+}
+
+/// Error attempting to do an out of bounds access on the transaction outputs vector.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct OutputsIndexError(pub IndexOutOfBoundsError);
+
+impl fmt::Display for OutputsIndexError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write_err!(f, "invalid output index"; self.0)
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for OutputsIndexError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> { Some(&self.0) }
+}
+
+impl From<IndexOutOfBoundsError> for OutputsIndexError {
+    fn from(e: IndexOutOfBoundsError) -> Self { Self(e) }
+}
+
+/// Error attempting to do an out of bounds access on a vector.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct IndexOutOfBoundsError {
+    /// Attempted index access.
+    pub index: usize,
+    /// Length of the vector where access was attempted.
+    pub length: usize,
+}
+
+impl fmt::Display for IndexOutOfBoundsError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "index {} is out-of-bounds for vector with length {}", self.index, self.length)
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for IndexOutOfBoundsError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> { None }
 }
 
 /// The transaction version.
@@ -1109,7 +1185,7 @@ impl Encodable for Transaction {
         len += self.version.consensus_encode(w)?;
 
         // Legacy transaction serialization format only includes inputs and outputs.
-        if !self.use_segwit_serialization() {
+        if !self.uses_segwit_serialization() {
             len += self.input.consensus_encode(w)?;
             len += self.output.consensus_encode(w)?;
         } else {
@@ -1680,6 +1756,17 @@ mod tests {
     }
 
     #[test]
+    fn segwit_invalid_transaction() {
+        let tx_bytes = hex!("0000fd000001021921212121212121212121f8b372b0239cc1dff600000000004f4f4f4f4f4f4f4f000000000000000000000000000000333732343133380d000000000000000000000000000000ff000000000009000dff000000000000000800000000000000000d");
+        let tx: Result<Transaction, _> = deserialize(&tx_bytes);
+        assert!(tx.is_err());
+        assert!(tx
+            .unwrap_err()
+            .to_string()
+            .contains("witness flag set but no witnesses present"));
+    }
+
+    #[test]
     fn segwit_transaction() {
         let tx_bytes = hex!(
             "02000000000101595895ea20179de87052b4046dfe6fd515860505d6511a9004cf12a1f93cac7c01000000\
@@ -2090,14 +2177,14 @@ mod tests {
         for (is_segwit, tx) in &txs {
             let txin_weight = if *is_segwit { TxIn::segwit_weight } else { TxIn::legacy_weight };
             let tx: Transaction = deserialize(Vec::from_hex(tx).unwrap().as_slice()).unwrap();
-            assert_eq!(*is_segwit, tx.use_segwit_serialization());
+            assert_eq!(*is_segwit, tx.uses_segwit_serialization());
 
             let mut calculated_weight = empty_transaction_weight
                 + tx.input.iter().fold(Weight::ZERO, |sum, i| sum + txin_weight(i))
                 + tx.output.iter().fold(Weight::ZERO, |sum, o| sum + o.weight());
 
             // The empty tx uses segwit serialization but a legacy tx does not.
-            if !tx.use_segwit_serialization() {
+            if !tx.uses_segwit_serialization() {
                 calculated_weight -= Weight::from_wu(2);
             }
 
