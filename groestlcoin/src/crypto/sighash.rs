@@ -2034,7 +2034,7 @@ mod tests {
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.p2wpkh_signature_hash(1, &spk, value, EcdsaSighashType::All).unwrap(),
-            "d5ec9f04716c649e5ee176b16e69f836fe0f360d38166394ae19bcaaf5e1365b"
+            "78d30165e9873c05d3e3eea458d41559dbb42ad5bb79db4e5be4827a05ed62b4"
                 .parse::<SegwitV0Sighash>()
                 .unwrap(),
         );
@@ -2075,7 +2075,7 @@ mod tests {
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.p2wpkh_signature_hash(0, &redeem_script, value, EcdsaSighashType::All).unwrap(),
-            "606521f5f0c6cf8caa0aa77c54b855d539e46848e9fce1ff6aa6172bf86aef7e"
+            "12885c3df56d146075151c6dbf2afe9506333d4f3e6cea38f58ca8520805a30f"
                 .parse::<SegwitV0Sighash>()
                 .unwrap(),
         );
@@ -2130,7 +2130,7 @@ mod tests {
         let mut cache = SighashCache::new(&tx);
         assert_eq!(
             cache.p2wsh_signature_hash(0, &witness_script, value, EcdsaSighashType::All).unwrap(),
-            "c3d0810930ab0047ef54095e82cae9e654316596f55646f5309ba48774b8b5ee"
+            "f49b945ea2188fbb44771c80c51e3b5185e90748b4600dd45c3e6268f634fa8a"
                 .parse::<SegwitV0Sighash>()
                 .unwrap(),
         );
@@ -2182,10 +2182,10 @@ mod tests {
     }
     check_bip143_p2wsh_nested_in_p2sh! {
         // EcdsaSighashType::All tested above.
-        bip143_p2wsh_nested_in_p2sh_sighash_none, None, "2e42b29c2154f5ad117feb3c6109569381063c6cc3f573ef508d25040c3ed872";
-        bip143_p2wsh_nested_in_p2sh_sighash_single, Single, "6273921bffcaed1fae8c00edbf5dab8c1d85aabde2ae6f65878f7e0114c14beb";
-        bip143_p2wsh_nested_in_p2sh_sighash_all_plus_anyonecanpay, AllPlusAnyoneCanPay, "ae72991b3330fe5a6ed93dfa82729330fcf996e778cf308f82bdddf444215536";
-        bip143_p2wsh_nested_in_p2sh_sighash_none_plus_anyonecanpay, NonePlusAnyoneCanPay, "781ba15f3779d5542ce8ecb5c18716733a5ee42a6f51488ec96154934e2c890a";
-        bip143_p2wsh_nested_in_p2sh_sighash_single_plus_anyonecanpay, SinglePlusAnyoneCanPay, "511e8e52ed574121fc1b654970395502128263f62662e076dc6baf05c2e6a99b";
+        bip143_p2wsh_nested_in_p2sh_sighash_none, None, "7f6d8bfa185f6a0562d6a85a4eafc8d4d09f9bd62e88d8083a5cb88c036e93f8";
+        bip143_p2wsh_nested_in_p2sh_sighash_single, Single, "3836dd3218fe38d316bdc4a1a6ac548e13003cf63bde666fb5e320b95739fde7";
+        bip143_p2wsh_nested_in_p2sh_sighash_all_plus_anyonecanpay, AllPlusAnyoneCanPay, "d9d4aecc2a634ccb011390e766419061ef4c16034f630029ada3faeaf30f89e0";
+        bip143_p2wsh_nested_in_p2sh_sighash_none_plus_anyonecanpay, NonePlusAnyoneCanPay, "ce6fb80adfe839c7b82c1d61a62b9565cd0bcae0974543a9b710b7be2bcdc65d";
+        bip143_p2wsh_nested_in_p2sh_sighash_single_plus_anyonecanpay, SinglePlusAnyoneCanPay, "c8d444490802d11060eb56265c5f5f966ca85965f17bd2c13ef214418529e8c2";
     }
 }
