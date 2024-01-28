@@ -148,13 +148,13 @@ impl ChainHash {
     // Mainnet value can be verified at https://github.com/lightning/bolts/blob/master/00-introduction.md
     /// `ChainHash` for mainnet groestlcoin.
     pub const GROESTLCOIN: Self = Self([
-        35, 144, 99, 59, 112, 240, 98, 203, 58, 61, 104, 20, 182, 126, 41, 168, 13, 157, 117,
-        129, 219, 11, 204, 73, 77, 89, 124, 146, 197, 10, 0, 0,
+        35, 144, 99, 59, 112, 240, 98, 203, 58, 61, 104, 20, 182, 126, 41, 168, 13, 157, 117, 129,
+        219, 11, 204, 73, 77, 89, 124, 146, 197, 10, 0, 0,
     ]);
     /// `ChainHash` for testnet groestlcoin.
     pub const TESTNET: Self = Self([
-        54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99,
-        193, 110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0,
+        54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99, 193,
+        110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0,
     ]);
     /// `ChainHash` for signet groestlcoin.
     pub const SIGNET: Self = Self([
@@ -163,8 +163,8 @@ impl ChainHash {
     ]);
     /// `ChainHash` for regtest groestlcoin.
     pub const REGTEST: Self = Self([
-        54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99,
-        193, 110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0,
+        54, 205, 242, 220, 183, 85, 98, 135, 40, 42, 5, 192, 100, 1, 35, 35, 186, 230, 99, 193,
+        110, 211, 205, 152, 152, 252, 80, 187, 255, 0, 0, 0,
     ]);
 
     /// Returns the hash of the `network` genesis block for use as a chain hash.

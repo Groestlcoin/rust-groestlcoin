@@ -118,7 +118,8 @@ mod tests {
     use crate::blockdata::block::Block;
     use crate::consensus::encode::deserialize;
 
-    #[test] #[ignore]
+    #[test]
+    #[ignore]
     fn both_merkle_root_functions_return_the_same_result() {
         // testnet block 000000000000045e0b1660b6445b5e5c5ab63c9a4f956be7e1e69be04fa4497b
         let segwit_block = include_bytes!("../../tests/data/testnet_block_000000000000045e0b1660b6445b5e5c5ab63c9a4f956be7e1e69be04fa4497b.raw");

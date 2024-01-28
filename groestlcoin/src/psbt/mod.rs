@@ -1909,7 +1909,8 @@ mod tests {
     }
 
     // PSBTs taken from BIP 174 test vectors.
-    #[test] #[ignore]
+    #[test]
+    #[ignore]
     fn combine_psbts() {
         let mut psbt1 = hex_psbt(include_str!("../../tests/data/psbt1.hex")).unwrap();
         let psbt2 = hex_psbt(include_str!("../../tests/data/psbt2.hex")).unwrap();
@@ -1919,7 +1920,8 @@ mod tests {
         assert_eq!(psbt1, psbt_combined);
     }
 
-    #[test] #[ignore]
+    #[test]
+    #[ignore]
     fn combine_psbts_commutative() {
         let mut psbt1 = hex_psbt(include_str!("../../tests/data/psbt1.hex")).unwrap();
         let mut psbt2 = hex_psbt(include_str!("../../tests/data/psbt2.hex")).unwrap();

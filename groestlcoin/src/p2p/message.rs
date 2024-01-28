@@ -540,9 +540,7 @@ impl Decodable for RawNetworkMessage {
 mod test {
     use std::net::Ipv4Addr;
 
-    use hashes::groestld;
-    use hashes::sha256d;
-    use hashes::Hash as HashTrait;
+    use hashes::{groestld, sha256d, Hash as HashTrait};
     use hex::test_hex_unwrap as hex;
 
     use super::message_network::{Reject, RejectReason, VersionMessage};
@@ -564,7 +562,9 @@ mod test {
 
     fn sha256d_hash(slice: [u8; 32]) -> sha256d::Hash { sha256d::Hash::from_slice(&slice).unwrap() }
 
-    fn groestl_hash(slice: [u8;32]) -> groestld::Hash { groestld::Hash::from_slice(&slice).unwrap() }
+    fn groestl_hash(slice: [u8; 32]) -> groestld::Hash {
+        groestld::Hash::from_slice(&slice).unwrap()
+    }
 
     //fn hash(slice: [u8; 32]) -> Hash { Hash::from_slice(&slice).unwrap() }
 
@@ -638,7 +638,10 @@ mod test {
                 filter_type: 13,
                 stop_hash: groestl_hash([53u8; 32]).into(),
                 previous_filter_header: groestl_hash([12u8; 32]).into(),
-                filter_hashes: vec![groestl_hash([4u8; 32]).into(), groestl_hash([12u8; 32]).into()],
+                filter_hashes: vec![
+                    groestl_hash([4u8; 32]).into(),
+                    groestl_hash([12u8; 32]).into(),
+                ],
             }),
             NetworkMessage::GetCFCheckpt(GetCFCheckpt {
                 filter_type: 17,
@@ -647,7 +650,10 @@ mod test {
             NetworkMessage::CFCheckpt(CFCheckpt {
                 filter_type: 27,
                 stop_hash: groestl_hash([77u8; 32]).into(),
-                filter_headers: vec![groestl_hash([3u8; 32]).into(), groestl_hash([99u8; 32]).into()],
+                filter_headers: vec![
+                    groestl_hash([3u8; 32]).into(),
+                    groestl_hash([99u8; 32]).into(),
+                ],
             }),
             NetworkMessage::Alert(vec![45, 66, 3, 2, 6, 8, 9, 12, 3, 130]),
             NetworkMessage::Reject(Reject {

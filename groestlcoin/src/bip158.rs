@@ -41,7 +41,7 @@
 use core::cmp::{self, Ordering};
 use core::fmt::{self, Display, Formatter};
 
-use hashes::{siphash24, Hash, groestld};
+use hashes::{groestld, siphash24, Hash};
 use internals::write_err;
 use io::{BufRead, Write};
 
@@ -569,7 +569,8 @@ mod test {
     use crate::consensus::encode::deserialize;
     use crate::ScriptBuf;
 
-    #[test] #[ignore]
+    #[test]
+    #[ignore]
     fn test_blockfilters() {
         // test vectors from: https://github.com/jimpo/bitcoin/blob/c7efb652f3543b001b4dd22186a354605b14f47e/src/test/data/blockfilters.json
         let data = include_str!("../tests/data/blockfilters.json");

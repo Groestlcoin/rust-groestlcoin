@@ -1271,7 +1271,6 @@ impl fmt::Display for SegwitV0Error {
     }
 }
 
-
 #[cfg(feature = "std")]
 impl std::error::Error for SegwitV0Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
@@ -1501,7 +1500,8 @@ mod tests {
         assert_eq!(got, want)
     }
 
-    #[test] #[ignore]
+    #[test]
+    #[ignore]
     #[cfg(feature = "serde")]
     fn legacy_sighash() {
         use serde_json::Value;

@@ -33,7 +33,9 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::str::FromStr;
 
-use groestlcoin::bip32::{ChildNumber, DerivationPath, Fingerprint, IntoDerivationPath, Xpriv, Xpub};
+use groestlcoin::bip32::{
+    ChildNumber, DerivationPath, Fingerprint, IntoDerivationPath, Xpriv, Xpub,
+};
 use groestlcoin::consensus::encode;
 use groestlcoin::locktime::absolute;
 use groestlcoin::psbt::{self, Input, Psbt, PsbtSighashType};
