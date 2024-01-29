@@ -214,7 +214,8 @@ impl fmt::Display for TxVerifyError {
         use TxVerifyError::*;
 
         match *self {
-            ScriptVerification(ref e) => write_err!(f, "groestlcoinconsensus verification failed"; e),
+            ScriptVerification(ref e) =>
+                write_err!(f, "groestlcoinconsensus verification failed"; e),
             UnknownSpentOutput(ref p) => write!(f, "unknown spent output: {}", p),
         }
     }

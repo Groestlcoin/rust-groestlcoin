@@ -44,17 +44,23 @@ macro_rules! do_impl {
 
         impl fmt::Display for $ty {
             #[inline]
-            fn fmt(&self, f: &mut fmt::Formatter) -> core::fmt::Result { fmt::Display::fmt(&self.0, f) }
+            fn fmt(&self, f: &mut fmt::Formatter) -> core::fmt::Result {
+                fmt::Display::fmt(&self.0, f)
+            }
         }
 
         impl fmt::LowerHex for $ty {
             #[inline]
-            fn fmt(&self, f: &mut fmt::Formatter) -> core::fmt::Result { fmt::LowerHex::fmt(&self.0, f) }
+            fn fmt(&self, f: &mut fmt::Formatter) -> core::fmt::Result {
+                fmt::LowerHex::fmt(&self.0, f)
+            }
         }
 
         impl fmt::UpperHex for $ty {
             #[inline]
-            fn fmt(&self, f: &mut fmt::Formatter) -> core::fmt::Result { fmt::UpperHex::fmt(&self.0, f) }
+            fn fmt(&self, f: &mut fmt::Formatter) -> core::fmt::Result {
+                fmt::UpperHex::fmt(&self.0, f)
+            }
         }
     };
 }
@@ -126,7 +132,8 @@ impl Target {
     /// The proof of work limit on testnet.
     // Taken from Bitcoin Core but had lossy conversion to/from compact form.
     // https://github.com/bitcoin/bitcoin/blob/8105bce5b384c72cf08b25b7c5343622754e7337/src/kernel/chainparams.cpp#L208
-    pub const MAX_ATTAINABLE_TESTNET: Self = Target(U256(0x00FF_FFFF_FFFF_FFFF_u128 << (208 - 128), 0));
+    pub const MAX_ATTAINABLE_TESTNET: Self =
+        Target(U256(0x00FF_FFFF_FFFF_FFFF_u128 << (208 - 128), 0));
 
     /// The proof of work limit on regtest.
     // Taken from Bitcoin Core but had lossy conversion to/from compact form.
@@ -1744,7 +1751,7 @@ mod verification {
         let _ = x.mul_u64(y);
     }
 
-    #[kani::unwind(5)]   // I can't remember exactly why we need this.
+    #[kani::unwind(5)] // I can't remember exactly why we need this.
     #[kani::proof]
     fn check_div_rem() {
         let x: U256 = kani::any();

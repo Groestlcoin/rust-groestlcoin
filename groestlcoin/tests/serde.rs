@@ -141,7 +141,8 @@ fn serde_regression_witness() {
     assert_eq!(got, want)
 }
 
-#[test] #[ignore]
+#[test]
+#[ignore]
 fn serde_regression_address() {
     let s = include_str!("data/serde/public_key_hex");
     let pk = PublicKey::from_str(s.trim()).unwrap();
@@ -152,7 +153,8 @@ fn serde_regression_address() {
     assert_eq!(got, want)
 }
 
-#[test] #[ignore]
+#[test]
+#[ignore]
 fn serde_regression_extended_priv_key() {
     let s = include_str!("data/serde/extended_priv_key");
     let key = Xpriv::from_str(s.trim()).unwrap();
@@ -161,7 +163,8 @@ fn serde_regression_extended_priv_key() {
     assert_eq!(got, want)
 }
 
-#[test] #[ignore]
+#[test]
+#[ignore]
 fn serde_regression_extended_pub_key() {
     let s = include_str!("data/serde/extended_pub_key");
     let key = Xpub::from_str(s.trim()).unwrap();
@@ -201,7 +204,8 @@ fn serde_regression_child_number() {
     assert_eq!(got, want)
 }
 
-#[test] #[ignore]
+#[test]
+#[ignore]
 fn serde_regression_private_key() {
     let sk = PrivateKey::from_wif("cVt4o7BGAig1UXywgGSmARhxMdzP5qvQsxKkSsc1XEkw3tCzAzUV").unwrap();
     let got = serialize(&sk).unwrap();
@@ -218,7 +222,8 @@ fn serde_regression_public_key() {
     assert_eq!(got, want)
 }
 
-#[test] #[ignore]
+#[test]
+#[ignore]
 fn serde_regression_psbt() {
     let tx = Transaction {
         version: transaction::Version::ONE,

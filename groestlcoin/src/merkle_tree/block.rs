@@ -677,7 +677,8 @@ mod tests {
         assert!(result.is_err());
     }
 
-    #[test] #[ignore]
+    #[test]
+    #[ignore]
     fn merkleblock_serialization() {
         // Got it by running the rpc call
         // `gettxoutproof '["220ebc64e21abece964927322cba69180ed853bb187fbc6923bac7d010b9d87a"]'`
@@ -695,7 +696,8 @@ mod tests {
 
     /// Create a CMerkleBlock using a list of txids which will be found in the
     /// given block.
-    #[test] #[ignore]
+    #[test]
+    #[ignore]
     fn merkleblock_construct_from_txids_found() {
         let block = get_block_3955537();
 
@@ -733,7 +735,8 @@ mod tests {
     }
 
     /// Create a CMerkleBlock using a list of txids which will not be found in the given block
-    #[test] #[ignore]
+    #[test]
+    #[ignore]
     fn merkleblock_construct_from_txids_not_found() {
         let block = get_block_3955537();
         let txids: Vec<Txid> = ["c0ffee00003bafa802c8aa084379aa98d9fcd632ddc2ed9782b586ec87451f20"]

@@ -337,7 +337,10 @@ impl<N: NetworkValidation> fmt::Display for DisplayUnchecked<'_, N> {
 }
 
 #[cfg(feature = "serde")]
-crate::serde_utils::serde_string_deserialize_impl!(Address<NetworkUnchecked>, "a Groestlcoin address");
+crate::serde_utils::serde_string_deserialize_impl!(
+    Address<NetworkUnchecked>,
+    "a Groestlcoin address"
+);
 
 #[cfg(feature = "serde")]
 impl<N: NetworkValidation> serde::Serialize for Address<N> {
@@ -1015,35 +1018,26 @@ mod tests {
         );
 
         let addr: Address<NetworkUnchecked> =
-            Address::from_str("tgrs1qw4z3xrtgx4f6w7akwpp2xa0gupmkv4yauemmm9")
-                .unwrap();
+            Address::from_str("tgrs1qw4z3xrtgx4f6w7akwpp2xa0gupmkv4yauemmm9").unwrap();
         let json = serde_json::to_value(addr).unwrap();
         assert_eq!(
             json,
-            serde_json::Value::String(
-                "tgrs1qw4z3xrtgx4f6w7akwpp2xa0gupmkv4yauemmm9".to_owned()
-            )
+            serde_json::Value::String("tgrs1qw4z3xrtgx4f6w7akwpp2xa0gupmkv4yauemmm9".to_owned())
         );
 
-        let addr =
-            Address::from_str("tgrs1qw4z3xrtgx4f6w7akwpp2xa0gupmkv4yauemmm9")
-                .unwrap()
-                .assume_checked();
+        let addr = Address::from_str("tgrs1qw4z3xrtgx4f6w7akwpp2xa0gupmkv4yauemmm9")
+            .unwrap()
+            .assume_checked();
         let json = serde_json::to_value(&addr).unwrap();
         assert_eq!(
             json,
-            serde_json::Value::String(
-                "tgrs1qw4z3xrtgx4f6w7akwpp2xa0gupmkv4yauemmm9".to_owned()
-            )
+            serde_json::Value::String("tgrs1qw4z3xrtgx4f6w7akwpp2xa0gupmkv4yauemmm9".to_owned())
         );
         let into: Address = serde_json::from_value::<Address<_>>(json).unwrap().assume_checked();
         assert_eq!(addr.to_string(), into.to_string());
         assert_eq!(
             into.script_pubkey(),
-            ScriptBuf::from_hex(
-                "00147545130d683553a77bb67042a375e8e07766549d"
-            )
-            .unwrap()
+            ScriptBuf::from_hex("00147545130d683553a77bb67042a375e8e07766549d").unwrap()
         );
 
         let addr = Address::from_str("grs1qyqzpfxy8mv2qhjm3vlaz955d8zapw55vrn5d2h")
@@ -1067,8 +1061,10 @@ mod tests {
         for el in
             ["FXBxTzaqSQsBFkL7DSAkqbaEvhN4HxNsAr", "33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32"].iter()
         {
-            let addr =
-                Address::from_str(el).unwrap().require_network(Network::Groestlcoin).expect("mainnet");
+            let addr = Address::from_str(el)
+                .unwrap()
+                .require_network(Network::Groestlcoin)
+                .expect("mainnet");
             assert_eq!(addr.to_qr_uri(), format!("groestlcoin:{}", el));
         }
 
@@ -1264,7 +1260,8 @@ mod tests {
         assert_eq!(got, want);
     }
 
-    #[test] #[ignore]
+    #[test]
+    #[ignore]
     fn test_matches_script_pubkey() {
         let addresses = [
             "FtUCfuND9WBN2pLEnKeSx3mURaJ4iQdado",
@@ -1277,10 +1274,13 @@ mod tests {
             "grs1pgllnmtxs0g058qz7c6qgaqq4qknwrqj9z7rqn9e2dzhmcfmhlu4sxxj9ma",
         ];
         for addr in &addresses {
-            let addr = Address::from_str(addr).unwrap().require_network(Network::Groestlcoin).unwrap();
+            let addr =
+                Address::from_str(addr).unwrap().require_network(Network::Groestlcoin).unwrap();
             for another in &addresses {
-                let another =
-                    Address::from_str(another).unwrap().require_network(Network::Groestlcoin).unwrap();
+                let another = Address::from_str(another)
+                    .unwrap()
+                    .require_network(Network::Groestlcoin)
+                    .unwrap();
                 assert_eq!(addr.matches_script_pubkey(&another.script_pubkey()), addr == another);
             }
         }

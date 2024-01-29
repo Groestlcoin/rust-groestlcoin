@@ -268,8 +268,7 @@ mod tests {
             coinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoinGroestlcoin"
                 .as_bytes(),
         );
-        let exp =
-            "2hXiLBbH9kmBoA9HWRRpWuHu29Hg49ApfMGzw6CXJkHn2sVUFjm8qF8FQQm29jFNXHjUXs59Q\
+        let exp = "2hXiLBbH9kmBoA9HWRRpWuHu29Hg49ApfMGzw6CXJkHn2sVUFjm8qF8FQQm29jFNXHjUXs59Q\
             K9gk2MrWjiLokRHQ2t71bY5HjQUmutR2rTU91sc9gZjixxegH45Zs19PkCweG4bshVEm3XvqSDnELis8yjxkb\
             aeV3DFCuYA69mxwtsqZpJxqWCSbu9vPBAoX5bWKeF5bRXNSd9tp4F7GMWCmvQqC2fxpVqk78YkxCs6H4EAJncp\
             sNxAxCwrLQ164Pzn2y5zupcmLmwEf1SRmN997q5J3rU3ytRf3ot1iuymf";

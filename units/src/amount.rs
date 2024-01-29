@@ -1814,10 +1814,7 @@ mod tests {
 
         assert_eq!(Amount::ONE_BTC.to_string_with_denomination(D::Bitcoin), "1 GRS");
         assert_eq!(Amount::ONE_SAT.to_string_with_denomination(D::MilliSatoshi), "1000 mgro");
-        assert_eq!(
-            SignedAmount::ONE_BTC.to_string_with_denomination(D::Satoshi),
-            "100000000 gro"
-        );
+        assert_eq!(SignedAmount::ONE_BTC.to_string_with_denomination(D::Satoshi), "100000000 gro");
         assert_eq!(Amount::ONE_SAT.to_string_with_denomination(D::Bitcoin), "0.00000001 GRS");
         assert_eq!(
             SignedAmount::from_sat(-42).to_string_with_denomination(D::Bitcoin),
@@ -2391,8 +2388,8 @@ mod tests {
     fn denomination_string_acceptable_forms() {
         // Non-exhaustive list of valid forms.
         let valid = vec![
-            "GRS", "grs", "mGRS", "mgrs", "uGRS", "ugrs", "GRO", "gro", "GROS",
-            "gros", "groestl", "groestls", "nGRS", "pGRS",
+            "GRS", "grs", "mGRS", "mgrs", "uGRS", "ugrs", "GRO", "gro", "GROS", "gros", "groestl",
+            "groestls", "nGRS", "pGRS",
         ];
         for denom in valid.iter() {
             assert!(Denomination::from_str(denom).is_ok());

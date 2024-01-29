@@ -10,7 +10,7 @@
 
 use core::fmt;
 
-use hashes::{sha256d, Hash, HashEngine, groestld};
+use hashes::{groestld, sha256d, Hash, HashEngine};
 use io::{BufRead, Write};
 
 use super::Weight;
@@ -555,7 +555,8 @@ mod tests {
     }
 
     // Check testnet block 000000000000045e0b1660b6445b5e5c5ab63c9a4f956be7e1e69be04fa4497b
-    #[test] #[ignore]
+    #[test]
+    #[ignore]
     fn segwit_block_test() {
         let network = Network::Testnet;
         let segwit_block = include_bytes!("../../tests/data/testnet_block_000000000000045e0b1660b6445b5e5c5ab63c9a4f956be7e1e69be04fa4497b.raw").to_vec();
