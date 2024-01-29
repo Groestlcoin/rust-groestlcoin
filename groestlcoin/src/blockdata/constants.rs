@@ -88,7 +88,7 @@ fn bitcoin_genesis_tx() -> Transaction {
 /// Constructs and returns the genesis block.
 pub fn genesis_block(network: Network) -> Block {
     let txdata = vec![bitcoin_genesis_tx()];
-    let hash: sha256d::Hash = txdata[0].txid().into();
+    let hash: sha256d::Hash = txdata[0].compute_txid().into();
     let merkle_root = hash.into();
     match network {
         Network::Groestlcoin => Block {
@@ -213,7 +213,7 @@ mod test {
         assert_eq!(gen.lock_time, absolute::LockTime::ZERO);
 
         assert_eq!(
-            gen.wtxid().to_string(),
+            gen.compute_wtxid().to_string(),
             "3ce968df58f9c8a752306c4b7264afab93149dbc578bd08a42c446caaa6628bb"
         );
     }

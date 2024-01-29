@@ -23,7 +23,7 @@ use internals::write_err;
 use secp256k1::{Message, Secp256k1, Signing};
 
 use crate::bip32::{self, KeySource, Xpriv, Xpub};
-use crate::blockdata::transaction::{Transaction, TxOut};
+use crate::blockdata::transaction::{self, Transaction, TxOut};
 use crate::crypto::ecdsa;
 use crate::crypto::key::{PrivateKey, PublicKey};
 use crate::prelude::*;
@@ -436,7 +436,7 @@ impl Psbt {
                 let witness_script =
                     input.witness_script.as_ref().ok_or(SignError::MissingWitnessScript)?;
                 let sighash =
-                    cache.p2wsh_signature_hash(input_index, witness_script, utxo.value, hash_ty)?;
+                    cache.p2wsh_signature_hash(input_index, witness_script, utxo.value, hash_ty).map_err(SignError::SegwitV0Sighash)?;
                 Ok((Message::from_digest(sighash.to_byte_array()), hash_ty))
             }
             Tr => {
@@ -771,7 +771,7 @@ pub enum SignError {
     /// The `scriptPubkey` is not a P2WPKH script.
     NotWpkh,
     /// Sighash computation error (segwit v0 input).
-    SegwitV0Sighash(sighash::SegwitV0Error),
+    SegwitV0Sighash(transaction::InputsIndexError),
     /// Sighash computation error (p2wpkh input).
     P2wpkhSighash(sighash::P2wpkhError),
     /// Unable to determine the output type.
@@ -832,10 +832,6 @@ impl std::error::Error for SignError {
             | Unsupported => None,
         }
     }
-}
-
-impl From<sighash::SegwitV0Error> for SignError {
-    fn from(e: sighash::SegwitV0Error) -> Self { Self::SegwitV0Sighash(e) }
 }
 
 impl From<sighash::P2wpkhError> for SignError {
@@ -1598,7 +1594,7 @@ mod tests {
             let tx_input = &psbt.unsigned_tx.input[0];
             let psbt_non_witness_utxo = psbt.inputs[0].non_witness_utxo.as_ref().unwrap();
 
-            assert_eq!(tx_input.previous_output.txid, psbt_non_witness_utxo.txid());
+            assert_eq!(tx_input.previous_output.txid, psbt_non_witness_utxo.compute_txid());
             assert!(psbt_non_witness_utxo.output[tx_input.previous_output.vout as usize]
                 .script_pubkey
                 .is_p2pkh());
@@ -1665,7 +1661,7 @@ mod tests {
 
             let tx = &psbt.unsigned_tx;
             assert_eq!(
-                tx.txid(),
+                tx.compute_txid(),
                 "8d20d72e5697468d6a79447a450990e2f586f95c43f61004b9e1eba8014f852f".parse().unwrap(),
             );
 

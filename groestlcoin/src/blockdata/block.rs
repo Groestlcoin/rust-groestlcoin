@@ -294,7 +294,7 @@ impl Block {
 
     /// Computes the transaction merkle root.
     pub fn compute_merkle_root(&self) -> Option<TxMerkleNode> {
-        let hashes = self.txdata.iter().map(|obj| obj.txid().to_raw_hash());
+        let hashes = self.txdata.iter().map(|obj| obj.compute_txid().to_raw_hash());
         merkle_tree::calculate_root(hashes).map(|h| h.into())
     }
 
@@ -316,7 +316,7 @@ impl Block {
                 // Replace the first hash with zeroes.
                 Wtxid::all_zeros().to_raw_hash()
             } else {
-                t.wtxid().to_raw_hash()
+                t.compute_wtxid().to_raw_hash()
             }
         });
         merkle_tree::calculate_root(hashes).map(|h| h.into())
@@ -496,7 +496,7 @@ mod tests {
         let block: Block = deserialize(&hex!(BLOCK_HEX)).unwrap();
 
         let cb_txid = "9ba1552009af3956649bf0cbf8d751aa12aee992e16d1c3965bf7eee76d405fc";
-        assert_eq!(block.coinbase().unwrap().txid().to_string(), cb_txid);
+        assert_eq!(block.coinbase().unwrap().compute_txid().to_string(), cb_txid);
 
         assert_eq!(block.bip34_block_height(), Ok(100_000));
 
@@ -539,7 +539,6 @@ mod tests {
         );
         assert_eq!(real_decode.header.difficulty(network), 22054522349);
         assert_eq!(real_decode.header.difficulty_float(), 82.1582444920006);
-        // [test] TODO: check the transaction data
 
         assert_eq!(real_decode.total_size(), some_block.len());
         assert_eq!(real_decode.base_size(), some_block.len());
@@ -583,7 +582,6 @@ mod tests {
         );
         assert_eq!(real_decode.header.difficulty(network), 440819);
         assert_eq!(real_decode.header.difficulty_float(), 2456598.4399242126);
-        // [test] TODO: check the transaction data
 
         assert_eq!(real_decode.total_size(), segwit_block.len());
         assert_eq!(real_decode.base_size(), 385);

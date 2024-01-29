@@ -693,9 +693,19 @@ impl Transaction {
 
     /// Computes a "normalized TXID" which does not include any signatures.
     ///
+    /// This method is deprecated.  Use `compute_ntxid` instead.
+    #[deprecated(
+        since = "0.31.0",
+        note = "ntxid has been renamed to compute_ntxid to note that it's computationally expensive.  use compute_ntxid() instead."
+    )]
+    pub fn ntxid(&self) -> sha256d::Hash { self.compute_ntxid() }
+
+    /// Computes a "normalized TXID" which does not include any signatures.
+    ///
     /// This gives a way to identify a transaction that is "the same" as
     /// another in the sense of having same inputs and outputs.
-    pub fn ntxid(&self) -> sha256d::Hash {
+    #[doc(alias = "ntxid")]
+    pub fn compute_ntxid(&self) -> sha256d::Hash {
         let cloned_tx = Transaction {
             version: self.version,
             lock_time: self.lock_time,
@@ -710,15 +720,25 @@ impl Transaction {
                 .collect(),
             output: self.output.clone(),
         };
-        cloned_tx.txid().into()
+        cloned_tx.compute_txid().into()
     }
+
+    /// Computes the [`Txid`].
+    ///
+    /// This method is deprecated.  Use `compute_txid` instead.
+    #[deprecated(
+        since = "0.31.0",
+        note = "txid has been renamed to compute_txid to note that it's computationally expensive.  use compute_txid() instead."
+    )]
+    pub fn txid(&self) -> Txid { self.compute_txid() }
 
     /// Computes the [`Txid`].
     ///
     /// Hashes the transaction **excluding** the segwit data (i.e. the marker, flag bytes, and the
     /// witness fields themselves). For non-segwit transactions which do not have any segwit data,
-    /// this will be equal to [`Transaction::wtxid()`].
-    pub fn txid(&self) -> Txid {
+    /// this will be equal to [`Transaction::compute_wtxid()`].
+    #[doc(alias = "txid")]
+    pub fn compute_txid(&self) -> Txid {
         let mut enc = TxidInternal::engine();
         self.version.consensus_encode(&mut enc).expect("engines don't error");
         self.input.consensus_encode(&mut enc).expect("engines don't error");
@@ -729,10 +749,20 @@ impl Transaction {
 
     /// Computes the segwit version of the transaction id.
     ///
+    /// This method is deprecated.  Use `compute_wtxid` instead.
+    #[deprecated(
+        since = "0.31.0",
+        note = "wtxid has been renamed to compute_wtxid to note that it's computationally expensive.  use compute_wtxid() instead."
+    )]
+    pub fn wtxid(&self) -> Wtxid { self.compute_wtxid() }
+
+    /// Computes the segwit version of the transaction id.
+    ///
     /// Hashes the transaction **including** all segwit data (i.e. the marker, flag bytes, and the
     /// witness fields themselves). For non-segwit transactions which do not have any segwit data,
     /// this will be equal to [`Transaction::txid()`].
-    pub fn wtxid(&self) -> Wtxid {
+    #[doc(alias = "wtxid")]
+    pub fn compute_wtxid(&self) -> Wtxid {
         let mut enc = WtxidInternal::engine();
         self.consensus_encode(&mut enc).expect("engines don't error");
         Wtxid::from(WtxidInternal::from_engine(enc))
@@ -1241,19 +1271,19 @@ impl Decodable for Transaction {
 }
 
 impl From<Transaction> for Txid {
-    fn from(tx: Transaction) -> Txid { tx.txid() }
+    fn from(tx: Transaction) -> Txid { tx.compute_txid() }
 }
 
 impl From<&Transaction> for Txid {
-    fn from(tx: &Transaction) -> Txid { tx.txid() }
+    fn from(tx: &Transaction) -> Txid { tx.compute_txid() }
 }
 
 impl From<Transaction> for Wtxid {
-    fn from(tx: Transaction) -> Wtxid { tx.wtxid() }
+    fn from(tx: Transaction) -> Wtxid { tx.compute_wtxid() }
 }
 
 impl From<&Transaction> for Wtxid {
-    fn from(tx: &Transaction) -> Wtxid { tx.wtxid() }
+    fn from(tx: &Transaction) -> Wtxid { tx.compute_wtxid() }
 }
 
 /// Computes the value of an output accounting for the cost of spending it.
@@ -1736,11 +1766,11 @@ mod tests {
         assert_eq!(realtx.lock_time, absolute::LockTime::ZERO);
 
         assert_eq!(
-            format!("{:x}", realtx.txid()),
+            format!("{:x}", realtx.compute_txid()),
             "196aa0d232576dd6809e4e2d9c1110f805abd9b5a22e6cf1d8a4fff3f9b503ea".to_string()
         );
         assert_eq!(
-            format!("{:x}", realtx.wtxid()),
+            format!("{:x}", realtx.compute_wtxid()),
             "196aa0d232576dd6809e4e2d9c1110f805abd9b5a22e6cf1d8a4fff3f9b503ea".to_string()
         );
         assert_eq!(realtx.weight().to_wu() as usize, tx_bytes.len() * WITNESS_SCALE_FACTOR);
@@ -1784,11 +1814,11 @@ mod tests {
         assert_eq!(realtx.lock_time, absolute::LockTime::ZERO);
 
         assert_eq!(
-            format!("{:x}", realtx.txid()),
+            format!("{:x}", realtx.compute_txid()),
             "4ca6adf8b9ae5b25f002b8b6ecf67ce9afd337132debe65c65c27236ad64c975".to_string()
         );
         assert_eq!(
-            format!("{:x}", realtx.wtxid()),
+            format!("{:x}", realtx.compute_wtxid()),
             "faabcb9e6b6b7314699abb16fdc0d3935cc85796e252e20a3e67f9f41a1c2ef5".to_string()
         );
         const EXPECTED_WEIGHT: Weight = Weight::from_wu(442);
@@ -1859,17 +1889,17 @@ mod tests {
         let tx_bytes = hex!("0100000001a15d57094aa7a21a28cb20b59aab8fc7d1149a3bdbcddba9c622e4f5f6a99ece010000006c493046022100f93bb0e7d8db7bd46e40132d1f8242026e045f03a0efe71bbb8e3f475e970d790221009337cd7f1f929f00cc6ff01f03729b069a7c21b59b1736ddfee5db5946c5da8c0121033b9b137ee87d5a812d6f506efdd37f0affa7ffc310711c06c7f3e097c9447c52ffffffff0100e1f505000000001976a9140389035a9225b3839e2bbf32d826a1e222031fd888ac00000000");
         let mut tx: Transaction = deserialize(&tx_bytes).unwrap();
 
-        let old_ntxid = tx.ntxid();
+        let old_ntxid = tx.compute_ntxid();
         assert_eq!(
             format!("{:x}", old_ntxid),
             "b7e72a7f5c2d72032bb11bcc46da00da904887d45fbfe5d17945fe5fb1d54131"
         );
         // changing sigs does not affect it
         tx.input[0].script_sig = ScriptBuf::new();
-        assert_eq!(old_ntxid, tx.ntxid());
+        assert_eq!(old_ntxid, tx.compute_ntxid());
         // changing pks does
         tx.output[0].script_pubkey = ScriptBuf::new();
-        assert!(old_ntxid != tx.ntxid());
+        assert!(old_ntxid != tx.compute_ntxid());
     }
 
     #[test]
@@ -1908,11 +1938,11 @@ mod tests {
         let tx: Transaction = deserialize(&tx_bytes).unwrap();
 
         assert_eq!(
-            format!("{:x}", tx.wtxid()),
+            format!("{:x}", tx.compute_wtxid()),
             "6ebfbaf6d9512a2904bcbbedbeb9d04ca2b608f66ae4933ecd7835bd05e54e5f"
         );
         assert_eq!(
-            format!("{:x}", tx.txid()),
+            format!("{:x}", tx.compute_txid()),
             "fc218401180869a3ede31cb450b482c9ff754a6bf14ced786c195ede5c64b9b5"
         );
         assert_eq!(tx.weight(), Weight::from_wu(2718));
@@ -1929,11 +1959,11 @@ mod tests {
         let tx: Transaction = deserialize(&tx_bytes).unwrap();
 
         assert_eq!(
-            format!("{:x}", tx.wtxid()),
+            format!("{:x}", tx.compute_wtxid()),
             "5595ad140302c470502312de6d640590e3916453c9474ae3f176b464596c1df4"
         );
         assert_eq!(
-            format!("{:x}", tx.txid()),
+            format!("{:x}", tx.compute_txid()),
             "5595ad140302c470502312de6d640590e3916453c9474ae3f176b464596c1df4"
         );
     }
@@ -2020,9 +2050,9 @@ mod tests {
             .as_slice()).unwrap();
 
         let mut spent = HashMap::new();
-        spent.insert(spent1.txid(), spent1);
-        spent.insert(spent2.txid(), spent2);
-        spent.insert(spent3.txid(), spent3);
+        spent.insert(spent1.compute_txid(), spent1);
+        spent.insert(spent2.compute_txid(), spent2);
+        spent.insert(spent3.compute_txid(), spent3);
         let mut spent2 = spent.clone();
         let mut spent3 = spent.clone();
 
