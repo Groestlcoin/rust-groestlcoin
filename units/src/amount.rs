@@ -714,15 +714,12 @@ impl Amount {
     /// The function panics if the argument multiplied by the number of sats
     /// per bitcoin overflows a u64 type.
     pub const fn from_int_btc(btc: u64) -> Amount {
-        // TODO replace whith unwrap() when available in const context.
         match btc.checked_mul(100_000_000) {
             Some(amount) => Amount::from_sat(amount),
             None => {
-                // TODO replace with panic!() when MSRV = 1.57+
+                // When MSRV is 1.57+ we can use `panic!()`.
                 #[allow(unconditional_panic)]
-                // disabling this lint until panic!() can be used.
                 #[allow(clippy::let_unit_value)]
-                // disabling this lint until panic!() can be used.
                 #[allow(clippy::out_of_bounds_indexing)]
                 let _int_overflow_converting_btc_to_sats = [(); 0][1];
                 Amount(0)
@@ -1705,7 +1702,7 @@ mod verification {
             if n1 <= i64::MAX as u64 {
                 Ok(SignedAmount::from_sat(n1.try_into().unwrap()))
             } else {
-                Err(ParseAmountError::OutOfRange(OutOfRangeError::too_big(false)))
+                Err(ParseAmountError::OutOfRange(OutOfRangeError::too_big(true)))
             },
         );
     }
@@ -1753,7 +1750,10 @@ mod verification {
             if n1 >= 0 {
                 Ok(Amount::from_sat(n1.try_into().unwrap()))
             } else {
-                Err(ParseAmountError::Negative)
+                Err(OutOfRangeError {
+                    is_signed: true,
+                    is_greater_than_max: false
+                })
             },
         );
     }
