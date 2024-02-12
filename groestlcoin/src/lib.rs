@@ -62,7 +62,7 @@ extern crate alloc;
 pub extern crate base64;
 
 /// Encodes and decodes the Bech32 forrmat.
-pub extern crate bech32;
+pub extern crate bech32grs;
 
 #[cfg(feature = "groestlcoinconsensus")]
 /// Groestlcoin's libgroestlcoinconsensus with Rust binding.

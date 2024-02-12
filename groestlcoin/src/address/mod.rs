@@ -31,7 +31,7 @@ use core::fmt;
 use core::marker::PhantomData;
 use core::str::FromStr;
 
-use bech32::primitives::hrp::{self, Hrp};
+use bech32grs::primitives::hrp::{self, Hrp};
 use hashes::{sha256, Hash, HashEngine};
 use secp256k1::{Secp256k1, Verification, XOnlyPublicKey};
 
@@ -264,9 +264,9 @@ impl<'a> fmt::Display for AddressEncoding<'a> {
                 let program = witness_program.program().as_bytes();
 
                 if fmt.alternate() {
-                    bech32::segwit::encode_upper_to_fmt_unchecked(fmt, hrp, version, program)
+                    bech32grs::segwit::encode_upper_to_fmt_unchecked(fmt, hrp, version, program)
                 } else {
-                    bech32::segwit::encode_lower_to_fmt_unchecked(fmt, hrp, version, program)
+                    bech32grs::segwit::encode_lower_to_fmt_unchecked(fmt, hrp, version, program)
                 }
             }
         }
@@ -798,7 +798,7 @@ impl FromStr for Address<NetworkUnchecked> {
             _ => None,
         };
         if let Some(network) = bech32_network {
-            let (_hrp, version, data) = bech32::segwit::decode(s)?;
+            let (_hrp, version, data) = bech32grs::segwit::decode(s)?;
             let version = WitnessVersion::try_from(version).expect("we know this is in range 0-16");
             let program = PushBytesBuf::try_from(data).expect("decode() guarantees valid length");
             let witness_program = WitnessProgram::new(version, program)?;

@@ -11,7 +11,7 @@ use core::convert::TryFrom;
 use core::fmt;
 use core::str::FromStr;
 
-use bech32::Fe32;
+use bech32grs::Fe32;
 use internals::write_err;
 
 use crate::blockdata::opcodes::all::*;
@@ -93,7 +93,7 @@ impl FromStr for WitnessVersion {
     }
 }
 
-impl TryFrom<bech32::Fe32> for WitnessVersion {
+impl TryFrom<bech32grs::Fe32> for WitnessVersion {
     type Error = TryFromError;
 
     fn try_from(value: Fe32) -> Result<Self, Self::Error> { Self::try_from(value.to_u8()) }
