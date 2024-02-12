@@ -33,7 +33,7 @@ use core::fmt;
 use core::marker::PhantomData;
 use core::str::FromStr;
 
-use bech32::primitives::hrp::Hrp;
+use bech32grs::primitives::hrp::Hrp;
 use hashes::{sha256, Hash, HashEngine};
 use secp256k1::{Secp256k1, Verification, XOnlyPublicKey};
 
@@ -170,9 +170,9 @@ impl fmt::Display for AddressInner {
                 let program = program.program().as_ref();
 
                 if fmt.alternate() {
-                    bech32::segwit::encode_upper_to_fmt_unchecked(fmt, &hrp, version, program)
+                    bech32grs::segwit::encode_upper_to_fmt_unchecked(fmt, &hrp, version, program)
                 } else {
-                    bech32::segwit::encode_lower_to_fmt_unchecked(fmt, &hrp, version, program)
+                    bech32grs::segwit::encode_lower_to_fmt_unchecked(fmt, &hrp, version, program)
                 }
             }
         }
@@ -206,25 +206,25 @@ impl KnownHrp {
         }
     }
 
-    /// Creates a `KnownHrp` from a [`bech32::Hrp`].
+    /// Creates a `KnownHrp` from a [`bech32grs::Hrp`].
     fn from_hrp(hrp: Hrp) -> Result<Self, UnknownHrpError> {
-        if hrp == bech32::hrp::GRS {
+        if hrp == bech32grs::hrp::GRS {
             Ok(Self::Mainnet)
         } else if hrp.is_valid_on_testnet() || hrp.is_valid_on_signet() {
             Ok(Self::Testnets)
-        } else if hrp == bech32::hrp::GRSRT {
+        } else if hrp == bech32grs::hrp::GRSRT {
             Ok(Self::Regtest)
         } else {
             Err(UnknownHrpError(hrp.to_lowercase()))
         }
     }
 
-    /// Converts, infallibly a known HRP to a [`bech32::Hrp`].
+    /// Converts, infallibly a known HRP to a [`bech32grs::Hrp`].
     fn to_hrp(self) -> Hrp {
         match self {
-            Self::Mainnet => bech32::hrp::GRS,
-            Self::Testnets => bech32::hrp::TGRS,
-            Self::Regtest => bech32::hrp::GRSRT,
+            Self::Mainnet => bech32grs::hrp::GRS,
+            Self::Testnets => bech32grs::hrp::TGRS,
+            Self::Regtest => bech32grs::hrp::GRSRT,
         }
     }
 }
@@ -724,7 +724,7 @@ impl FromStr for Address<NetworkUnchecked> {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Address<NetworkUnchecked>, ParseError> {
-        if let Ok((hrp, witness_version, data)) = bech32::segwit::decode(s) {
+        if let Ok((hrp, witness_version, data)) = bech32grs::segwit::decode(s) {
             let version = WitnessVersion::try_from(witness_version)?;
             let program = WitnessProgram::new(version, &data)
                 .expect("bech32 guarantees valid program length for witness");

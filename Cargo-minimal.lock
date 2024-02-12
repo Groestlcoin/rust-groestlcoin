@@ -15,9 +15,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "414dcefbc63d77c526a76b3afcf6fbb9b5e2791c19c3aa2297733208750c6e53"
 
 [[package]]
-name = "bech32"
+name = "bech32grs"
 version = "0.10.0-beta"
-source = "git+https://github.com/Groestlcoin/rust-bech32#7fa28249c554c52bb7a14257d91109a8652b9dd6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e190aad8fbe17cf8d2d68ba93844c33a2ef9544e05945da83df0bf81078f044"
 
 [[package]]
 name = "bincode"
@@ -121,7 +122,7 @@ name = "groestlcoin"
 version = "0.31.0"
 dependencies = [
  "base64",
- "bech32",
+ "bech32grs",
  "bincode",
  "bitcoin-io",
  "groestlcoin-internals",
