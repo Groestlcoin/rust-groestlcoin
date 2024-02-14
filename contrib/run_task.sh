@@ -22,7 +22,7 @@ main() {
     # Building the fuzz crate is more-or-less just a sanity check.
     if [ "$crate" == "fuzz" ]
     then
-        cargo --locked build
+        cargo build
         exit 0
     fi
 
@@ -77,7 +77,7 @@ main() {
 
 do_test() {
     # Use the current (recent/minimal) lock file.
-    local cargo="cargo --locked"
+    local cargo="cargo"
 
     # Defaults / sanity checks
     $cargo build
@@ -98,7 +98,7 @@ do_test() {
 # Each crate defines its own feature matrix test so feature combinations
 # can be better controlled.
 do_feature_matrix() {
-    local cargo="cargo --locked"
+    local cargo="cargo"
 
     $cargo build --no-default-features
     $cargo test --no-default-features
@@ -120,7 +120,7 @@ do_feature_matrix() {
 loop_features() {
     local use="$1"
     local features="$2"
-    local cargo="cargo --locked"
+    local cargo="cargo"
 
     # All the provided features including $use
     $cargo build --no-default-features --features="$use $features"
@@ -149,7 +149,7 @@ loop_features() {
 # Lint the workspace then the individual crate examples.
 do_lint() {
     # Use the current (recent/minimal) lock file.
-    local cargo="cargo +nightly --locked"
+    local cargo="cargo +nightly"
 
     $cargo clippy --workspace -- -D warnings
 
@@ -181,7 +181,7 @@ do_dup_deps() {
 # Build the docs with a nightly toolchain, in unison with the function
 # below this checks that we feature guarded docs imports correctly.
 build_docs_with_nightly_toolchain() {
-    local cargo="cargo +nightly --locked"
+    local cargo="cargo +nightly"
 
     RUSTDOCFLAGS="--cfg docsrs -D warnings -D rustdoc::broken-intra-doc-links" $cargo doc --all-features
 }
@@ -189,7 +189,7 @@ build_docs_with_nightly_toolchain() {
 # Build the docs with a stable toolchain, in unison with the function
 # above this checks that we feature guarded docs imports correctly.
 build_docs_with_stable_toolchain() {
-    local cargo="cargo +stable --locked"
+    local cargo="cargo +stable"
 
     RUSTDOCFLAGS="-D warnings" $cargo doc --all-features
 }
