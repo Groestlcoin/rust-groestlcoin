@@ -57,7 +57,7 @@ const INPUT_UTXO_SCRIPT_PUBKEY: &str = "0014e2f83ac18f753167390b35f52a33b61cb1c9
 const INPUT_UTXO_VALUE: &str = "512 GRS";
 // Get this from the desciptor,
 // "wpkh([19ef7cdd/0'/0'/3']03b0821181136555b68e7e65f62b9d6368ff341a19728986d925fc06faa6afa1a2)#ymv35a8p".
-const INPUT_UTXO_DERIVATION_PATH: &str = "m/0h/0h/3h";
+const INPUT_UTXO_DERIVATION_PATH: &str = "0h/0h/3h";
 
 // Grab an address to receive on: `bt generatenewaddress` (obviously contrived but works as an example).
 const RECEIVE_ADDRESS: &str = "grsrt1q5udclaxlvslfnqsw2gyd5xj52r4kra749e5e9k"; // The address to receive the coins we send.
@@ -118,7 +118,7 @@ impl ColdStorage {
 
         // Hardened children require secret data to derive.
 
-        let path = "m/84h/0h/0h".into_derivation_path()?;
+        let path = "84h/0h/0h".into_derivation_path()?;
         let account_0_xpriv = master_xpriv.derive_priv(secp, &path)?;
         let account_0_xpub = Xpub::from_priv(secp, &account_0_xpriv);
 

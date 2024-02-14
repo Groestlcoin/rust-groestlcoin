@@ -863,9 +863,9 @@ impl Amount {
     pub fn checked_rem(self, rhs: u64) -> Option<Amount> { self.0.checked_rem(rhs).map(Amount) }
 
     /// Convert to a signed amount.
-    pub fn to_signed(self) -> Result<SignedAmount, ParseAmountError> {
+    pub fn to_signed(self) -> Result<SignedAmount, OutOfRangeError> {
         if self.to_sat() > SignedAmount::MAX.to_sat() as u64 {
-            Err(ParseAmountError::OutOfRange(OutOfRangeError::too_big(true)))
+            Err(OutOfRangeError::too_big(true))
         } else {
             Ok(SignedAmount::from_sat(self.to_sat() as i64))
         }
@@ -953,6 +953,14 @@ impl FromStr for Amount {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> { Amount::from_str_with_denomination(s) }
+}
+
+impl TryFrom<SignedAmount> for Amount {
+    type Error = OutOfRangeError;
+
+    fn try_from(value: SignedAmount) -> Result<Self, Self::Error> {
+        value.to_unsigned()
+    }
 }
 
 impl core::iter::Sum for Amount {
@@ -1326,10 +1334,24 @@ impl ops::DivAssign<i64> for SignedAmount {
     fn div_assign(&mut self, rhs: i64) { *self = *self / rhs }
 }
 
+impl ops::Neg for SignedAmount {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output { Self(self.0.neg()) }
+}
+
 impl FromStr for SignedAmount {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> { SignedAmount::from_str_with_denomination(s) }
+}
+
+impl TryFrom<Amount> for SignedAmount {
+    type Error = OutOfRangeError;
+
+    fn try_from(value: Amount) -> Result<Self, Self::Error> {
+        value.to_signed()
+    }
 }
 
 impl core::iter::Sum for SignedAmount {
@@ -1702,7 +1724,7 @@ mod verification {
             if n1 <= i64::MAX as u64 {
                 Ok(SignedAmount::from_sat(n1.try_into().unwrap()))
             } else {
-                Err(ParseAmountError::OutOfRange(OutOfRangeError::too_big(true)))
+                Err(OutOfRangeError::too_big(true))
             },
         );
     }
@@ -1832,6 +1854,40 @@ mod tests {
     #[should_panic]
     #[test]
     fn from_int_btc_panic() { Amount::from_int_btc(u64::MAX); }
+
+    #[test]
+    fn test_signed_amount_try_from_amount() {
+        let ua_positive = Amount::from_sat(123);
+        let sa_positive = SignedAmount::try_from(ua_positive).unwrap();
+        assert_eq!(sa_positive, SignedAmount(123));
+
+        let ua_max = Amount::MAX;
+        let result = SignedAmount::try_from(ua_max);
+        assert_eq!(
+            result,
+            Err(OutOfRangeError {
+                is_signed: true,
+                is_greater_than_max: true
+            })
+        );
+    }
+
+    #[test]
+    fn test_amount_try_from_signed_amount() {
+        let sa_positive = SignedAmount(123);
+        let ua_positive = Amount::try_from(sa_positive).unwrap();
+        assert_eq!(ua_positive, Amount::from_sat(123));
+
+        let sa_negative = SignedAmount(-123);
+        let result = Amount::try_from(sa_negative);
+        assert_eq!(
+            result,
+            Err(OutOfRangeError {
+                is_signed: false,
+                is_greater_than_max: false
+            })
+        );
+    }
 
     #[test]
     fn mul_div() {

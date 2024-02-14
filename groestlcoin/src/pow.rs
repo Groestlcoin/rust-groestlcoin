@@ -1699,22 +1699,27 @@ mod tests {
     }
 
     #[test]
+    #[cfg(debug_assertions)]
     #[should_panic]
     fn u256_overflowing_addition_panics() { let _ = U256::MAX + U256::ONE; }
 
     #[test]
+    #[cfg(debug_assertions)]
     #[should_panic]
     fn u256_overflowing_subtraction_panics() { let _ = U256::ZERO - U256::ONE; }
 
     #[test]
+    #[cfg(debug_assertions)]
     #[should_panic]
     fn u256_multiplication_by_max_panics() { let _ = U256::MAX * U256::MAX; }
 
     #[test]
+    #[cfg(debug_assertions)]
     #[should_panic]
     fn work_overflowing_addition_panics() { let _ = Work(U256::MAX) + Work(U256::ONE); }
 
     #[test]
+    #[cfg(debug_assertions)]
     #[should_panic]
     fn work_overflowing_subtraction_panics() { let _ = Work(U256::ZERO) - Work(U256::ONE); }
 
@@ -1747,14 +1752,5 @@ mod verification {
         let y: u64 = kani::any();
 
         let _ = x.mul_u64(y);
-    }
-
-    #[kani::unwind(5)] // I can't remember exactly why we need this.
-    #[kani::proof]
-    fn check_div_rem() {
-        let x: U256 = kani::any();
-        let y: U256 = kani::any();
-
-        assert_eq!(x * y / y, x);
     }
 }
