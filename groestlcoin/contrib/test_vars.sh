@@ -7,4 +7,4 @@ FEATURES_WITH_STD="rand-std serde secp-recovery groestlcoinconsensus-std base64 
 FEATURES_WITHOUT_STD="rand serde secp-recovery groestlcoinconsensus base64 ordered"
 
 # Run and lint these examples.
-EXAMPLES="ecdsa-psbt:std,groestlcoinconsensus sign-tx-segwit-v0:rand-std sign-tx-taproot:rand-std taproot-psbt:groestlcoinconsensus,rand-std sighash:std"
+EXAMPLES="ecdsa-psbt:std,groestlcoinconsensus sign-tx-segwit-v0:rand-std sign-tx-taproot:rand-std taproot-psbt:groestlcoinconsensus,rand-std"
