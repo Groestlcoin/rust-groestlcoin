@@ -5,20 +5,18 @@
 //! This module mainly introduces the [Amount] and [SignedAmount] types.
 //! We refer to the documentation on the types for more information.
 
+#[cfg(feature = "alloc")]
+use alloc::string::{String, ToString};
 use core::cmp::Ordering;
-use core::fmt;
 #[cfg(feature = "alloc")]
 use core::fmt::Write as _;
 use core::str::FromStr;
-use core::{default, ops};
+use core::{default, fmt, ops};
 
 #[cfg(feature = "serde")]
 use ::serde::{Deserialize, Serialize};
 use internals::error::InputString;
 use internals::write_err;
-
-#[cfg(feature = "alloc")]
-use alloc::string::{String, ToString};
 
 /// A set of denominations in which amounts can be expressed.
 ///
@@ -223,8 +221,7 @@ impl std::error::Error for ParseAmountError {
         use ParseAmountError::*;
 
         match *self {
-            TooPrecise | InvalidFormat | InputTooLarge
-            | InvalidCharacter(_) => None,
+            TooPrecise | InvalidFormat | InputTooLarge | InvalidCharacter(_) => None,
             OutOfRange(ref error) => Some(error),
         }
     }
@@ -249,21 +246,12 @@ impl OutOfRangeError {
     }
 
     /// Returns true if the input value was large than the maximum allowed value.
-    pub fn is_above_max(&self) -> bool {
-        self.is_greater_than_max
-    }
+    pub fn is_above_max(&self) -> bool { self.is_greater_than_max }
 
     /// Returns true if the input value was smaller than the minimum allowed value.
-    pub fn is_below_min(&self) -> bool {
-        !self.is_greater_than_max
-    }
+    pub fn is_below_min(&self) -> bool { !self.is_greater_than_max }
 
-    pub(crate) fn too_big(is_signed: bool) -> Self {
-        Self {
-            is_signed,
-            is_greater_than_max: true,
-        }
-    }
+    pub(crate) fn too_big(is_signed: bool) -> Self { Self { is_signed, is_greater_than_max: true } }
 
     pub(crate) fn too_small() -> Self {
         Self {
@@ -296,11 +284,8 @@ impl fmt::Display for OutOfRangeError {
 impl std::error::Error for OutOfRangeError {}
 
 impl From<OutOfRangeError> for ParseAmountError {
-    fn from(value: OutOfRangeError) -> Self {
-        ParseAmountError::OutOfRange(value)
-    }
+    fn from(value: OutOfRangeError) -> Self { ParseAmountError::OutOfRange(value) }
 }
-
 
 /// An error during amount parsing.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -473,7 +458,8 @@ enum InnerParseError {
 impl InnerParseError {
     fn convert(self, is_signed: bool) -> ParseAmountError {
         match self {
-            Self::Overflow { is_negative } => OutOfRangeError { is_signed, is_greater_than_max: !is_negative }.into(),
+            Self::Overflow { is_negative } =>
+                OutOfRangeError { is_signed, is_greater_than_max: !is_negative }.into(),
             Self::TooPrecise => ParseAmountError::TooPrecise,
             Self::InvalidFormat => ParseAmountError::InvalidFormat,
             Self::InputTooLarge => ParseAmountError::InputTooLarge,
@@ -732,8 +718,8 @@ impl Amount {
     /// Note: This only parses the value string.  If you want to parse a value
     /// with denomination, use [FromStr].
     pub fn from_str_in(s: &str, denom: Denomination) -> Result<Amount, ParseAmountError> {
-        let (negative, satoshi) = parse_signed_to_satoshi(s, denom)
-            .map_err(|error| error.convert(false))?;
+        let (negative, satoshi) =
+            parse_signed_to_satoshi(s, denom).map_err(|error| error.convert(false))?;
         if negative {
             return Err(ParseAmountError::OutOfRange(OutOfRangeError::negative()));
         }
@@ -877,9 +863,7 @@ impl default::Default for Amount {
 }
 
 impl fmt::Debug for Amount {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} GRO", self.to_sat())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{} GRO", self.to_sat()) }
 }
 
 // No one should depend on a binding contract for Display for this type.
@@ -958,9 +942,7 @@ impl FromStr for Amount {
 impl TryFrom<SignedAmount> for Amount {
     type Error = OutOfRangeError;
 
-    fn try_from(value: SignedAmount) -> Result<Self, Self::Error> {
-        value.to_unsigned()
-    }
+    fn try_from(value: SignedAmount) -> Result<Self, Self::Error> { value.to_unsigned() }
 }
 
 impl core::iter::Sum for Amount {
@@ -1079,10 +1061,12 @@ impl SignedAmount {
     pub fn from_str_in(s: &str, denom: Denomination) -> Result<SignedAmount, ParseAmountError> {
         match parse_signed_to_satoshi(s, denom).map_err(|error| error.convert(true))? {
             // (negative, amount)
-            (false, sat) if sat > i64::MAX as u64 => Err(ParseAmountError::OutOfRange(OutOfRangeError::too_big(true))),
+            (false, sat) if sat > i64::MAX as u64 =>
+                Err(ParseAmountError::OutOfRange(OutOfRangeError::too_big(true))),
             (false, sat) => Ok(SignedAmount(sat as i64)),
             (true, sat) if sat == i64::MIN.unsigned_abs() => Ok(SignedAmount(i64::MIN)),
-            (true, sat) if sat > i64::MIN.unsigned_abs() => Err(ParseAmountError::OutOfRange(OutOfRangeError::too_small())),
+            (true, sat) if sat > i64::MIN.unsigned_abs() =>
+                Err(ParseAmountError::OutOfRange(OutOfRangeError::too_small())),
             (true, sat) => Ok(SignedAmount(-(sat as i64))),
         }
     }
@@ -1349,9 +1333,7 @@ impl FromStr for SignedAmount {
 impl TryFrom<Amount> for SignedAmount {
     type Error = OutOfRangeError;
 
-    fn try_from(value: Amount) -> Result<Self, Self::Error> {
-        value.to_signed()
-    }
+    fn try_from(value: Amount) -> Result<Self, Self::Error> { value.to_signed() }
 }
 
 impl core::iter::Sum for SignedAmount {
@@ -1422,11 +1404,12 @@ pub mod serde {
     //! ```
 
     use core::fmt;
+
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-    use super::{Amount, SignedAmount, ParseAmountError};
     #[cfg(feature = "alloc")]
     use super::Denomination;
+    use super::{Amount, ParseAmountError, SignedAmount};
 
     /// This trait is used only to avoid code duplication and naming collisions
     /// of the different serde serialization crates.
@@ -1471,9 +1454,7 @@ pub mod serde {
 
     #[cfg(not(feature = "std"))]
     impl fmt::Display for DisplayFullError {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            fmt::Display::fmt(&self.0, f)
-        }
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { fmt::Display::fmt(&self.0, f) }
     }
 
     impl SerdeAmount for Amount {
@@ -1542,10 +1523,9 @@ pub mod serde {
         //! Serialize and deserialize [`Amount`](crate::Amount) as real numbers denominated in satoshi.
         //! Use with `#[serde(with = "amount::serde::as_sat")]`.
         //!
-        use super::private;
-
         use serde::{Deserializer, Serializer};
 
+        use super::private;
         use crate::amount::serde::SerdeAmount;
 
         pub fn serialize<A: SerdeAmount, S: Serializer>(a: &A, s: S) -> Result<S::Ok, S::Error> {
@@ -1560,12 +1540,12 @@ pub mod serde {
             //! Serialize and deserialize [`Option<Amount>`](crate::Amount) as real numbers denominated in satoshi.
             //! Use with `#[serde(default, with = "amount::serde::as_sat::opt")]`.
 
-            use super::private;
             use core::fmt;
             use core::marker::PhantomData;
 
             use serde::{de, Deserializer, Serializer};
 
+            use super::private;
             use crate::amount::serde::SerdeAmountForOpt;
 
             pub fn serialize<A: SerdeAmountForOpt, S: Serializer>(
@@ -1613,10 +1593,9 @@ pub mod serde {
         //! Serialize and deserialize [`Amount`](crate::Amount) as JSON numbers denominated in GRS.
         //! Use with `#[serde(with = "amount::serde::as_btc")]`.
 
-        use super::private;
-
         use serde::{Deserializer, Serializer};
 
+        use super::private;
         use crate::amount::serde::SerdeAmount;
 
         pub fn serialize<A: SerdeAmount, S: Serializer>(a: &A, s: S) -> Result<S::Ok, S::Error> {
@@ -1631,12 +1610,12 @@ pub mod serde {
             //! Serialize and deserialize `Option<Amount>` as JSON numbers denominated in GRS.
             //! Use with `#[serde(default, with = "amount::serde::as_btc::opt")]`.
 
-            use super::private;
             use core::fmt;
             use core::marker::PhantomData;
 
             use serde::{de, Deserializer, Serializer};
 
+            use super::private;
             use crate::amount::serde::SerdeAmountForOpt;
 
             pub fn serialize<A: SerdeAmountForOpt, S: Serializer>(
@@ -1772,10 +1751,7 @@ mod verification {
             if n1 >= 0 {
                 Ok(Amount::from_sat(n1.try_into().unwrap()))
             } else {
-                Err(OutOfRangeError {
-                    is_signed: true,
-                    is_greater_than_max: false
-                })
+                Err(OutOfRangeError { is_signed: true, is_greater_than_max: false })
             },
         );
     }
@@ -1807,11 +1783,9 @@ mod verification {
 
 #[cfg(test)]
 mod tests {
-    use core::str::FromStr;
-
     #[cfg(feature = "alloc")]
     use alloc::format;
-
+    use core::str::FromStr;
     #[cfg(feature = "std")]
     use std::panic;
 
@@ -1835,7 +1809,10 @@ mod tests {
 
             let s = format!("-0 {}", denom);
             match Amount::from_str(&s) {
-                Err(e) => assert_eq!(e, ParseError::Amount(ParseAmountError::OutOfRange(OutOfRangeError::negative()))),
+                Err(e) => assert_eq!(
+                    e,
+                    ParseError::Amount(ParseAmountError::OutOfRange(OutOfRangeError::negative()))
+                ),
                 Ok(_) => panic!("Unsigned amount from {}", s),
             }
             match SignedAmount::from_str(&s) {
@@ -1863,13 +1840,7 @@ mod tests {
 
         let ua_max = Amount::MAX;
         let result = SignedAmount::try_from(ua_max);
-        assert_eq!(
-            result,
-            Err(OutOfRangeError {
-                is_signed: true,
-                is_greater_than_max: true
-            })
-        );
+        assert_eq!(result, Err(OutOfRangeError { is_signed: true, is_greater_than_max: true }));
     }
 
     #[test]
@@ -1880,13 +1851,7 @@ mod tests {
 
         let sa_negative = SignedAmount(-123);
         let result = Amount::try_from(sa_negative);
-        assert_eq!(
-            result,
-            Err(OutOfRangeError {
-                is_signed: false,
-                is_greater_than_max: false
-            })
-        );
+        assert_eq!(result, Err(OutOfRangeError { is_signed: false, is_greater_than_max: false }));
     }
 
     #[test]
@@ -1953,7 +1918,10 @@ mod tests {
         assert_eq!(sf(-100.0, D::MilliSatoshi), Err(ParseAmountError::TooPrecise));
         assert_eq!(f(42.123456781, D::Bitcoin), Err(ParseAmountError::TooPrecise));
         assert_eq!(sf(-184467440738.0, D::Bitcoin), Err(OutOfRangeError::too_small().into()));
-        assert_eq!(f(18446744073709551617.0, D::Satoshi), Err(OutOfRangeError::too_big(false).into()));
+        assert_eq!(
+            f(18446744073709551617.0, D::Satoshi),
+            Err(OutOfRangeError::too_big(false).into())
+        );
 
         // Amount can be grater than the max SignedAmount.
         assert!(f(SignedAmount::MAX.to_float_in(D::Satoshi) + 1.0, D::Satoshi).is_ok());
@@ -2031,7 +1999,9 @@ mod tests {
         {
             let amount = Amount::from_sat(i64::MAX as u64);
             assert_eq!(Amount::from_str_in(&amount.to_string_in(sat), sat), Ok(amount));
-            assert!(SignedAmount::from_str_in(&(amount + Amount(1)).to_string_in(sat), sat).is_err());
+            assert!(
+                SignedAmount::from_str_in(&(amount + Amount(1)).to_string_in(sat), sat).is_err()
+            );
             assert!(Amount::from_str_in(&(amount + Amount(1)).to_string_in(sat), sat).is_ok());
         }
 
@@ -2605,11 +2575,8 @@ mod tests {
         let sum = amounts.into_iter().sum::<Amount>();
         assert_eq!(Amount::from_sat(1400), sum);
 
-        let amounts = [
-            SignedAmount::from_sat(-42),
-            SignedAmount::from_sat(1337),
-            SignedAmount::from_sat(21),
-        ];
+        let amounts =
+            [SignedAmount::from_sat(-42), SignedAmount::from_sat(1337), SignedAmount::from_sat(21)];
         let sum = amounts.into_iter().sum::<SignedAmount>();
         assert_eq!(SignedAmount::from_sat(1316), sum);
     }
@@ -2623,8 +2590,7 @@ mod tests {
         let sum = amounts.into_iter().checked_sum();
         assert_eq!(Some(Amount::from_sat(1400)), sum);
 
-        let amounts =
-            [Amount::from_sat(u64::MAX), Amount::from_sat(1337), Amount::from_sat(21)];
+        let amounts = [Amount::from_sat(u64::MAX), Amount::from_sat(1337), Amount::from_sat(21)];
         let sum = amounts.into_iter().checked_sum();
         assert_eq!(None, sum);
 
@@ -2644,11 +2610,8 @@ mod tests {
         let sum = amounts.into_iter().checked_sum();
         assert_eq!(None, sum);
 
-        let amounts = [
-            SignedAmount::from_sat(42),
-            SignedAmount::from_sat(3301),
-            SignedAmount::from_sat(21),
-        ];
+        let amounts =
+            [SignedAmount::from_sat(42), SignedAmount::from_sat(3301), SignedAmount::from_sat(21)];
         let sum = amounts.into_iter().checked_sum();
         assert_eq!(Some(SignedAmount::from_sat(3364)), sum);
     }
