@@ -30,7 +30,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 groestl = { version = "0.10.1", default_features = false }
 hex = { package = "hex-conservative", version = "0.1.1", default-features = false }
 
-bitcoin-io = { version = "0.1", default-features = false, optional = true }
+bitcoin-io = { version = "0.1.1", default-features = false, optional = true }
 schemars = { version = "0.8.3", default-features = false, optional = true }
 serde = { version = "1.0", default-features = false, optional = true }
 
