@@ -127,7 +127,7 @@ macro_rules! const_assert {
 ///
 /// ```rust
 /// # use core::fmt::{Display, Debug};
-/// use bitcoin_internals::impl_from_infallible;
+/// use groestlcoin_internals::impl_from_infallible;
 ///
 /// enum AlphaEnum { Item }
 /// impl_from_infallible!(AlphaEnum);

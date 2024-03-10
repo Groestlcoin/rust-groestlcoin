@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CC0-1.0
 
-//! Bitcoin base58 encoding and decoding.
+//! Groestlcoin base58 encoding and decoding.
 //!
 //! This crate can be used in a no-std environment but requires an allocator.
 
@@ -16,12 +16,8 @@
 #![allow(clippy::needless_question_mark)] // https://github.com/rust-bitcoin/rust-bitcoin/pull/2134
 #![allow(clippy::manual_range_contains)] // More readable than clippy's format.
 
-<<<<<<<< HEAD:groestlcoin/src/base58.rs
-use hashes::{groestld, Hash};
-========
 #[macro_use]
 extern crate alloc;
->>>>>>>> upstream/master:base58/src/lib.rs
 
 #[cfg(feature = "std")]
 extern crate std;
@@ -34,7 +30,7 @@ pub use alloc::{string::String, vec::Vec};
 #[cfg(feature = "std")]
 pub use std::{string::String, vec::Vec};
 
-use hashes::{sha256d, Hash};
+use hashes::{groestld, Hash};
 
 #[rustfmt::skip]
 static BASE58_DIGITS: [Option<u8>; 128] = [

@@ -137,6 +137,7 @@ dependencies = [
 name = "groestlcoin"
 version = "0.31.0"
 dependencies = [
+ "base58grscheck",
  "base64",
  "bech32grs",
  "bincode",
