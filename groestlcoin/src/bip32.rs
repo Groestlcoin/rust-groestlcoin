@@ -6,7 +6,6 @@
 //! at <https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki>.
 //!
 
-use core::default::Default;
 use core::ops::Index;
 use core::str::FromStr;
 use core::{fmt, slice};
@@ -14,15 +13,12 @@ use core::{fmt, slice};
 use hashes::{hash160, hash_newtype, sha512, Hash, HashEngine, Hmac, HmacEngine};
 use internals::{impl_array_newtype, write_err};
 use io::Write;
-use secp256k1::{self, Secp256k1, XOnlyPublicKey};
-#[cfg(feature = "serde")]
-use serde;
+use secp256k1::{Secp256k1, XOnlyPublicKey};
 
-use crate::base58;
 use crate::crypto::key::{CompressedPublicKey, Keypair, PrivateKey};
 use crate::internal_macros::impl_bytes_newtype;
-use crate::network::NetworkKind;
 use crate::prelude::*;
+use crate::network::NetworkKind;
 
 /// Version bytes for extended public keys on the Bitcoin network.
 const VERSION_BYTES_MAINNET_PUBLIC: [u8; 4] = [0x04, 0x88, 0xB2, 0x1E];
@@ -255,7 +251,7 @@ impl serde::Serialize for ChildNumber {
 /// Trait that allows possibly failable conversion from a type into a
 /// derivation path
 pub trait IntoDerivationPath {
-    /// Convers a given type into a [`DerivationPath`] with possible error
+    /// Converts a given type into a [`DerivationPath`] with possible error
     fn into_derivation_path(self) -> Result<DerivationPath, Error>;
 }
 
@@ -494,6 +490,8 @@ pub enum Error {
     /// `PublicKey` hex should be 66 or 130 digits long.
     InvalidPublicKeyHexLength(usize),
 }
+
+internals::impl_from_infallible!(Error);
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -867,10 +865,7 @@ impl From<&Xpub> for XKeyIdentifier {
 
 #[cfg(test)]
 mod tests {
-    use core::str::FromStr;
-
     use hex::test_hex_unwrap as hex;
-    use secp256k1::{self, Secp256k1};
 
     use super::ChildNumber::{Hardened, Normal};
     use super::*;

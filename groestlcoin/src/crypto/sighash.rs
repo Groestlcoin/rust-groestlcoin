@@ -11,7 +11,6 @@
 //! handle its complexity efficiently. Computing these hashes is as simple as creating
 //! [`SighashCache`] and calling its methods.
 
-use core::borrow::{Borrow, BorrowMut};
 use core::{fmt, str};
 
 use hashes::{hash_newtype, sha256, sha256t_hash_newtype, Hash};
@@ -20,8 +19,8 @@ use io::Write;
 
 use crate::blockdata::witness::Witness;
 use crate::consensus::{encode, Encodable};
-use crate::prelude::*;
 use crate::taproot::{LeafVersion, TapLeafHash, TAPROOT_ANNEX_PREFIX};
+use crate::prelude::*;
 use crate::{transaction, Amount, Script, ScriptBuf, Sequence, Transaction, TxIn, TxOut};
 
 /// Used for signature hash for invalid use of SIGHASH_SINGLE.
@@ -275,6 +274,8 @@ pub enum PrevoutsIndexError {
     /// Invalid index when accessing a [`Prevouts::All`] kind.
     InvalidAllIndex,
 }
+
+internals::impl_from_infallible!(PrevoutsIndexError);
 
 impl fmt::Display for PrevoutsIndexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -1153,6 +1154,8 @@ pub enum TaprootError {
     InvalidSighashType(u32),
 }
 
+internals::impl_from_infallible!(TaprootError);
+
 impl fmt::Display for TaprootError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use TaprootError::*;
@@ -1209,6 +1212,8 @@ pub enum P2wpkhError {
     /// Script is not a witness program for a p2wpkh output.
     NotP2wpkhScript,
 }
+
+internals::impl_from_infallible!(P2wpkhError);
 
 impl From<transaction::InputsIndexError> for P2wpkhError {
     fn from(value: transaction::InputsIndexError) -> Self {
@@ -1274,6 +1279,8 @@ pub enum AnnexError {
     /// Incorrect prefix byte in the annex.
     IncorrectPrefix(u8),
 }
+
+internals::impl_from_infallible!(AnnexError);
 
 impl fmt::Display for AnnexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -1381,6 +1388,8 @@ pub enum SigningDataError<E> {
     Sighash(E),
 }
 
+internals::impl_from_infallible!(SigningDataError<E>);
+
 impl<E> SigningDataError<E> {
     /// Returns the sighash variant, panicking if it's IO.
     ///
@@ -1433,10 +1442,7 @@ mod tests {
 
     use super::*;
     use crate::blockdata::locktime::absolute;
-    use crate::blockdata::transaction;
     use crate::consensus::deserialize;
-    use crate::crypto::sighash::{LegacySighash, TapSighash};
-    use crate::taproot::TapLeafHash;
 
     extern crate serde_json;
 
@@ -1752,6 +1758,8 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn bip_341_sighash_tests() {
+        use hex::DisplayHex;
+
         fn sighash_deser_numeric<'de, D>(deserializer: D) -> Result<TapSighashType, D::Error>
         where
             D: actual_serde::Deserializer<'de>,
@@ -1767,7 +1775,7 @@ mod tests {
             })
         }
 
-        use secp256k1::{self, SecretKey, XOnlyPublicKey};
+        use secp256k1::{SecretKey, XOnlyPublicKey};
 
         use crate::consensus::serde as con_serde;
         use crate::taproot::{TapNodeHash, TapTweakHash};

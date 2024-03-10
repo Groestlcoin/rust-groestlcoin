@@ -61,6 +61,9 @@ extern crate alloc;
 /// Encodes and decodes base64 as bytes or utf8.
 pub extern crate base64;
 
+/// Bitcoin base58 encoding and decoding.
+pub extern crate base58;
+
 /// Rust implementation of cryptographic hash function algorithms.
 pub extern crate hashes;
 
@@ -93,7 +96,6 @@ mod serde_utils;
 #[macro_use]
 pub mod p2p;
 pub mod address;
-pub mod base58;
 pub mod bip152;
 pub mod bip158;
 pub mod bip32;
@@ -109,7 +111,6 @@ pub mod policy;
 pub mod pow;
 pub mod psbt;
 pub mod sign_message;
-pub mod string;
 pub mod taproot;
 
 #[rustfmt::skip]                // Keep public re-exports separate.
@@ -143,6 +144,7 @@ pub use crate::{
 };
 
 #[rustfmt::skip]
+#[allow(unused_imports)]
 mod prelude {
     #[cfg(all(not(feature = "std"), not(test)))]
     pub use alloc::{string::{String, ToString}, vec::Vec, boxed::Box, borrow::{Borrow, BorrowMut, Cow, ToOwned}, slice, rc};

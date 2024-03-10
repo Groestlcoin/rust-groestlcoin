@@ -9,7 +9,6 @@ use crate::blockdata::transaction::Transaction;
 use crate::consensus::encode;
 use crate::prelude::*;
 use crate::psbt::raw;
-use crate::{hashes, io};
 
 /// Enum for marking psbt hash error.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
@@ -103,6 +102,8 @@ pub enum Error {
     /// I/O error.
     Io(io::Error),
 }
+
+internals::impl_from_infallible!(Error);
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

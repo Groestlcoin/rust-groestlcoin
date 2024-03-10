@@ -77,6 +77,8 @@ pub enum Error {
     Io(io::Error),
 }
 
+internals::impl_from_infallible!(Error);
+
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         use Error::*;
@@ -565,7 +567,6 @@ mod test {
     use serde_json::Value;
 
     use super::*;
-    use crate::blockdata::block::BlockHash;
     use crate::consensus::encode::deserialize;
     use crate::ScriptBuf;
 

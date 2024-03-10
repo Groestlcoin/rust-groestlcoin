@@ -24,7 +24,6 @@ mod message_signing {
 
     use hashes::{sha256, Hash};
     use internals::write_err;
-    use secp256k1;
     use secp256k1::ecdsa::{RecoverableSignature, RecoveryId};
 
     use crate::address::{Address, AddressType};
@@ -43,6 +42,8 @@ mod message_signing {
         /// Unsupported Address Type
         UnsupportedAddressType(AddressType),
     }
+
+    internals::impl_from_infallible!(MessageSignatureError);
 
     impl fmt::Display for MessageSignatureError {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -165,7 +166,7 @@ mod message_signing {
         use base64::prelude::{Engine as _, BASE64_STANDARD};
 
         use super::*;
-        use crate::prelude::String;
+        use crate::prelude::*;
 
         impl MessageSignature {
             /// Convert a signature from base64 encoding.

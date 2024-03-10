@@ -53,7 +53,7 @@ impl From<BlockHash> for sha256d::Hash {
 /// Groestlcoin block header.
 ///
 /// Contains all the block's information except the actual transactions, but
-/// including a root of a [merkle tree] commiting to all transactions in the block.
+/// including a root of a [merkle tree] committing to all transactions in the block.
 ///
 /// [merkle tree]: https://en.wikipedia.org/wiki/Merkle_tree
 ///
@@ -178,7 +178,8 @@ impl Version {
     /// Creates a [`Version`] from a signed 32 bit integer value.
     ///
     /// This is the data type used in consensus code in Bitcoin Core.
-    pub fn from_consensus(v: i32) -> Self { Version(v) }
+    #[inline]
+    pub const fn from_consensus(v: i32) -> Self { Version(v) }
 
     /// Returns the inner `i32` value.
     ///
@@ -424,6 +425,8 @@ pub enum Bip34Error {
     NegativeHeight,
 }
 
+internals::impl_from_infallible!(Bip34Error);
+
 impl fmt::Display for Bip34Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Bip34Error::*;
@@ -459,6 +462,8 @@ pub enum ValidationError {
     /// The `target` field of a block header did not match the expected difficulty.
     BadTarget,
 }
+
+internals::impl_from_infallible!(ValidationError);
 
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

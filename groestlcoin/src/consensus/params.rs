@@ -49,65 +49,80 @@ pub struct Params {
 }
 
 impl Params {
-    /// Creates parameters set for the given network.
+    /// The mainnet parameters (alias for `Params::MAINNET`).
+    pub const GROESTLCOIN: Params = Params::MAINNET;
+
+    /// The mainnet parameters.
+    pub const MAINNET: Params = Params {
+        network: Network::Groestlcoin,
+        bip16_time: 0,
+        bip34_height: 800000, // 0000000007f3f37410d5f7e71a07bf09bb802d5af6726fc891f0248ad857708c
+        bip65_height: 2464000, // 00000000000030f90269dd2c0fb5f7502f332cd183b1596817f0cc4cfd6966b1
+        bip66_height: 800000, // 0000000007f3f37410d5f7e71a07bf09bb802d5af6726fc891f0248ad857708c
+        rule_change_activation_threshold: 1815, // 90%
+        miner_confirmation_window: 2016,
+        pow_limit: Target::MAX_ATTAINABLE_MAINNET,
+        pow_target_spacing: 60,      // 1 minute.
+        pow_target_timespan: 129600, // 1.5 days (1.5 * 24 * 60 * 60)
+        allow_min_difficulty_blocks: false,
+        no_pow_retargeting: false,
+    };
+
+    /// The testnet parameters.
+    pub const TESTNET: Params = Params {
+        network: Network::Testnet,
+        bip16_time: 0,
+        bip34_height: 286, // 0000004b7778ba253a75b716c55b2c6609b5fb97691b3260978f9ce4a633106d
+        bip65_height: 982000, // 000000204a7e703f80543d9329d4b90e4269e08f36ad746cfe145add340b8738
+        bip66_height: 286, // 0000004b7778ba253a75b716c55b2c6609b5fb97691b3260978f9ce4a633106d
+        rule_change_activation_threshold: 1512, // 75%
+        miner_confirmation_window: 2016,
+        pow_limit: Target::MAX_ATTAINABLE_TESTNET,
+        pow_target_spacing: 60,      // 1 minute.
+        pow_target_timespan: 129600, // 1.5 days (1.5 * 24 * 60 * 60)
+        allow_min_difficulty_blocks: true,
+        no_pow_retargeting: false,
+    };
+
+    /// The signet parameters.
+    pub const SIGNET: Params = Params {
+        network: Network::Signet,
+        bip16_time: 0,
+        bip34_height: 1,
+        bip65_height: 1,
+        bip66_height: 1,
+        rule_change_activation_threshold: 1815, // 90%
+        miner_confirmation_window: 2016,
+        pow_limit: Target::MAX_ATTAINABLE_SIGNET,
+        pow_target_spacing: 60,      // 1 minute.
+        pow_target_timespan: 129600, // 1.5 days (1.5 * 24 * 60 * 60)
+        allow_min_difficulty_blocks: false,
+        no_pow_retargeting: false,
+    };
+
+    /// The regtest parameters.
+    pub const REGTEST: Params = Params {
+        network: Network::Regtest,
+        bip16_time: 0,
+        bip34_height: 1,
+        bip65_height: 1,
+        bip66_height: 1,
+        rule_change_activation_threshold: 108, // 75%
+        miner_confirmation_window: 144,
+        pow_limit: Target::MAX_ATTAINABLE_REGTEST,
+        pow_target_spacing: 60,      // 1 minute.
+        pow_target_timespan: 129600, // 1.5 days (1.5 * 24 * 60 * 60)
+        allow_min_difficulty_blocks: true,
+        no_pow_retargeting: true,
+    };
+
+    /// Creates parameters set for the given network.    /// Creates parameters set for the given network.
     pub const fn new(network: Network) -> Self {
         match network {
-            Network::Groestlcoin => Params {
-                network: Network::Groestlcoin,
-                bip16_time: 0,
-                bip34_height: 800000, // 0000000007f3f37410d5f7e71a07bf09bb802d5af6726fc891f0248ad857708c
-                bip65_height: 2464000, // 00000000000030f90269dd2c0fb5f7502f332cd183b1596817f0cc4cfd6966b1
-                bip66_height: 800000, // 0000000007f3f37410d5f7e71a07bf09bb802d5af6726fc891f0248ad857708c
-                rule_change_activation_threshold: 1815, // 90%
-                miner_confirmation_window: 2016,
-                pow_limit: Target::MAX_ATTAINABLE_MAINNET,
-                pow_target_spacing: 60,      // 1 minute.
-                pow_target_timespan: 129600, // 1.5 days (1.5 * 24 * 60 * 60)
-                allow_min_difficulty_blocks: false,
-                no_pow_retargeting: false,
-            },
-            Network::Testnet => Params {
-                network: Network::Testnet,
-                bip16_time: 0,
-                bip34_height: 286, // 0000004b7778ba253a75b716c55b2c6609b5fb97691b3260978f9ce4a633106d
-                bip65_height: 982000, // 000000204a7e703f80543d9329d4b90e4269e08f36ad746cfe145add340b8738
-                bip66_height: 286, // 0000004b7778ba253a75b716c55b2c6609b5fb97691b3260978f9ce4a633106d
-                rule_change_activation_threshold: 1512, // 75%
-                miner_confirmation_window: 2016,
-                pow_limit: Target::MAX_ATTAINABLE_TESTNET,
-                pow_target_spacing: 60,      // 1 minute.
-                pow_target_timespan: 129600, // 1.5 days (1.5 * 24 * 60 * 60)
-                allow_min_difficulty_blocks: true,
-                no_pow_retargeting: false,
-            },
-            Network::Signet => Params {
-                network: Network::Signet,
-                bip16_time: 0,
-                bip34_height: 1,
-                bip65_height: 1,
-                bip66_height: 1,
-                rule_change_activation_threshold: 1815, // 90%
-                miner_confirmation_window: 2016,
-                pow_limit: Target::MAX_ATTAINABLE_SIGNET,
-                pow_target_spacing: 60,      // 1 minute.
-                pow_target_timespan: 129600, // 1.5 days (1.5 * 24 * 60 * 60)
-                allow_min_difficulty_blocks: false,
-                no_pow_retargeting: false,
-            },
-            Network::Regtest => Params {
-                network: Network::Regtest,
-                bip16_time: 0,
-                bip34_height: 1,
-                bip65_height: 1,
-                bip66_height: 1,
-                rule_change_activation_threshold: 108, // 75%
-                miner_confirmation_window: 144,
-                pow_limit: Target::MAX_ATTAINABLE_REGTEST,
-                pow_target_spacing: 60,      // 1 minute.
-                pow_target_timespan: 129600, // 1.5 days (1.5 * 24 * 60 * 60)
-                allow_min_difficulty_blocks: true,
-                no_pow_retargeting: true,
-            },
+            Network::Groestlcoin => Params::MAINNET,
+            Network::Testnet => Params::TESTNET,
+            Network::Signet => Params::SIGNET,
+            Network::Regtest => Params::REGTEST,
         }
     }
 
@@ -120,6 +135,7 @@ impl Params {
 impl From<Network> for Params {
     fn from(value: Network) -> Self { Self::new(value) }
 }
+
 
 impl From<&Network> for Params {
     fn from(value: &Network) -> Self { Self::new(*value) }

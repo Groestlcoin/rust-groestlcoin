@@ -10,9 +10,9 @@ use core::fmt;
 use internals::write_err;
 use io::Write;
 
-use crate::prelude::*;
 use crate::sighash::{InvalidSighashTypeError, TapSighashType};
 use crate::taproot::serialized_signature::{self, SerializedSignature};
+use crate::prelude::*;
 
 /// A BIP340-341 serialized taproot signature with the corresponding hash type.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -96,6 +96,8 @@ pub enum SigFromSliceError {
     /// Invalid taproot signature size
     InvalidSignatureSize(usize),
 }
+
+internals::impl_from_infallible!(SigFromSliceError);
 
 impl fmt::Display for SigFromSliceError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

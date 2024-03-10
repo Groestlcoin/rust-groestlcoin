@@ -7,7 +7,6 @@ use std::{env, process};
 
 use groestlcoin::consensus::{encode, Decodable};
 use groestlcoin::p2p::{self, address, message, message_network};
-use groestlcoin::secp256k1;
 use groestlcoin::secp256k1::rand::Rng;
 
 fn main() {

@@ -15,7 +15,6 @@
 //! typically big-endian decimals, etc.)
 //!
 
-use core::convert::{From, TryFrom};
 use core::{fmt, mem, u32};
 
 use hashes::{groestld, sha256, sha256d, Hash};
@@ -61,6 +60,8 @@ pub enum Error {
     /// Unsupported Segwit flag.
     UnsupportedSegwitFlag(u8),
 }
+
+internals::impl_from_infallible!(Error);
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -868,13 +869,9 @@ impl Decodable for TapLeafHash {
 
 #[cfg(test)]
 mod tests {
-    use core::fmt;
-    use core::mem::{self, discriminant};
+    use core::mem::discriminant;
 
     use super::*;
-    use crate::consensus::{deserialize_partial, Decodable, Encodable};
-    #[cfg(feature = "std")]
-    use crate::p2p::{message_blockdata::Inventory, Address};
 
     #[test]
     fn serialize_int_test() {

@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 use crate::consensus::Params;
 use crate::constants::ChainHash;
 use crate::p2p::Magic;
-use crate::prelude::{String, ToOwned};
+use crate::prelude::*;
 
 /// What kind of network we are on.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -83,7 +83,6 @@ impl Network {
     /// ```rust
     /// use groestlcoin::p2p::Magic;
     /// use groestlcoin::Network;
-    /// use std::convert::TryFrom;
     ///
     /// assert_eq!(Ok(Network::Groestlcoin), Network::try_from(Magic::from_bytes([0xF9, 0xBE, 0xB4, 0xD4])));
     /// assert_eq!(None, Network::from_magic(Magic::from_bytes([0xFF, 0xFF, 0xFF, 0xFF])));
@@ -164,7 +163,6 @@ impl Network {
     /// ```rust
     /// use groestlcoin::Network;
     /// use groestlcoin::blockdata::constants::ChainHash;
-    /// use std::convert::TryFrom;
     ///
     /// assert_eq!(Ok(Network::Groestlcoin), Network::try_from(ChainHash::GROESTLCOIN));
     /// ```
@@ -188,8 +186,6 @@ impl Network {
 pub mod as_core_arg {
     //! Module for serialization/deserialization of network variants into/from Groestlcoin Core values
     #![allow(missing_docs)]
-
-    use serde;
 
     use crate::Network;
 
@@ -351,6 +347,7 @@ mod tests {
             ServiceFlags::WITNESS,
             ServiceFlags::COMPACT_FILTERS,
             ServiceFlags::NETWORK_LIMITED,
+            ServiceFlags::P2P_V2,
         ];
 
         let mut flags = ServiceFlags::NONE;

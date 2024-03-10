@@ -60,22 +60,19 @@ pub mod witness_version;
 use alloc::rc::Rc;
 #[cfg(any(not(rust_v_1_60), target_has_atomic = "ptr"))]
 use alloc::sync::Arc;
-use core::borrow::{Borrow, BorrowMut};
 use core::cmp::Ordering;
 use core::fmt;
 use core::ops::{Deref, DerefMut};
 
 use hashes::{hash160, sha256};
 use io::{BufRead, Write};
-#[cfg(feature = "serde")]
-use serde;
 
 use crate::blockdata::opcodes::all::*;
 use crate::blockdata::opcodes::{self, Opcode};
 use crate::consensus::{encode, Decodable, Encodable};
 use crate::internal_macros::impl_asref_push_bytes;
 use crate::prelude::*;
-use crate::{io, OutPoint};
+use crate::OutPoint;
 
 #[rustfmt::skip]                // Keep public re-exports separate.
 #[doc(inline)]
@@ -702,6 +699,8 @@ pub enum Error {
     Serialization,
 }
 
+internals::impl_from_infallible!(Error);
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Error::*;
@@ -739,6 +738,8 @@ enum UintError {
     EarlyEndOfScript,
     NumericOverflow,
 }
+
+internals::impl_from_infallible!(UintError);
 
 impl From<UintError> for Error {
     fn from(error: UintError) -> Self {

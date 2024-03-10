@@ -21,10 +21,9 @@ use crate::internal_macros::impl_asref_push_bytes;
 use crate::network::NetworkKind;
 use crate::prelude::*;
 use crate::taproot::{TapNodeHash, TapTweakHash};
-use crate::{base58, io};
 
 #[rustfmt::skip]                // Keep public re-exports separate.
-pub use secp256k1::{self, constants, Keypair, Parity, Secp256k1, Verification, XOnlyPublicKey};
+pub use secp256k1::{constants, Keypair, Parity, Secp256k1, Verification, XOnlyPublicKey};
 
 #[cfg(feature = "rand-std")]
 pub use secp256k1::rand;
@@ -303,6 +302,7 @@ impl CompressedPublicKey {
         let mut bytes = [0; 33];
 
         reader.read_exact(&mut bytes)?;
+        #[allow(unused_variables)] // e when std not enabled
         Self::from_slice(&bytes).map_err(|e| {
             // Need a static string for no-std io
             #[cfg(feature = "std")]
@@ -896,6 +896,8 @@ pub enum FromSliceError {
     InvalidLength(usize),
 }
 
+internals::impl_from_infallible!(FromSliceError);
+
 impl fmt::Display for FromSliceError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use FromSliceError::*;
@@ -921,7 +923,7 @@ impl std::error::Error for FromSliceError {
 }
 
 impl From<secp256k1::Error> for FromSliceError {
-    fn from(e: secp256k1::Error) -> FromSliceError { Self::Secp256k1(e) }
+    fn from(e: secp256k1::Error) -> Self { Self::Secp256k1(e) }
 }
 
 /// Error generated from WIF key format.
@@ -933,6 +935,8 @@ pub enum FromWifError {
     /// A secp256k1 error.
     Secp256k1(secp256k1::Error),
 }
+
+internals::impl_from_infallible!(FromWifError);
 
 impl fmt::Display for FromWifError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -956,11 +960,11 @@ impl std::error::Error for FromWifError {
 }
 
 impl From<base58::Error> for FromWifError {
-    fn from(e: base58::Error) -> FromWifError { Self::Base58(e) }
+    fn from(e: base58::Error) -> Self { Self::Base58(e) }
 }
 
 impl From<secp256k1::Error> for FromWifError {
-    fn from(e: secp256k1::Error) -> FromWifError { Self::Secp256k1(e) }
+    fn from(e: secp256k1::Error) -> Self { Self::Secp256k1(e) }
 }
 
 /// Error returned while constructing public key from string.
@@ -973,6 +977,8 @@ pub enum ParsePublicKeyError {
     /// `PublicKey` hex should be 66 or 130 digits long.
     InvalidHexLength(usize),
 }
+
+internals::impl_from_infallible!(ParsePublicKeyError);
 
 impl fmt::Display for ParsePublicKeyError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -1007,15 +1013,17 @@ pub enum ParseCompressedPublicKeyError {
     /// Secp256k1 Error.
     Secp256k1(secp256k1::Error),
     /// hex to array conversion error.
-    HexError(hex::HexToArrayError),
+    Hex(hex::HexToArrayError),
 }
+
+internals::impl_from_infallible!(ParseCompressedPublicKeyError);
 
 impl fmt::Display for ParseCompressedPublicKeyError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use ParseCompressedPublicKeyError::*;
         match self {
             Secp256k1(e) => write_err!(f, "secp256k1 error"; e),
-            HexError(e) => write_err!(f, "invalid hex"; e)
+            Hex(e) => write_err!(f, "invalid hex"; e)
         }
     }
 }
@@ -1027,17 +1035,17 @@ impl std::error::Error for ParseCompressedPublicKeyError {
 
         match self {
             Secp256k1(e) => Some(e),
-            HexError(e) => Some(e),
+            Hex(e) => Some(e),
         }
     }
 }
 
 impl From<secp256k1::Error> for ParseCompressedPublicKeyError {
-    fn from(e: secp256k1::Error) -> ParseCompressedPublicKeyError { Self::Secp256k1(e) }
+    fn from(e: secp256k1::Error) -> Self { Self::Secp256k1(e) }
 }
 
 impl From<hex::HexToArrayError> for ParseCompressedPublicKeyError {
-    fn from(e: hex::HexToArrayError) -> ParseCompressedPublicKeyError { Self::HexError(e) }
+    fn from(e: hex::HexToArrayError) -> Self { Self::Hex(e) }
 }
 
 /// Segwit public keys must always be compressed.
@@ -1058,14 +1066,8 @@ impl std::error::Error for UncompressedPublicKeyError {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use hex::FromHex;
-    use secp256k1::Secp256k1;
-
     use super::*;
     use crate::address::Address;
-    use crate::network::NetworkKind;
 
     #[test]
     fn test_key_derivation() {

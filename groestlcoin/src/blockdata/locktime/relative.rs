@@ -12,7 +12,6 @@ use core::fmt;
 use mutagen::mutate;
 
 use crate::parse::impl_parse_str_from_int_infallible;
-use crate::prelude::*;
 #[cfg(doc)]
 use crate::relative;
 
@@ -282,6 +281,8 @@ pub enum Error {
     /// Tried to satisfy a lock-by-blockheight lock using a time value.
     IncompatibleTime(LockTime, Time),
 }
+
+internals::impl_from_infallible!(Error);
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

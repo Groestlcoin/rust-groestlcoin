@@ -15,12 +15,12 @@ use core::iter::FusedIterator;
 use hashes::{sha256t_hash_newtype, Hash, HashEngine};
 use internals::write_err;
 use io::Write;
-use secp256k1::{self, Scalar, Secp256k1};
+use secp256k1::{Scalar, Secp256k1};
 
 use crate::consensus::Encodable;
 use crate::crypto::key::{TapTweak, TweakedPublicKey, UntweakedPublicKey, XOnlyPublicKey};
 use crate::prelude::*;
-use crate::{io, Script, ScriptBuf};
+use crate::{Script, ScriptBuf};
 
 // Re-export these so downstream only has to use one `taproot` module.
 #[rustfmt::skip]
@@ -587,6 +587,8 @@ pub enum IncompleteBuilderError {
     HiddenParts(TaprootBuilder),
 }
 
+internals::impl_from_infallible!(IncompleteBuilderError);
+
 impl IncompleteBuilderError {
     /// Converts error into the original incomplete [`TaprootBuilder`] instance.
     pub fn into_builder(self) -> TaprootBuilder {
@@ -630,6 +632,8 @@ pub enum HiddenNodesError {
     /// Indicates an attempt to construct a tap tree from a builder containing hidden parts.
     HiddenParts(NodeInfo),
 }
+
+internals::impl_from_infallible!(HiddenNodesError);
 
 impl HiddenNodesError {
     /// Converts error into the original incomplete [`NodeInfo`] instance.
@@ -1324,6 +1328,8 @@ pub enum TaprootBuilderError {
     EmptyTree,
 }
 
+internals::impl_from_infallible!(TaprootBuilderError);
+
 impl fmt::Display for TaprootBuilderError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use TaprootBuilderError::*;
@@ -1384,6 +1390,8 @@ pub enum TaprootError {
     EmptyTree,
 }
 
+internals::impl_from_infallible!(TaprootError);
+
 impl fmt::Display for TaprootError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use TaprootError::*;
@@ -1436,9 +1444,9 @@ mod test {
     use core::str::FromStr;
 
     use hashes::sha256t::Tag;
-    use hashes::{sha256, Hash, HashEngine};
+    use hashes::sha256;
     use hex::FromHex;
-    use secp256k1::{VerifyOnly, XOnlyPublicKey};
+    use secp256k1::VerifyOnly;
 
     use super::*;
     use crate::sighash::{TapSighash, TapSighashTag};

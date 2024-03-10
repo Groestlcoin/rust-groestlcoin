@@ -506,6 +506,8 @@ pub enum MerkleBlockError {
     IdenticalHashesFound,
 }
 
+internals::impl_from_infallible!(MerkleBlockError);
+
 impl fmt::Display for MerkleBlockError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use MerkleBlockError::*;
@@ -540,15 +542,11 @@ impl std::error::Error for MerkleBlockError {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "rand-std")]
-    use hashes::Hash;
-    use hex::test_hex_unwrap as hex;
+    use hex::{test_hex_unwrap as hex};
     #[cfg(feature = "rand-std")]
     use secp256k1::rand::prelude::*;
-
     use super::*;
     use crate::consensus::encode::{deserialize, serialize};
-    use crate::{Block, Txid};
 
     #[cfg(feature = "rand-std")]
     macro_rules! pmt_tests {

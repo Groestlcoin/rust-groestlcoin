@@ -2,16 +2,13 @@
 
 //! Contains `TaprootMerkleBranch` and its associated types.
 
-use alloc::boxed::Box;
-use alloc::vec::Vec;
-use core::borrow::{Borrow, BorrowMut};
-
 use hashes::Hash;
 
 use super::{
     TapNodeHash, TaprootBuilderError, TaprootError, TAPROOT_CONTROL_MAX_NODE_COUNT,
     TAPROOT_CONTROL_NODE_SIZE,
 };
+use crate::prelude::*;
 
 /// The merkle proof for inclusion of a tree in a taptree hash.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -46,7 +43,7 @@ impl TaprootMerkleBranch {
     ///
     /// # Errors
     ///
-    /// The function returns an error if the the number of bytes is not an integer multiple of 32 or
+    /// The function returns an error if the number of bytes is not an integer multiple of 32 or
     /// if the number of hashes exceeds 128.
     pub fn decode(sl: &[u8]) -> Result<Self, TaprootError> {
         if sl.len() % TAPROOT_CONTROL_NODE_SIZE != 0 {

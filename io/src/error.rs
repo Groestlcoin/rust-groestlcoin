@@ -1,4 +1,4 @@
-#[cfg(any(feature = "alloc", feature = "std"))]
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
 use alloc::boxed::Box;
 use core::fmt::{Debug, Display, Formatter};
 
@@ -114,6 +114,10 @@ macro_rules! define_errorkind {
                 $(#[$($attr)*])*
                 $kind
             ),*
+        }
+
+        impl From<core::convert::Infallible> for ErrorKind {
+            fn from(never: core::convert::Infallible) -> Self { match never {} }
         }
 
         impl ErrorKind {

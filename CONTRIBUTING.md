@@ -73,7 +73,7 @@ To contribute a patch, the workflow is a as follows:
 2. Create topic branch
 3. Commit patches
 
-Please keep commits should atomic and diffs easy to read. For this reason
+Please keep commits atomic and diffs easy to read. For this reason
 do not mix any formatting fixes or code moves with actual code changes.
 Further, each commit, individually, should compile and pass tests, in order to
 ensure git bisect and other automated tools function properly.
@@ -85,12 +85,6 @@ to split it into multiple small, focused PRs.
 
 Commits should cover both the issue fixed and the solution's rationale.
 Please keep these [guidelines](https://chris.beams.io/posts/git-commit/) in mind.
-
-To facilitate communication with other contributors, the project is making use
-of GitHub's "assignee" field. First check that no one is assigned and then
-comment suggesting that you're working on it. If someone is already assigned,
-don't hesitate to ask if the assigned party or previous commenters are still
-working on it if it has been awhile.
 
 
 ## Preparing PRs
@@ -118,19 +112,6 @@ Prerequisites that a PR must satisfy for merging into the `master` branch:
 NB: reviewers may run more complex test/CI scripts, thus, satisfying all the
 requirements above is just a preliminary, but not necessary sufficient step for
 getting the PR accepted as a valid candidate PR for the `master` branch.
-
-PR authors may also find it useful to run the following script locally in order
-to check that each of the commits within the PR satisfies the requirements
-above, before submitting the PR to review:
-```shell script
-RUSTUP_TOOLCHAIN=1.41.1 ./contrib/test.sh
-```
-Please replace the value in `RUSTUP_TOOLCHAIN=1.41.1` with the current MSRV from
-[README.md].
-
-NB: Please keep in mind that the script above replaces `Cargo.lock` file, which
-is necessary to support current MSRV, incompatible with `stable` and newer cargo
-versions.
 
 ### Peer review
 
@@ -298,6 +279,7 @@ More specifically an error should
 - derive `Debug, Clone, PartialEq, Eq` (and `Copy` iff not `non_exhaustive`).
 - implement Display using `write_err!()` macro if a variant contains an inner error source.
 - have `Error` suffix
+- call `internals::impl_from_infallible!
 - implement `std::error::Error` if they are public (feature gated on "std").
 
 ```rust
@@ -310,6 +292,9 @@ pub enum Error {
     /// Documentation for variant B.
     B,
 }
+
+internals::impl_from_infallible!(Error);
+
 ```
 
 

@@ -13,8 +13,8 @@ use io::{BufRead, Write};
 use crate::consensus::encode::{Error, MAX_VEC_SIZE};
 use crate::consensus::{Decodable, Encodable, WriteExt};
 use crate::crypto::ecdsa;
-use crate::prelude::*;
 use crate::taproot::{self, TAPROOT_ANNEX_PREFIX};
+use crate::prelude::*;
 use crate::{Script, VarInt};
 
 /// The Witness is the data used to unlock bitcoin since the [segwit upgrade].
@@ -27,7 +27,7 @@ use crate::{Script, VarInt};
 /// saving some allocations.
 ///
 /// [segwit upgrade]: <https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki>
-#[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Witness {
     /// Contains the witness `Vec<Vec<u8>>` serialization without the initial varint indicating the
     /// number of elements (which is stored in `witness_elements`).
@@ -233,7 +233,14 @@ impl Encodable for Witness {
 
 impl Witness {
     /// Creates a new empty [`Witness`].
-    pub fn new() -> Self { Witness::default() }
+    #[inline]
+    pub const fn new() -> Self {
+        Witness {
+            content: Vec::new(),
+            witness_elements: 0,
+            indices_start: 0,
+        }
+    }
 
     /// Creates a witness required to spend a P2WPKH output.
     ///
@@ -543,9 +550,13 @@ impl From<Vec<&[u8]>> for Witness {
     fn from(vec: Vec<&[u8]>) -> Self { Witness::from_slice(&vec) }
 }
 
+impl Default for Witness {
+    fn default() -> Self { Self::new() }
+}
+
 #[cfg(test)]
 mod test {
-    use hex::test_hex_unwrap as hex;
+    use hex::{test_hex_unwrap as hex};
 
     use super::*;
     use crate::consensus::{deserialize, serialize};
