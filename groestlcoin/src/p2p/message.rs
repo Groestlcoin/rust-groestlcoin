@@ -753,8 +753,7 @@ mod test {
             0x64, 0x64, 0x72, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0xfd, 0xfb, 0x14, 0xd3
         ]);
-        let preimage =
-            RawNetworkMessage::new(Magic::GROESTLCOIN, NetworkMessage::GetAddr);
+        let preimage = RawNetworkMessage::new(Magic::GROESTLCOIN, NetworkMessage::GetAddr);
         assert!(msg.is_ok());
         let msg: RawNetworkMessage = msg.unwrap();
         assert_eq!(preimage.magic, msg.magic);
