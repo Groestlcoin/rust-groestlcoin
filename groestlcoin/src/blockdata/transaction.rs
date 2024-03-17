@@ -24,12 +24,12 @@ use crate::blockdata::script::{Script, ScriptBuf};
 use crate::blockdata::witness::Witness;
 use crate::blockdata::FeeRate;
 use crate::consensus::{encode, Decodable, Encodable};
-use crate::error::{PrefixedHexError, UnprefixedHexError, ContainsPrefixError, MissingPrefixError};
+use crate::error::{ContainsPrefixError, MissingPrefixError, PrefixedHexError, UnprefixedHexError};
 use crate::internal_macros::{impl_consensus_encoding, impl_hashencode};
 use crate::parse::{self, impl_parse_str_from_int_infallible};
+use crate::prelude::*;
 #[cfg(doc)]
 use crate::sighash::{EcdsaSighashType, TapSighashType};
-use crate::prelude::*;
 use crate::{Amount, SignedAmount, VarInt};
 
 #[rustfmt::skip]                // Keep public re-exports separate.
