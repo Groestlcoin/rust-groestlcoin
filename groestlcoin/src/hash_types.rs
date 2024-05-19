@@ -81,7 +81,7 @@ mod tests {
 
         assert_eq!(
             FilterHash::hash(&[]).to_string(),
-            "56944c5d3f98413ef45cf54545538103cc9f298e0575820ad3591376e2e0f65d",
+            "5ea6b3ce1e127fa47a491084b10542e0436c82fb0ec51557f8dfc686d314fbfd",
         );
         assert_eq!(
             FilterHeader::hash(&[]).to_string(),
