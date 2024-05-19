@@ -1965,7 +1965,7 @@ mod tests {
         );
         assert_eq!(
             format!("{:.10x}", tx.compute_txid()),
-            "9652aa62b0"
+            "fc21840118"
         );
         assert_eq!(tx.weight(), Weight::from_wu(2718));
 
