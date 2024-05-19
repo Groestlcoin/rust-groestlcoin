@@ -1,5 +1,5 @@
 [package]
-name = "base58grscheck"
+name = "base58grsck"
 version = "0.1.0"
 authors = ["Groestlcoin Developers <groestlcoin@gmail.com>"]
 license = "CC0-1.0"
@@ -14,15 +14,15 @@ exclude = ["tests", "contrib"]
 
 [features]
 default = ["std"]
-std = ["hashes/std"]
+std = ["hashes/std", "internals/std"]
 
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-hashes = { package = "groestlcoin_hashes", version = "0.13.0", default-features = false, features = ["alloc"] }
+hashes = { package = "groestlcoin_hashes", version = "0.14.0", default-features = false, features = ["alloc"] }
 internals = { package = "groestlcoin-internals", version = "0.2.0" }
 
 [dev-dependencies]
-hex = { package = "hex-conservative", version = "0.1.1", default-features = false, features = ["alloc"] }
+hex = { package = "hex-conservative", version = "0.2.0", default-features = false, features = ["alloc"] }

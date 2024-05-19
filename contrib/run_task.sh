@@ -1,6 +1,6 @@
 #!/bin/env bash
 
-set -ex
+set -euox pipefail
 
 # Make all cargo invocations verbose.
 export CARGO_TERM_VERBOSE=true
@@ -165,12 +165,20 @@ do_lint() {
 # We should not have any duplicate dependencies. This catches mistakes made upgrading dependencies
 # in one crate and not in another (e.g. upgrade bitcoin_hashes in bitcoin but not in secp).
 do_dup_deps() {
+    # We can't use pipefail because these grep statements fail by design when there is no duplicate,
+    # the shell therefore won't pick up mistakes in your pipe - you are on your own.
+    set +o pipefail
+
     duplicate_dependencies=$(
         # Only show the actual duplicated deps, not their reverse tree, then
         # whitelist the 'syn' crate which is duplicated but it's not our fault.
+        #
+        # Temporarily allow 2 versions of `hashes` and `hex` while we upgrade.
         cargo tree  --target=all --all-features --duplicates \
             | grep '^[0-9A-Za-z]' \
             | grep -v 'syn' \
+            | grep -v 'bitcoin_hashes' \
+            | grep -v 'hex-conservative' \
             | wc -l
                           )
     if [ "$duplicate_dependencies" -ne 0 ]; then
@@ -178,6 +186,8 @@ do_dup_deps() {
         cargo tree  --target=all --all-features --duplicates
         exit 1
     fi
+
+    set -o pipefail
 }
 
 # Build the docs with a nightly toolchain, in unison with the function
@@ -212,10 +222,12 @@ do_asan() {
       RUSTFLAGS='-Zsanitizer=address -Clinker=clang -Cforce-frame-pointers=yes'                    \
       ASAN_OPTIONS='detect_leaks=1 detect_invalid_pointer_pairs=1 detect_stack_use_after_return=1' \
       cargo test --lib --no-default-features --features="$ASAN_FEATURES" -Zbuild-std --target x86_64-unknown-linux-gnu
-    cargo clean
-    CC='clang -fsanitize=memory -fno-omit-frame-pointer'                                         \
-      RUSTFLAGS='-Zsanitizer=memory -Zsanitizer-memory-track-origins -Cforce-frame-pointers=yes'   \
-      cargo test --lib --no-default-features --features="$ASAN_FEATURES" -Zbuild-std --target x86_64-unknown-linux-gnu
+    # There is currently a bug in the MemorySanitizer (MSAN) - disable the job for now.
+    #
+    # cargo clean
+    # CC='clang -fsanitize=memory -fno-omit-frame-pointer'                                         \
+    #   RUSTFLAGS='-Zsanitizer=memory -Zsanitizer-memory-track-origins -Cforce-frame-pointers=yes'   \
+    #   cargo test --lib --no-default-features --features="$ASAN_FEATURES" -Zbuild-std --target x86_64-unknown-linux-gnu
 }
 
 # Bench only works with a non-stable toolchain (nightly, beta).

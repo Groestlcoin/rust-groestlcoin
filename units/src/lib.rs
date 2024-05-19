@@ -33,7 +33,33 @@ extern crate std;
 #[cfg(feature = "serde")]
 pub extern crate serde;
 
+#[cfg(test)]
+#[macro_use]
+mod test_macros;
+
 pub mod amount;
+#[cfg(feature = "alloc")]
+pub mod locktime;
+#[cfg(feature = "alloc")]
+pub mod fee_rate;
+#[cfg(feature = "alloc")]
+pub mod parse;
+#[cfg(feature = "alloc")]
+pub mod weight;
 
 #[doc(inline)]
-pub use self::amount::{Amount, ParseAmountError, SignedAmount};
+pub use self::{
+    amount::{Amount, ParseAmountError, SignedAmount},
+};
+#[cfg(feature = "alloc")]
+pub use self::parse::ParseIntError;
+
+#[rustfmt::skip]
+#[allow(unused_imports)]
+mod prelude {
+    #[cfg(all(feature = "alloc", not(feature = "std")))]
+    pub use alloc::{string::{String, ToString}, vec::Vec, boxed::Box, borrow::{Borrow, BorrowMut, Cow, ToOwned}, slice, rc};
+
+    #[cfg(feature = "std")]
+    pub use std::{string::{String, ToString}, vec::Vec, boxed::Box, borrow::{Borrow, BorrowMut, Cow, ToOwned}, rc};
+}

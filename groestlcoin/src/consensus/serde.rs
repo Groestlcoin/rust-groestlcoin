@@ -12,11 +12,12 @@
 use core::fmt;
 use core::marker::PhantomData;
 
-use io::{BufRead, Read, Write};
+use io::Write;
 use serde::de::{SeqAccess, Unexpected, Visitor};
 use serde::ser::SerializeSeq;
 use serde::{Deserializer, Serializer};
 
+use crate::consensus::{DecodeError, IterReader};
 use super::encode::Error as ConsensusError;
 use super::{Decodable, Encodable};
 
@@ -71,11 +72,11 @@ pub mod hex {
 
     /// Hex byte encoder.
     // We wrap `BufEncoder` to not leak internal representation.
-    pub struct Encoder<C: Case>(BufEncoder<[u8; HEX_BUF_SIZE]>, PhantomData<C>);
+    pub struct Encoder<C: Case>(BufEncoder<{ HEX_BUF_SIZE }>, PhantomData<C>);
 
     impl<C: Case> From<super::Hex<C>> for Encoder<C> {
         fn from(_: super::Hex<C>) -> Self {
-            Encoder(BufEncoder::new([0; HEX_BUF_SIZE]), Default::default())
+            Encoder(BufEncoder::new(), Default::default())
         }
     }
 
@@ -100,15 +101,15 @@ pub mod hex {
     // Newtypes to hide internal details.
 
     /// Error returned when a hex string decoder can't be created.
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct DecodeInitError(hex::HexToBytesError);
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct DecodeInitError(hex::OddLengthStringError);
 
     /// Error returned when a hex string contains invalid characters.
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct DecodeError(hex::HexToBytesError);
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct DecodeError(hex::InvalidCharError);
 
     /// Hex decoder state.
-    pub struct Decoder<'a>(hex::HexToBytesIter<'a>);
+    pub struct Decoder<'a>(hex::HexSliceToBytesIter<'a>);
 
     impl<'a> Decoder<'a> {
         fn new(s: &'a str) -> Result<Self, DecodeInitError> {
@@ -137,29 +138,19 @@ pub mod hex {
 
     impl super::IntoDeError for DecodeInitError {
         fn into_de_error<E: serde::de::Error>(self) -> E {
-            use hex::HexToBytesError;
-
-            match self.0 {
-                HexToBytesError::OddLengthString(len) =>
-                    E::invalid_length(len, &"an even number of ASCII-encoded hex digits"),
-                error => panic!("unexpected error: {:?}", error),
-            }
+            E::invalid_length(self.0.length(), &"an even number of ASCII-encoded hex digits")
         }
     }
 
     impl super::IntoDeError for DecodeError {
         fn into_de_error<E: serde::de::Error>(self) -> E {
-            use hex::HexToBytesError;
             use serde::de::Unexpected;
 
             const EXPECTED_CHAR: &str = "an ASCII-encoded hex digit";
 
-            match self.0 {
-                HexToBytesError::InvalidChar(c) if c.is_ascii() =>
-                    E::invalid_value(Unexpected::Char(c as _), &EXPECTED_CHAR),
-                HexToBytesError::InvalidChar(c) =>
-                    E::invalid_value(Unexpected::Unsigned(c.into()), &EXPECTED_CHAR),
-                error => panic!("unexpected error: {:?}", error),
+            match self.0.invalid_char() {
+                c if c.is_ascii() => E::invalid_value(Unexpected::Char(c as _), &EXPECTED_CHAR),
+                c => E::invalid_value(Unexpected::Unsigned(c.into()), &EXPECTED_CHAR),
             }
         }
     }
@@ -362,14 +353,6 @@ impl<D: fmt::Display> serde::de::Expected for DisplayExpected<D> {
     }
 }
 
-enum DecodeError<E> {
-    TooManyBytes,
-    Consensus(ConsensusError),
-    Other(E),
-}
-
-internals::impl_from_infallible!(DecodeError<E>);
-
 // not a trait impl because we panic on some variants
 fn consensus_error_into_serde<E: serde::de::Error>(error: ConsensusError) -> E {
     match error {
@@ -415,86 +398,6 @@ where
             DecodeError::Other(error) => error.into_de_error(),
             DecodeError::TooManyBytes => DE::custom(format_args!("got more bytes than expected")),
             DecodeError::Consensus(error) => consensus_error_into_serde(error),
-        }
-    }
-}
-
-struct IterReader<E: fmt::Debug, I: Iterator<Item = Result<u8, E>>> {
-    iterator: core::iter::Fuse<I>,
-    buf: Option<u8>,
-    error: Option<E>,
-}
-
-impl<E: fmt::Debug, I: Iterator<Item = Result<u8, E>>> IterReader<E, I> {
-    fn new(iterator: I) -> Self { IterReader { iterator: iterator.fuse(), buf: None, error: None } }
-
-    fn decode<T: Decodable>(mut self) -> Result<T, DecodeError<E>> {
-        let result = T::consensus_decode(&mut self);
-        match (result, self.error) {
-            (Ok(_), None) if self.iterator.next().is_some() => {
-                Err(DecodeError::TooManyBytes)
-            },
-            (Ok(value), None) => Ok(value),
-            (Ok(_), Some(error)) => panic!("{} silently ate the error: {:?}", core::any::type_name::<T>(), error),
-            (Err(ConsensusError::Io(io_error)), Some(de_error)) if io_error.kind() == io::ErrorKind::Other && io_error.get_ref().is_none() => Err(DecodeError::Other(de_error)),
-            (Err(consensus_error), None) => Err(DecodeError::Consensus(consensus_error)),
-            (Err(ConsensusError::Io(io_error)), de_error) => panic!("Unexpected IO error {:?} returned from {}::consensus_decode(), deserialization error: {:?}", io_error, core::any::type_name::<T>(), de_error),
-            (Err(consensus_error), Some(de_error)) => panic!("{} should've returned `Other` IO error because of deserialization error {:?} but it returned consensus error {:?} instead", core::any::type_name::<T>(), de_error, consensus_error),
-        }
-    }
-}
-
-impl<E: fmt::Debug, I: Iterator<Item = Result<u8, E>>> Read for IterReader<E, I> {
-    fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
-        let mut count = 0;
-        if buf.is_empty() {
-            return Ok(0);
-        }
-
-        if let Some(first) = self.buf.take() {
-            buf[0] = first;
-            buf = &mut buf[1..];
-            count += 1;
-        }
-        for (dst, src) in buf.iter_mut().zip(&mut self.iterator) {
-            match src {
-                Ok(byte) => *dst = byte,
-                Err(error) => {
-                    self.error = Some(error);
-                    return Err(io::ErrorKind::Other.into());
-                }
-            }
-            // bounded by the length of buf
-            count += 1;
-        }
-        Ok(count)
-    }
-}
-
-impl<E: fmt::Debug, I: Iterator<Item = Result<u8, E>>> BufRead for IterReader<E, I> {
-    fn fill_buf(&mut self) -> Result<&[u8], io::Error> {
-        // matching on reference rather than using `ref` confuses borrow checker
-        if let Some(ref byte) = self.buf {
-            Ok(core::slice::from_ref(byte))
-        } else {
-            match self.iterator.next() {
-                Some(Ok(byte)) => {
-                    self.buf = Some(byte);
-                    Ok(core::slice::from_ref(self.buf.as_ref().expect("we've just filled it")))
-                }
-                Some(Err(error)) => {
-                    self.error = Some(error);
-                    Err(io::ErrorKind::Other.into())
-                }
-                None => Ok(&[]),
-            }
-        }
-    }
-
-    fn consume(&mut self, len: usize) {
-        debug_assert!(len <= 1);
-        if len > 0 {
-            self.buf = None;
         }
     }
 }

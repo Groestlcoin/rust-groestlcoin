@@ -12,13 +12,14 @@ use core::ops::{Add, Div, Mul, Not, Rem, Shl, Shr, Sub};
 use io::{BufRead, Write};
 #[cfg(all(test, mutate))]
 use mutagen::mutate;
+use units::parse;
 
 use crate::blockdata::block::BlockHash;
 use crate::consensus::encode::{self, Decodable, Encodable};
 #[cfg(doc)]
 use crate::consensus::Params;
 use crate::error::{PrefixedHexError, UnprefixedHexError, ContainsPrefixError, MissingPrefixError};
-use crate::{parse, Network};
+use crate::Network;
 
 /// Implement traits and methods shared by `Target` and `Work`.
 macro_rules! do_impl {
@@ -741,22 +742,6 @@ const TARGET_MAX_F64: f64 = 2.695953529101131e67;
 
 impl<T: Into<u128>> From<T> for U256 {
     fn from(x: T) -> Self { U256(0, x.into()) }
-}
-
-/// Error from `TryFrom<signed type>` implementations, occurs when input is negative.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[non_exhaustive]
-pub struct TryFromError(i128);
-
-impl fmt::Display for TryFromError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "attempt to create unsigned integer type from negative number: {}", self.0)
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for TryFromError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> { None }
 }
 
 impl Add for U256 {

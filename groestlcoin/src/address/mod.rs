@@ -50,11 +50,13 @@ use crate::network::{Network, NetworkKind};
 use crate::prelude::*;
 use crate::taproot::TapNodeHash;
 
-use self::error::P2shError;
 #[rustfmt::skip]                // Keep public re-exports separate.
 #[doc(inline)]
 pub use self::{
-    error::{NetworkValidationError, ParseError, UnknownAddressTypeError, UnknownHrpError, FromScriptError, },
+    error::{
+        FromScriptError, InvalidBase58PayloadLengthError, InvalidLegacyPrefixError, LegacyAddressTooLongError,
+        NetworkValidationError, ParseError, P2shError, UnknownAddressTypeError, UnknownHrpError
+    },
 };
 
 /// The different types of addresses.
@@ -668,12 +670,50 @@ impl Address<NetworkUnchecked> {
     ///
     /// For details about this mechanism, see section [*Parsing addresses*](Address#parsing-addresses)
     /// on [`Address`].
+    ///
+    /// # Errors
+    ///
+    /// This function only ever returns the [`ParseError::NetworkValidation`] variant of
+    /// `ParseError`. This is not how we normally implement errors in this library but
+    /// `require_network` is not a typical function, it is conceptually part of string parsing.
+    ///
+    ///  # Examples
+    ///
+    /// ```
+    /// use bitcoin::address::{NetworkChecked, NetworkUnchecked, ParseError};
+    /// use bitcoin::{Address, Network};
+    ///
+    /// const ADDR: &str = "bc1zw508d6qejxtdg4y5r3zarvaryvaxxpcs";
+    ///
+    /// fn parse_and_validate_address(network: Network) -> Result<Address, ParseError> {
+    ///     let address = ADDR.parse::<Address<_>>()?
+    ///                       .require_network(network)?;
+    ///     Ok(address)
+    /// }
+    ///
+    /// fn parse_and_validate_address_combinator(network: Network) -> Result<Address, ParseError> {
+    ///     let address = ADDR.parse::<Address<_>>()
+    ///                       .and_then(|a| a.require_network(network))?;
+    ///     Ok(address)
+    /// }
+    ///
+    /// fn parse_and_validate_address_show_types(network: Network) -> Result<Address, ParseError> {
+    ///     let address: Address<NetworkChecked> = ADDR.parse::<Address<NetworkUnchecked>>()?
+    ///                                                .require_network(network)?;
+    ///     Ok(address)
+    /// }
+    ///
+    /// let network = Network::Bitcoin;  // Don't hard code network in applications.
+    /// let _ = parse_and_validate_address(network).unwrap();
+    /// let _ = parse_and_validate_address_combinator(network).unwrap();
+    /// let _ = parse_and_validate_address_show_types(network).unwrap();
+    /// ```
     #[inline]
-    pub fn require_network(self, required: Network) -> Result<Address, NetworkValidationError> {
+    pub fn require_network(self, required: Network) -> Result<Address, ParseError> {
         if self.is_valid_for_network(required) {
             Ok(self.assume_checked())
         } else {
-            Err(NetworkValidationError { required, address: self })
+            Err(NetworkValidationError { required, address: self }.into())
         }
     }
 
@@ -736,11 +776,11 @@ impl FromStr for Address<NetworkUnchecked> {
         // If segwit decoding fails, assume its a legacy address.
 
         if s.len() > 50 {
-            return Err(ParseError::Base58(base58::Error::InvalidLength(s.len() * 11 / 15)));
+            return Err(LegacyAddressTooLongError { length: s.len() }.into());
         }
         let data = base58::decode_check(s)?;
         if data.len() != 21 {
-            return Err(ParseError::Base58(base58::Error::InvalidLength(data.len())));
+            return Err(InvalidBase58PayloadLengthError { length: s.len() }.into());
         }
 
         let (prefix, data) = data.split_first().expect("length checked above");
@@ -763,7 +803,7 @@ impl FromStr for Address<NetworkUnchecked> {
                 let hash = ScriptHash::from_byte_array(data);
                 AddressInner::P2sh { hash, network: NetworkKind::Test }
             }
-            x => return Err(ParseError::Base58(base58::Error::InvalidAddressVersion(x))),
+            invalid => return Err(InvalidLegacyPrefixError { invalid }.into()),
         };
 
         Ok(Address(inner, PhantomData))

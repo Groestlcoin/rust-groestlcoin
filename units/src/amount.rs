@@ -1062,8 +1062,15 @@ impl fmt::Debug for Amount {
 // Just using Bitcoin denominated string.
 impl fmt::Display for Amount {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.fmt_value_in(f, Denomination::Bitcoin)?;
-        write!(f, " {}", Denomination::Bitcoin)
+        let satoshis = self.to_sat();
+        let denomination = Denomination::Bitcoin;
+        let mut format_options = FormatOptions::from_formatter(f);
+
+        if f.precision().is_none() && satoshis.rem_euclid(Amount::ONE_BTC.to_sat()) != 0 {
+            format_options.precision = Some(8);
+        }
+
+        fmt_satoshi_in(satoshis, false, f, denomination, true, format_options)
     }
 }
 
@@ -2488,7 +2495,7 @@ mod tests {
 
         use super::ParseAmountError as E;
 
-        assert_eq!(Amount::from_str("x GRS"), Err(E::from(E::from(InvalidCharacterError { invalid_char: 'x', position: 0 })).into()));
+        assert_eq!(Amount::from_str("x GRS"), Err(InvalidCharacterError { invalid_char: 'x', position: 0 }.into()));
         assert_eq!(
             Amount::from_str("xGRS"),
             Err(Unknown(UnknownDenominationError("xGRS".into())).into()),
@@ -2901,5 +2908,36 @@ mod tests {
                 Err(e) => panic!("unexpected error: {}", e),
             }
         }
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn trailing_zeros_for_amount() {
+        assert_eq!(format!("{}", Amount::ONE_SAT), "0.00000001 GRS");
+        assert_eq!(format!("{}", Amount::ONE_BTC), "1 GRS");
+        assert_eq!(format!("{}", Amount::from_sat(1)), "0.00000001 GRS");
+        assert_eq!(format!("{}", Amount::from_sat(10)), "0.00000010 GRS");
+        assert_eq!(format!("{:.2}", Amount::from_sat(10)), "0.0000001 GRS");
+        assert_eq!(format!("{:.2}", Amount::from_sat(100)), "0.000001 GRS");
+        assert_eq!(format!("{:.2}", Amount::from_sat(1000)), "0.00001 GRS");
+        assert_eq!(format!("{:.2}", Amount::from_sat(10_000)), "0.0001 GRS");
+        assert_eq!(format!("{:.2}", Amount::from_sat(100_000)), "0.001 GRS");
+        assert_eq!(format!("{:.2}", Amount::from_sat(1_000_000)), "0.01 GRS");
+        assert_eq!(format!("{:.2}", Amount::from_sat(10_000_000)), "0.10 GRS");
+        assert_eq!(format!("{:.2}", Amount::from_sat(100_000_000)), "1.00 GRS");
+        assert_eq!(format!("{}", Amount::from_sat(100_000_000)), "1 GRS");
+        assert_eq!(format!("{}", Amount::from_sat(40_000_000_000)), "400 GRS");
+        assert_eq!(
+            format!("{:.10}", Amount::from_sat(100_000_000)),
+            "1.0000000000 GRS"
+        );
+        assert_eq!(
+            format!("{}", Amount::from_sat(400_000_000_000_010)),
+            "4000000.00000010 GRS"
+        );
+        assert_eq!(
+            format!("{}", Amount::from_sat(400_000_000_000_000)),
+            "4000000 GRS"
+        );
     }
 }

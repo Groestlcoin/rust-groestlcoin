@@ -1,6 +1,6 @@
 [package]
 name = "groestlcoin_hashes"
-version = "0.13.0"
+version = "0.14.0"
 authors = ["Groestlcoin Developers <groestlcoin@gmail.com>"]
 license = "CC0-1.0"
 repository = "https://github.com/Groestlcoin/rust-groestlcoin"
@@ -28,7 +28,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 groestl = { version = "0.10.1", default_features = false }
-hex = { package = "hex-conservative", version = "0.1.1", default-features = false }
+hex = { package = "hex-conservative", version = "0.2.0", default-features = false }
 
 bitcoin-io = { version = "0.1.1", default-features = false, optional = true }
 schemars = { version = "0.8.3", default-features = false, optional = true }
