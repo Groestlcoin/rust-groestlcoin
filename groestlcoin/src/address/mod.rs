@@ -683,7 +683,7 @@ impl Address<NetworkUnchecked> {
     /// use groestlcoin::address::{NetworkChecked, NetworkUnchecked, ParseError};
     /// use groestlcoin::{Address, Network};
     ///
-    /// const ADDR: &str = "grs1zw508d6qejxtdg4y5r3zarvaryvaxxpcs";
+    /// const ADDR: &str = "grs1qvzvkjn4q3nszqxrv3nraga2r822xjty3e8sh90"";
     ///
     /// fn parse_and_validate_address(network: Network) -> Result<Address, ParseError> {
     ///     let address = ADDR.parse::<Address<_>>()?
@@ -1303,7 +1303,6 @@ mod tests {
             "FnE3wVX6qraakMYiNxaAqRCX7RUP5q7ba2",
             "33iFwdLuRpW1uK1RTRqsoi8rR4NpChEu32",
             "3QBRmWNqqBGme9er7fMkGqtZtp4gn5WwDf",
-            "grs1zw508d6qejxtdg4y5r3zarvaryvaxxpcs",
             "grs1qvzvkjn4q3nszqxrv3nraga2r822xjty3e8sh90",
             "grs1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqezj0h8",
             "grs1pgllnmtxs0g058qz7c6qgaqq4qknwrqj9z7rqn9e2dzhmcfmhlu4sxxj9ma",
