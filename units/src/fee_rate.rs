@@ -95,21 +95,6 @@ impl FeeRate {
     /// if overflow occurred.
     ///
     /// This is equivalent to `Self::checked_mul_by_weight()`.
-<<<<<<<< HEAD:groestlcoin/src/blockdata/fee_rate.rs
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use groestlcoin::{absolute, transaction, FeeRate, Transaction};
-    /// # // Dummy transaction.
-    /// # let tx = Transaction { version: transaction::Version::ONE, lock_time: absolute::LockTime::ZERO, input: vec![], output: vec![] };
-    ///
-    /// let rate = FeeRate::from_sat_per_vb(1).expect("1 sat/vbyte is valid");
-    /// let fee = rate.fee_wu(tx.weight()).unwrap();
-    /// assert_eq!(fee.to_sat(), tx.vsize() as u64);
-    /// ```
-========
->>>>>>>> upstream/master:units/src/fee_rate.rs
     pub fn fee_wu(self, weight: Weight) -> Option<Amount> { self.checked_mul_by_weight(weight) }
 
     /// Calculates fee by multiplying this fee rate by weight, in virtual bytes, returning `None`

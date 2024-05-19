@@ -680,8 +680,8 @@ impl Address<NetworkUnchecked> {
     ///  # Examples
     ///
     /// ```
-    /// use bitcoin::address::{NetworkChecked, NetworkUnchecked, ParseError};
-    /// use bitcoin::{Address, Network};
+    /// use groestlcoin::address::{NetworkChecked, NetworkUnchecked, ParseError};
+    /// use groestlcoin::{Address, Network};
     ///
     /// const ADDR: &str = "bc1zw508d6qejxtdg4y5r3zarvaryvaxxpcs";
     ///
@@ -703,7 +703,7 @@ impl Address<NetworkUnchecked> {
     ///     Ok(address)
     /// }
     ///
-    /// let network = Network::Bitcoin;  // Don't hard code network in applications.
+    /// let network = Network::Groestlcoin;  // Don't hard code network in applications.
     /// let _ = parse_and_validate_address(network).unwrap();
     /// let _ = parse_and_validate_address_combinator(network).unwrap();
     /// let _ = parse_and_validate_address_show_types(network).unwrap();
